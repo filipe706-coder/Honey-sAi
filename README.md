@@ -5,7 +5,32 @@ série, livro ou jogo (ou inventas uma tua), a IA cria-lhe a personalidade e a
 forma de falar, e depois conversas com ela. A personagem lembra-se de ti: do
 teu nome, do que gostas, do que já aconteceu entre vocês.
 
-Por agora corre no PC e usa-se no browser. A versão para telemóvel vem depois.
+Usa-se no browser (PC ou telemóvel). As personagens e conversas ficam guardadas
+no br## Pôr online com um link fixo (Render, grátis)
+
+O Render liga-se a este repositório do GitHub, corre o servidor e dá um link
+fixo tipo `https://honey-sai.onrender.com`. Sempre que fizerem push para o
+`main`, o site atualiza sozinho.
+
+1. Entra em https://render.com com **"Sign in with GitHub"**.
+2. **New → Blueprint** e escolhe o repositório **Honey-sAi**
+   (se não aparecer, dá acesso ao Render a este repositório quando o GitHub pedir).
+3. O Render lê o `render.yaml` e pede dois valores:
+   - `GROQ_API_KEY`: a chave do Groq
+   - `SENHA`: a palavra-passe para entrar na app
+4. **Deploy**. Ao fim de uns minutos aparece o link no topo da página do serviço.
+
+No plano grátis o servidor "adormece" depois de 15 minutos sem uso; a primeira
+visita a seguir demora ~1 minuto a acordar. Como os dados ficam no browser de
+cada pessoa, nada se perde quando ele reinicia.
+
+**Cópias de segurança:** como as conversas vivem no browser, limpar os dados
+do browser apaga-as. Na galeria há **Exportar cópia** (guarda um ficheiro) e
+**Importar** (também serve para passar as personagens para outro aparelho).
+
+---
+
+owser de cada pessoa; o servidor só fala com a IA.
 
 ---
 
@@ -31,7 +56,7 @@ Cada pessoa usa a sua própria chave.
 
 ---
 
-## Partilhar com um link (o PC fica a ser o servidor)
+## Partilhar a partir do PC (alternativa ao Render)
 
 O `partilhar.bat` cria um link público tipo `https://algo.trycloudflare.com`
 para outra pessoa usar a app a partir do telemóvel ou de outro PC.
@@ -50,9 +75,10 @@ para outra pessoa usar a app a partir do telemóvel ou de outro PC.
 Atenção:
 - O PC tem de estar ligado, com as duas janelas abertas.
 - O link muda de cada vez que corres o `partilhar.bat`.
-- Cada pessoa tem as suas próprias personagens e conversas (guardadas no teu
-  PC, em `servidor/dados/`).
-- Há um limite de 300 pedidos à IA por pessoa por dia (`MAX_PEDIDOS_DIA` no `.env`).
+- Cada pessoa tem as suas próprias personagens e conversas, guardadas no
+  browser dela.
+- Há limites de pedidos à IA por dia: 300 por pessoa (`MAX_PEDIDOS_DIA`) e 1000
+  no total (`MAX_PEDIDOS_DIA_TOTAL`).
 
 ---
 
@@ -82,9 +108,17 @@ ao criar a ficha e a regra fica no servidor, mesmo que a ficha seja editada.
 
 ```
 Browser (app.html) ──▶ Servidor Python (main.py) ──▶ IA (Groq, via ia.py)
-                              │
-                              └── servidor/dados/<id>/  (personagens e conversas em JSON)
+   │
+   └── localStorage: personagens e conversas (cada pessoa tem as suas)
 ```
+
+O servidor não guarda nada. Em cada mensagem, o browser envia a ficha, a
+conversa e a memória; o servidor pergunta à IA e devolve a conversa atualizada.
+
+**Regra de menores e o "selo":** ao criar a ficha, a IA diz se a personagem é
+menor na obra. O servidor assina essa decisão com um `SEGREDO` (HMAC) e o
+browser guarda o selo. Se alguém o alterar, a assinatura deixa de bater certo
+e o servidor trata a personagem como menor.
 
 | Ficheiro | O que faz |
 |---|---|
@@ -94,6 +128,7 @@ Browser (app.html) ──▶ Servidor Python (main.py) ──▶ IA (Groq, via i
 | `servidor/ia.py` | A ligação à IA. É o único ficheiro que sabe que fornecedor usamos |
 | `iniciar.bat` | Instala e arranca tudo |
 | `partilhar.bat` | Cria um link público (túnel Cloudflare) protegido por palavra-passe |
+| `render.yaml` | Configuração para pôr online no Render |
 | `iniciar-ollama.bat` | Alternativa: arranca com uma IA local (Ollama) em vez do Groq |
 | `app/` | Primeira versão da app Android (desatualizada, vai ser refeita) |
 
@@ -124,13 +159,12 @@ instala o Ollama (https://ollama.com/download), abre-o uma vez e usa o
 ---
 
 ## Limites atuais (de propósito)
-- Sem contas: o browser guarda um id aleatório. Noutro browser começas do zero.
+- Sem contas: cada browser tem as suas personagens. Para mudar de aparelho, usa Exportar/Importar.
 - A proteção é uma palavra-passe partilhada (`SENHA`), suficiente para uso
   entre amigos, não para uma app pública.
 - Os erros da IA aparecem detalhados na página (útil para testar).
 
 ## Próximos passos
 - Contas de utilizador a sério
-- Servidor na cloud (Oracle Cloud, grátis) para usar sem o PC ligado
 - App Android
 - Imagens das personagens

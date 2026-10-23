@@ -1,0 +1,26 @@
+# Configuração para o Render (render.com): põe o servidor online de graça,
+# com um link fixo, e atualiza sozinho sempre que fazes push para o GitHub.
+#
+# No Render: New → Blueprint → escolhe este repositório. Ele lê este ficheiro
+# e só te pede os valores marcados com "sync: false" (a chave e a senha),
+# que ficam guardados no Render e nunca vão para o GitHub.
+services:
+  - type: web
+    name: honey-sai
+    runtime: python
+    plan: free
+    buildCommand: pip install -r servidor/requirements.txt
+    startCommand: cd servidor && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: PROVEDOR
+        value: groq
+      - key: PROVEDOR_FICHA
+        value: groq
+      - key: GROQ_API_KEY      # a tua chave do Groq (pede-ta ao criar)
+        sync: false
+      - key: SENHA             # a palavra-passe de acesso à app (pede-ta ao criar)
+        sync: false
+      - key: SEGREDO           # assina os "selos" das personagens; o Render gera um sozinho
+        generateValue: true

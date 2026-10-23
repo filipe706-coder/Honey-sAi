@@ -1,36 +1,35 @@
-# Servidor do Sussurros (versão 2: personagens criadas por ti).
+# Servidor do Sussurros (versão 3: os dados ficam no browser).
 #
-# Criar uma personagem:
-#   1. A app envia nome + obra para POST /personagens/gerar
-#   2. A IA escreve a ficha (personalidade, forma de falar, primeira fala)
-#   3. O servidor guarda-a como RASCUNHO e devolve-a para tu reveres
-#   4. POST /personagens/{id}/guardar grava as tuas correções e ela vai para a galeria
+# O servidor já NÃO guarda personagens nem conversas: isso fica no browser de
+# cada pessoa (localStorage). Assim pode correr num servidor grátis que apaga
+# os ficheiros quando reinicia (como o Render), e cada pessoa tem os seus dados.
+# O servidor só faz três coisas:
+#   1. guarda a chave da IA (que nunca pode ir para o browser)
+#   2. fala com a IA (criar fichas e responder às mensagens)
+#   3. protege a app (palavra-passe, limites por dia, regra de menores)
 #
-# Conversar (igual à versão anterior):
-#   1. A app envia o texto para POST /chat
-#   2. O servidor junta ficha + regras + MEMÓRIA + RESUMO e as mensagens recentes
-#   3. A IA responde pela ferramenta "responder": texto + escolhas + factos novos
-#   4. Tudo fica guardado; as mensagens antigas vão sendo resumidas
+# Criar uma personagem:  POST /personagens/gerar  -> devolve a ficha + um "selo"
+# Conversar:             POST /chat  -> o browser envia a ficha, a conversa e a
+#                        mensagem nova; o servidor devolve a conversa atualizada
 #
-# Onde fica tudo (pasta dados/<o teu id>/):
-#   personagens/<id>.json   a ficha de cada personagem
-#   conversas/<id>.json     a conversa, a memória e o resumo com essa personagem
-#
-# A chave da API fica SÓ aqui no servidor (ficheiro .env), nunca na app.
+# O "selo": quando a IA cria a ficha, decide se a personagem é menor na obra.
+# O servidor assina essa decisão com um SEGREDO que só ele conhece (HMAC).
+# O browser guarda o selo e envia-o em cada mensagem. Se alguém o alterar, a
+# assinatura deixa de bater certo e o servidor trata a personagem como menor.
 
 import datetime
 import hashlib
 import hmac
-import json
 import os
 import re
+import secrets
 import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # O .env tem de ser lido ANTES de importar o ia.py, porque é lá que está o PROVEDOR.
 load_dotenv()
@@ -42,22 +41,54 @@ print(f"Sussurros | conversa: {ia.conversa.fornecedor} / {ia.conversa.modelo}"
       f" | fichas: {ia.fichas.fornecedor} / {ia.fichas.modelo}")
 
 PASTA = Path(__file__).parent
-DADOS = PASTA / "dados"
-DADOS.mkdir(exist_ok=True)
 
 JANELA = 24          # nº de mensagens recentes que a IA vê "palavra por palavra"
 FOLGA = 10           # quando passarmos JANELA+FOLGA, as mais antigas vão para o resumo
 MAX_FACTOS = 60
 MAX_CARACTERES = 2000
-# Limite de pedidos à IA por pessoa por dia, para ninguém gastar a quota toda do Groq.
-MAX_PEDIDOS_DIA = int(os.getenv("MAX_PEDIDOS_DIA", "300"))
+# Limites de pedidos à IA por dia, para a quota do Groq nunca se esgotar:
+MAX_PEDIDOS_DIA = int(os.getenv("MAX_PEDIDOS_DIA", "300"))           # por pessoa
+MAX_PEDIDOS_DIA_TOTAL = int(os.getenv("MAX_PEDIDOS_DIA_TOTAL", "1000"))  # todos juntos
 
 app = FastAPI(title="Sussurros")
 
 
+# ---------- Segredo para assinar os selos ----------
+# No Render vem da variável SEGREDO. No PC, se não existir, criamos um e
+# guardamo-lo num ficheiro, para os selos continuarem válidos depois de reiniciar.
+
+def obter_segredo() -> str:
+    if os.getenv("SEGREDO"):
+        return os.environ["SEGREDO"]
+    f = PASTA / "dados" / "segredo.txt"
+    if f.exists():
+        return f.read_text().strip()
+    f.parent.mkdir(exist_ok=True)
+    novo = secrets.token_hex(32)
+    f.write_text(novo)
+    return novo
+
+
+SEGREDO = obter_segredo().encode()
+
+
+def fazer_selo(pid: str, menor: bool) -> str:
+    valor = "1" if menor else "0"
+    assinatura = hmac.new(SEGREDO, f"{pid}:{valor}".encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{valor}.{assinatura}"
+
+
+def e_menor(pid: str, selo: str) -> bool:
+    """Lê o selo. Se for inválido ou tiver sido mexido, trata como menor (mais seguro)."""
+    for menor in (False, True):
+        if hmac.compare_digest(selo or "", fazer_selo(pid, menor)):
+            return menor
+    return True
+
+
 # ---------- Palavra-passe de acesso ----------
-# Se o .env tiver SENHA=..., só entra quem a souber. Quem acerta fica com um
-# "cookie" no browser durante 30 dias (não precisa de a escrever sempre).
+# Se houver SENHA (no .env ou nas variáveis do Render), só entra quem a souber.
+# Quem acerta fica com um "cookie" no browser durante 30 dias.
 # O cookie guarda uma impressão digital (hash) da senha, nunca a senha em si.
 
 SENHA = os.getenv("SENHA", "").strip()
@@ -99,6 +130,31 @@ def entrar(senha: str = Form("")):
     r.set_cookie(COOKIE, impressao(SENHA), max_age=30 * 24 * 3600, httponly=True, samesite="lax")
     return r
 
+
+# ---------- Limites por dia (guardados em memória) ----------
+# Se o servidor reiniciar, a contagem recomeça. Não faz mal: é só uma proteção.
+
+_uso: dict[str, int] = {}
+_uso_dia = ""
+
+
+def contar_pedido(utilizador: str) -> None:
+    global _uso, _uso_dia
+    if not re.fullmatch(r"[a-zA-Z0-9-]{8,64}", utilizador or ""):
+        raise HTTPException(400, "Id inválido.")
+    hoje = datetime.date.today().isoformat()
+    if hoje != _uso_dia:
+        _uso, _uso_dia = {}, hoje
+    if _uso.get("*", 0) >= MAX_PEDIDOS_DIA_TOTAL:
+        raise HTTPException(429, "A app chegou ao limite de mensagens de hoje. Volta amanhã!")
+    if _uso.get(utilizador, 0) >= MAX_PEDIDOS_DIA:
+        raise HTTPException(429, f"Chegaste ao limite de {MAX_PEDIDOS_DIA} mensagens por hoje. Volta amanhã!")
+    _uso[utilizador] = _uso.get(utilizador, 0) + 1
+    _uso["*"] = _uso.get("*", 0) + 1
+
+
+# ---------- Ajudas ----------
+
 FERRAMENTA_RESPOSTA = {
     "name": "responder",
     "description": "Envia a tua fala, 3 escolhas para o utilizador e factos novos.",
@@ -114,70 +170,9 @@ FERRAMENTA_RESPOSTA = {
 }
 
 
-# ---------- Ficheiros ----------
-
-def validar_id(valor: str) -> str:
-    # Só letras, números e "-": impede ids manhosos tipo "../../" que
-    # escreveriam fora da pasta dados/.
-    if not re.fullmatch(r"[a-zA-Z0-9-]{8,64}", valor or ""):
-        raise HTTPException(400, "Id inválido.")
-    return valor
-
-
-def pasta_de(utilizador: str, tipo: str) -> Path:
-    p = DADOS / validar_id(utilizador) / tipo
-    p.mkdir(parents=True, exist_ok=True)
-    return p
-
-
-def ler(f: Path):
-    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
-
-
-def escrever(f: Path, dados) -> None:
-    f.write_text(json.dumps(dados, ensure_ascii=False, indent=1), encoding="utf-8")
-
-
-def abrir_personagem(utilizador: str, pid: str) -> dict:
-    p = ler(pasta_de(utilizador, "personagens") / f"{validar_id(pid)}.json")
-    if not p:
-        raise HTTPException(404, "Personagem não encontrada.")
-    return p
-
-
-def abrir_conversa(utilizador: str, p: dict) -> dict:
-    conv = ler(pasta_de(utilizador, "conversas") / f"{p['id']}.json")
-    return conv or {
-        "mensagens": [{"papel": "personagem", "texto": p["saudacao"]}],
-        "memoria": [], "resumo": "", "resumidas_ate": 0, "escolhas": [],
-    }
-
-
-def guardar_conversa(utilizador: str, pid: str, conv: dict) -> None:
-    escrever(pasta_de(utilizador, "conversas") / f"{pid}.json", conv)
-
-
-def contar_pedido(utilizador: str) -> None:
-    """Conta um pedido à IA para esta pessoa e trava se passar o limite do dia."""
-    f = pasta_de(utilizador, ".") / "uso.json"
-    hoje = datetime.date.today().isoformat()
-    uso = ler(f) or {}
-    n = uso.get("n", 0) if uso.get("dia") == hoje else 0
-    if n >= MAX_PEDIDOS_DIA:
-        raise HTTPException(429, f"Chegaste ao limite de {MAX_PEDIDOS_DIA} mensagens por hoje. Volta amanhã!")
-    escrever(f, {"dia": hoje, "n": n + 1})
-
-
 def cor(valor, padrao: str) -> str:
     return valor if isinstance(valor, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", valor) else padrao
 
-
-def publico(p: dict) -> dict:
-    """O que a app pode ver de uma personagem (o campo "menor" fica no servidor)."""
-    return {k: p[k] for k in ("id", "nome", "obra", "frase", "ficha", "saudacao", "emoji", "cores", "conhecida")}
-
-
-# ---------- Ajudas para a IA ----------
 
 def para_api(mensagens: list[dict]) -> list[dict]:
     """Formato da API: "user"/"assistant", a começar em "user" e a alternar."""
@@ -195,11 +190,10 @@ def para_api(mensagens: list[dict]) -> list[dict]:
 
 def erro_ia(e: Exception):
     print("Erro da API:", e)
-    # Enquanto testamos no PC, mostramos o erro real na página. Numa versão pública sai.
     return HTTPException(502, f"A IA não respondeu: {str(e)[:350]}")
 
 
-def resumir_se_preciso(conv: dict, p: dict) -> None:
+def resumir_se_preciso(conv: dict, nome: str) -> None:
     """Quando a conversa fica longa, resume as mensagens mais antigas (assim a IA
     nunca recebe a conversa inteira, mas também não esquece o que aconteceu)."""
     msgs = conv["mensagens"]
@@ -207,7 +201,7 @@ def resumir_se_preciso(conv: dict, p: dict) -> None:
         return
     fim = len(msgs) - JANELA
     texto = "\n".join(
-        f"{'Utilizador' if m['papel'] == 'utilizador' else p['nome']}: {m['texto']}"
+        f"{'Utilizador' if m['papel'] == 'utilizador' else nome}: {m['texto']}"
         for m in msgs[conv["resumidas_ate"]:fim]
     )
     try:
@@ -223,7 +217,29 @@ def resumir_se_preciso(conv: dict, p: dict) -> None:
         print("Erro ao resumir (tenta-se outra vez na próxima):", e)
 
 
-# ---------- Pedidos que a app faz ----------
+# ---------- O que o browser envia ----------
+# Os limites de tamanho (max_length) impedem que alguém mande coisas gigantes.
+
+class Mensagem(BaseModel):
+    papel: str = Field(pattern="^(utilizador|personagem)$")
+    texto: str = Field(max_length=6000)
+
+
+class Conversa(BaseModel):
+    mensagens: list[Mensagem] = Field(max_length=2000)
+    memoria: list[str] = Field(default_factory=list, max_length=200)
+    resumo: str = Field(default="", max_length=6000)
+    resumidas_ate: int = 0
+
+
+class Personagem(BaseModel):
+    id: str = Field(pattern="^[a-f0-9]{12}$")
+    nome: str = Field(max_length=80)
+    obra: str = Field(default="", max_length=120)
+    ficha: str = Field(max_length=4000)
+    saudacao: str = Field(max_length=1000)
+    selo: str = Field(default="", max_length=64)
+
 
 class PedidoGerar(BaseModel):
     utilizador: str
@@ -232,35 +248,14 @@ class PedidoGerar(BaseModel):
     extra: str = ""
 
 
-class PedidoGuardar(BaseModel):
-    utilizador: str
-    nome: str
-    obra: str
-    frase: str
-    ficha: str
-    saudacao: str
-
-
 class PedidoChat(BaseModel):
     utilizador: str
-    personagem: str
+    personagem: Personagem
+    conversa: Conversa
     texto: str
 
 
-class PedidoSimples(BaseModel):
-    utilizador: str
-    personagem: str
-
-
-# ---------- Personagens ----------
-
-@app.get("/personagens")
-def listar_personagens(utilizador: str):
-    """As tuas personagens guardadas (sem rascunhos), da mais recente para a mais antiga."""
-    pasta = pasta_de(utilizador, "personagens")
-    lista = [ler(f) for f in sorted(pasta.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)]
-    return [publico(p) for p in lista if p and not p.get("rascunho")]
-
+# ---------- Pedidos ----------
 
 @app.post("/personagens/gerar")
 def gerar_personagem(pedido: PedidoGerar):
@@ -278,61 +273,24 @@ def gerar_personagem(pedido: PedidoGerar):
         )
     except ia.ErroIA as e:
         raise erro_ia(e)
-
     if not d:
         raise HTTPException(502, "A IA não conseguiu criar a ficha. Tenta outra vez.")
 
-    p = {
-        "id": uuid.uuid4().hex[:12],
-        "rascunho": True,  # só passa para a galeria quando carregas em "Guardar"
+    pid = uuid.uuid4().hex[:12]
+    # Na dúvida (ou se a IA não disser), trata como menor: mais vale prevenir.
+    menor = d.get("menor_na_obra") is not False
+    return {
+        "id": pid,
         "nome": str(d.get("nome") or nome)[:80],
         "obra": str(d.get("obra") or pedido.obra)[:120],
         "frase": str(d.get("frase", ""))[:200],
-        "ficha": str(d.get("ficha", "")),
-        "saudacao": str(d.get("saudacao", "")) or "*olha para ti* Olá.",
+        "ficha": str(d.get("ficha", ""))[:4000],
+        "saudacao": str(d.get("saudacao", ""))[:1000] or "*olha para ti* Olá.",
         "emoji": str(d.get("emoji") or "✨")[:8],
         "cores": [cor(d.get("cor1"), "#3d2c5c"), cor(d.get("cor2"), "#c76b4a")],
         "conhecida": bool(d.get("conhecida", True)),
-        # Na dúvida (ou se a IA não disser), trata como menor: mais vale prevenir.
-        "menor": d.get("menor_na_obra") is not False,
+        "selo": fazer_selo(pid, menor),
     }
-    escrever(pasta_de(pedido.utilizador, "personagens") / f"{p['id']}.json", p)
-    return publico(p)
-
-
-@app.post("/personagens/{pid}/guardar")
-def guardar_personagem(pid: str, pedido: PedidoGuardar):
-    """Grava as tuas correções à ficha. O campo "menor" NÃO vem da app:
-    fica o que foi decidido quando a ficha foi gerada."""
-    p = abrir_personagem(pedido.utilizador, pid)
-    p.update({
-        "nome": pedido.nome.strip()[:80] or p["nome"],
-        "obra": pedido.obra.strip()[:120],
-        "frase": pedido.frase.strip()[:200],
-        "ficha": pedido.ficha.strip()[:4000] or p["ficha"],
-        "saudacao": pedido.saudacao.strip()[:1000] or p["saudacao"],
-        "rascunho": False,
-    })
-    escrever(pasta_de(pedido.utilizador, "personagens") / f"{pid}.json", p)
-    return publico(p)
-
-
-@app.post("/personagens/{pid}/apagar")
-def apagar_personagem(pid: str, pedido: PedidoSimples):
-    validar_id(pid)
-    for tipo in ("personagens", "conversas"):
-        f = pasta_de(pedido.utilizador, tipo) / f"{pid}.json"
-        if f.exists():
-            f.unlink()
-    return {"ok": True}
-
-
-# ---------- Conversa ----------
-
-@app.get("/historia/{pid}")
-def ver_historia(pid: str, utilizador: str):
-    conv = abrir_conversa(utilizador, abrir_personagem(utilizador, pid))
-    return {k: conv[k] for k in ("mensagens", "memoria", "resumo", "escolhas")}
 
 
 @app.post("/chat")
@@ -340,14 +298,17 @@ def chat(pedido: PedidoChat):
     texto = pedido.texto.strip()
     if not texto or len(texto) > MAX_CARACTERES:
         raise HTTPException(400, "Mensagem vazia ou demasiado longa.")
-
-    p = abrir_personagem(pedido.utilizador, pedido.personagem)
     contar_pedido(pedido.utilizador)
-    conv = abrir_conversa(pedido.utilizador, p)
+
+    p = pedido.personagem.model_dump()
+    p["menor"] = e_menor(p["id"], p["selo"])
+
+    conv = pedido.conversa.model_dump()
+    conv["memoria"] = [str(f)[:300] for f in conv["memoria"]][-MAX_FACTOS:]
+    conv["resumidas_ate"] = max(0, min(conv["resumidas_ate"], len(conv["mensagens"])))
     conv["mensagens"].append({"papel": "utilizador", "texto": texto})
 
     try:
-        # A ferramenta "responder" obriga a IA a responder sempre no mesmo formato.
         d = ia.conversa.estruturado(
             instrucoes(p, conv["memoria"], conv["resumo"]),
             para_api(conv["mensagens"][conv["resumidas_ate"]:]),
@@ -358,30 +319,20 @@ def chat(pedido: PedidoChat):
 
     resposta = str(d.get("resposta", "")).strip() or "*fica em silêncio por um momento*"
     escolhas = [str(e).strip() for e in d.get("escolhas", []) if str(e).strip()][:3]
-    novos = [str(f).strip() for f in d.get("novos_factos", []) if str(f).strip()]
+    novos = [str(f).strip()[:300] for f in d.get("novos_factos", []) if str(f).strip()]
 
     ja = {f.lower() for f in conv["memoria"]}
     novos = [f for f in novos if f.lower() not in ja]
     conv["memoria"] = (conv["memoria"] + novos)[-MAX_FACTOS:]
     conv["mensagens"].append({"papel": "personagem", "texto": resposta})
-    conv["escolhas"] = escolhas
-    resumir_se_preciso(conv, p)
-    guardar_conversa(pedido.utilizador, p["id"], conv)
+    resumir_se_preciso(conv, p["nome"])
 
-    return {"resposta": resposta, "escolhas": escolhas, "novos_factos": novos}
-
-
-@app.post("/recomecar")
-def recomecar(pedido: PedidoSimples):
-    f = pasta_de(pedido.utilizador, "conversas") / f"{validar_id(pedido.personagem)}.json"
-    if f.exists():
-        f.unlink()
-    return {"ok": True}
+    return {"resposta": resposta, "escolhas": escolhas, "novos_factos": novos, "conversa": conv}
 
 
 @app.get("/modelos")
 def modelos():
-    """Diagnóstico: que IA está a ser usada e que modelos a tua conta tem."""
+    """Diagnóstico: que IA está a ser usada e que modelos a conta tem."""
     info = {"conversa": f"{ia.conversa.fornecedor} / {ia.conversa.modelo}",
             "fichas": f"{ia.fichas.fornecedor} / {ia.fichas.modelo}"}
     try:

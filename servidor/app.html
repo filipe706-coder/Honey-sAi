@@ -5,8 +5,7 @@
     1. Galeria: as tuas personagens (vazia ao início, só com o botão Criar)
     2. Criar: escreves nome + obra, a IA gera a ficha, tu revês e guardas
     3. Chat: a conversa com a personagem
-  Tudo fica guardado no SERVIDOR; o browser só guarda um id aleatório teu
-  e a preferência de mostrar ou não as sugestões de resposta.
+  Tudo fica guardado NESTE BROWSER (localStorage). O servidor só fala com a IA.
 -->
 <html lang="pt">
 <head>
@@ -35,6 +34,8 @@
   .marca { font-family: "Cormorant Garamond", serif; font-size: 34px; margin: 0; letter-spacing: .5px; }
   .marca span { color: var(--acento); }
   .sub { color: var(--suave); margin: 4px 0 0; font-size: 14px; }
+  .copia { color: var(--suave); margin: 8px 0 0; font-size: 12px; }
+  .ligacao { background: none; border: 0; padding: 0; color: var(--acento); font-size: 12px; text-decoration: underline; }
   .lista { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px 28px; display: grid;
            gap: 14px; grid-auto-rows: max-content; align-content: start; }
   .carta { border: 0; text-align: left; border-radius: 22px; padding: 0; overflow: hidden;
@@ -144,6 +145,10 @@
     <div class="topo-galeria">
       <h1 class="marca">Sussur<span>ros</span></h1>
       <p class="sub">As tuas personagens. Cada uma lembra-se de ti.</p>
+      <p class="copia">Ficam guardadas neste browser ·
+        <button type="button" class="ligacao" id="exportar">Exportar cópia</button> ·
+        <button type="button" class="ligacao" id="importar">Importar</button>
+        <input type="file" id="ficheiro-copia" accept=".json,application/json" hidden></p>
     </div>
     <div class="lista" id="lista"></div>
   </section>
@@ -216,23 +221,44 @@
 </div>
 
 <script>
-  // ---------- Pequenas ajudas ----------
-  // localStorage pode falhar (modo privado, etc.), por isso vai sempre dentro de try.
-  function guardado(chave, valor) {
+  // =====================================================================
+  //  Onde ficam os dados: NESTE BROWSER (localStorage).
+  //    sussurros-personagens        -> lista das tuas personagens
+  //    sussurros-conversa-<id>      -> a conversa, memória e resumo com cada uma
+  //  O servidor não guarda nada: só fala com a IA. Por isso há "Exportar cópia"
+  //  (para guardares num ficheiro) e "Importar" (para passar para outro browser).
+  // =====================================================================
+
+  // localStorage pode falhar (modo privado, etc.). Se falhar, usamos a memória
+  // da página (os dados perdem-se ao fechar, mas a app continua a funcionar).
+  const memoriaLocal = {};
+  function ler(chave, padrao) {
     try {
-      if (valor === undefined) return localStorage.getItem(chave);
-      localStorage.setItem(chave, valor);
-    } catch (e) { return null; }
+      const v = localStorage.getItem(chave);
+      return v === null ? padrao : JSON.parse(v);
+    } catch (e) {
+      return chave in memoriaLocal ? memoriaLocal[chave] : padrao;
+    }
   }
+  function gravar(chave, valor) {
+    memoriaLocal[chave] = valor;
+    try { localStorage.setItem(chave, JSON.stringify(valor)); }
+    catch (e) { console.warn("Não consegui guardar no browser:", e); }
+  }
+  function apagarChave(chave) {
+    delete memoriaLocal[chave];
+    try { localStorage.removeItem(chave); } catch (e) {}
+  }
+
   function obterId() {
-    let id = guardado("sussurros-id");
+    let id = ler("sussurros-id", null);
     if (!id) {
       id = crypto.randomUUID ? crypto.randomUUID() : (String(Math.random()).slice(2) + Date.now());
-      guardado("sussurros-id", id);
+      gravar("sussurros-id", id);
     }
     return id;
   }
-  const EU = obterId();
+  const EU = obterId();   // id aleatório: serve só para os limites por dia no servidor
   const $ = id => document.getElementById(id);
 
   // Escapa HTML (para ninguém injetar código) e põe *ações* em itálico.
@@ -243,11 +269,16 @@
   const fundo = p => `linear-gradient(135deg, ${p.cores[0]}, ${p.cores[1]})`;
 
   async function api(caminho, corpo) {
-    const r = await fetch(caminho, corpo ? {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo)
-    } : undefined);
+    let r;
+    try {
+      r = await fetch(caminho, corpo ? {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo)
+      } : undefined);
+    } catch (e) {
+      throw new Error("Sem ligação ao servidor. Se não usavas a app há um bocado, espera um minuto (está a acordar) e tenta outra vez.");
+    }
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.detail || "Erro " + r.status);
+    if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "Erro " + r.status);
     return d;
   }
 
@@ -255,17 +286,32 @@
     document.querySelectorAll(".ecra").forEach(e => e.classList.toggle("ativo", e.id === ecra));
   }
 
-  let personagens = [];
+  // ---------- Dados ----------
+  const listaPersonagens = () => ler("sussurros-personagens", []);
+  const gravarPersonagens = lista => gravar("sussurros-personagens", lista);
+  function conversaDe(p) {
+    return ler("sussurros-conversa-" + p.id, null) || {
+      mensagens: [{ papel: "personagem", texto: p.saudacao }],
+      memoria: [], resumo: "", resumidas_ate: 0, escolhas: []
+    };
+  }
+  const gravarConversa = (id, conv) => gravar("sussurros-conversa-" + id, conv);
+  function tocar(id) {  // põe a personagem no topo da galeria
+    const lista = listaPersonagens();
+    const i = lista.findIndex(p => p.id === id);
+    if (i > 0) { lista.unshift(lista.splice(i, 1)[0]); gravarPersonagens(lista); }
+  }
+
   let atual = null;      // personagem aberta no chat
-  let estado = null;     // {mensagens, memoria, resumo, escolhas}
+  let estado = null;     // {mensagens, memoria, resumo, resumidas_ate, escolhas}
   let aEspera = false;
   let rascunho = null;   // ficha gerada, à espera de revisão
-  let verSugestoes = guardado("sussurros-sugestoes") === "1";
+  let verSugestoes = ler("sussurros-sugestoes", false) === true;
 
   // ---------- Galeria ----------
-  async function mostrarGaleria() {
+  function mostrarGaleria() {
     mostrar("ecra-galeria");
-    personagens = await api(`/personagens?utilizador=${EU}`);
+    const personagens = listaPersonagens();
 
     if (!personagens.length) {
       $("lista").innerHTML = `
@@ -278,23 +324,57 @@
       return;
     }
 
-    const historias = await Promise.all(personagens.map(p => api(`/historia/${p.id}?utilizador=${EU}`)));
     $("lista").innerHTML = `<button class="criar-carta" id="criar-nova">+ Criar personagem</button>` +
-      personagens.map((p, i) => {
-        const n = historias[i].mensagens.length;
+      personagens.map(p => {
+        const c = conversaDe(p);
         return `
         <button class="carta" data-id="${p.id}">
           <div class="carta-capa" style="background:${fundo(p)}"><span>${formatar(p.emoji)}</span>${p.obra ? `<span class="chip">${formatar(p.obra)}</span>` : ""}</div>
           <div class="carta-corpo">
             <p class="carta-nome">${formatar(p.nome)}</p>
             <p class="carta-frase">${formatar(p.frase)}</p>
-            ${n > 1 ? `<div class="continuar">Continuar conversa · ${historias[i].memoria.length} memórias</div>` : ""}
+            ${c.mensagens.length > 1 ? `<div class="continuar">Continuar conversa · ${c.memoria.length} memórias</div>` : ""}
           </div>
         </button>`;
       }).join("");
     $("criar-nova").onclick = abrirCriar;
     document.querySelectorAll(".carta").forEach(b => b.onclick = () => abrirChat(b.dataset.id));
   }
+
+  // ---------- Cópia de segurança ----------
+  $("exportar").onclick = () => {
+    const personagens = listaPersonagens();
+    const conversas = {};
+    personagens.forEach(p => conversas[p.id] = conversaDe(p));
+    const blob = new Blob([JSON.stringify({ app: "sussurros", versao: 1, personagens, conversas }, null, 1)],
+                          { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `sussurros-copia-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $("importar").onclick = () => $("ficheiro-copia").click();
+  $("ficheiro-copia").onchange = async e => {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (d.app !== "sussurros" || !Array.isArray(d.personagens)) throw new Error("formato");
+      const lista = listaPersonagens();
+      for (const p of d.personagens) {
+        if (!p || !/^[a-f0-9]{12}$/.test(p.id || "")) continue;
+        const i = lista.findIndex(x => x.id === p.id);
+        if (i >= 0) lista[i] = p; else lista.push(p);
+        if (d.conversas && d.conversas[p.id]) gravarConversa(p.id, d.conversas[p.id]);
+      }
+      gravarPersonagens(lista);
+      mostrarGaleria();
+    } catch (err) {
+      $("lista").insertAdjacentHTML("afterbegin", `<p class="erro">Esse ficheiro não é uma cópia do Sussurros.</p>`);
+    }
+  };
 
   // ---------- Criar personagem ----------
   function abrirCriar() {
@@ -316,8 +396,6 @@
     $("passo2").style.display = "none";
     $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">✨</span>A conhecer ${formatar(nome)}…</div>`;
     try {
-      // Se já havia um rascunho (carregaste em "Gerar outra vez"), apaga-o.
-      if (rascunho) api(`/personagens/${rascunho.id}/apagar`, { utilizador: EU, personagem: rascunho.id }).catch(() => {});
       rascunho = await api("/personagens/gerar", {
         utilizador: EU, nome, obra: $("c-obra").value, extra: $("c-extra").value
       });
@@ -338,40 +416,37 @@
     $("gerar").disabled = $("regerar").disabled = false;
   }
 
-  async function guardarFicha() {
-    $("guardar").disabled = true;
-    try {
-      const p = await api(`/personagens/${rascunho.id}/guardar`, {
-        utilizador: EU, nome: $("r-nome").value, obra: $("r-obra").value, frase: $("r-frase").value,
-        ficha: $("r-ficha").value, saudacao: $("r-saudacao").value
-      });
-      rascunho = null;
-      personagens = await api(`/personagens?utilizador=${EU}`);
-      await abrirChat(p.id);
-    } catch (e) {
-      $("passo2-estado").innerHTML = `<p class="erro">${formatar(e.message)}</p>`;
-    }
-    $("guardar").disabled = false;
+  function guardarFicha() {
+    // O selo (regra de menores) vem do servidor e não muda com as tuas edições.
+    const p = Object.assign({}, rascunho, {
+      nome: $("r-nome").value.trim().slice(0, 80) || rascunho.nome,
+      obra: $("r-obra").value.trim().slice(0, 120),
+      frase: $("r-frase").value.trim().slice(0, 200),
+      ficha: $("r-ficha").value.trim().slice(0, 4000) || rascunho.ficha,
+      saudacao: $("r-saudacao").value.trim().slice(0, 1000) || rascunho.saudacao,
+    });
+    const lista = listaPersonagens();
+    lista.unshift(p);
+    gravarPersonagens(lista);
+    rascunho = null;
+    abrirChat(p.id);
   }
 
   $("passo1").onsubmit = e => { e.preventDefault(); gerarFicha(); };
   $("regerar").onclick = gerarFicha;
   $("passo2").onsubmit = e => { e.preventDefault(); guardarFicha(); };
-  $("criar-voltar").onclick = () => {
-    if (rascunho) api(`/personagens/${rascunho.id}/apagar`, { utilizador: EU, personagem: rascunho.id }).catch(() => {});
-    rascunho = null;
-    mostrarGaleria();
-  };
+  $("criar-voltar").onclick = () => { rascunho = null; mostrarGaleria(); };
 
   // ---------- Chat ----------
-  async function abrirChat(id) {
-    atual = personagens.find(p => p.id === id);
+  function abrirChat(id) {
+    atual = listaPersonagens().find(p => p.id === id);
+    if (!atual) return mostrarGaleria();
     $("avatar").style.background = fundo(atual);
     $("avatar").textContent = atual.emoji;
     $("nome").textContent = atual.nome;
     $("obra").textContent = atual.obra;
     mostrar("ecra-chat");
-    estado = await api(`/historia/${id}?utilizador=${EU}`);
+    estado = conversaDe(atual);
     desenhar();
     $("texto").focus();
   }
@@ -392,19 +467,29 @@
     texto = (texto || "").trim();
     if (!texto || aEspera) return;
     aEspera = true;
-    estado.mensagens.push({ papel: "utilizador", texto });
+    const antes = estado;  // a conversa tal como estava, para enviar ao servidor
+    estado = Object.assign({}, antes, { mensagens: antes.mensagens.concat({ papel: "utilizador", texto }) });
     $("texto").value = "";
     desenhar(`<div class="a-escrever">${formatar(atual.nome)} está a escrever <i>•</i><i>•</i><i>•</i></div>`);
     try {
-      const r = await api("/chat", { utilizador: EU, personagem: atual.id, texto });
-      estado.mensagens.push({ papel: "personagem", texto: r.resposta });
-      estado.escolhas = r.escolhas;
-      estado.memoria.push(...r.novos_factos);
+      const r = await api("/chat", {
+        utilizador: EU,
+        personagem: { id: atual.id, nome: atual.nome, obra: atual.obra, ficha: atual.ficha,
+                      saudacao: atual.saudacao, selo: atual.selo },
+        conversa: { mensagens: antes.mensagens, memoria: antes.memoria,
+                    resumo: antes.resumo, resumidas_ate: antes.resumidas_ate },
+        texto
+      });
+      // O servidor devolve a conversa já com a mensagem nova, a resposta,
+      // a memória atualizada e (se for altura) o resumo novo.
+      estado = Object.assign(r.conversa, { escolhas: r.escolhas });
+      gravarConversa(atual.id, estado);
+      tocar(atual.id);
       if (r.novos_factos.length) avisarMemoria(r.novos_factos);
       aEspera = false;
       desenhar();
     } catch (e) {
-      estado.mensagens.pop();
+      estado = antes;
       aEspera = false;
       desenhar(`<div class="erro">${formatar(e.message)}</div>`);
       $("texto").value = texto;
@@ -422,7 +507,7 @@
 
   $("lampada").onclick = () => {
     verSugestoes = !verSugestoes;
-    guardado("sussurros-sugestoes", verSugestoes ? "1" : "0");
+    gravar("sussurros-sugestoes", verSugestoes);
     desenhar();
   };
 
@@ -449,15 +534,16 @@
     botao.textContent = texto;
     return false;
   }
-  $("recomecar").onclick = async () => {
+  $("recomecar").onclick = () => {
     if (!confirmar($("recomecar"), "Tens a certeza? Apaga a conversa e a memória. Clica outra vez.")) return;
-    await api("/recomecar", { utilizador: EU, personagem: atual.id });
+    apagarChave("sussurros-conversa-" + atual.id);
     $("painel").classList.remove("ver");
     abrirChat(atual.id);
   };
-  $("apagar").onclick = async () => {
+  $("apagar").onclick = () => {
     if (!confirmar($("apagar"), `Apagar ${atual.nome} e a conversa toda? Clica outra vez.`)) return;
-    await api(`/personagens/${atual.id}/apagar`, { utilizador: EU, personagem: atual.id });
+    apagarChave("sussurros-conversa-" + atual.id);
+    gravarPersonagens(listaPersonagens().filter(p => p.id !== atual.id));
     $("painel").classList.remove("ver");
     mostrarGaleria();
   };
@@ -468,9 +554,7 @@
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar($("texto").value); }
   });
 
-  mostrarGaleria().catch(e => {
-    $("lista").innerHTML = `<p class="erro">Não consegui falar com o servidor: ${formatar(e.message)}</p>`;
-  });
+  mostrarGaleria();
 </script>
 </body>
 </html>
