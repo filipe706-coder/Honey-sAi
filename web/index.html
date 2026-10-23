@@ -400,7 +400,7 @@ ${p.ficha}
 - Trata a personagem do utilizador por "tu" ("a porta fecha-se atrás de ti").
 - NUNCA decides o que "tu" dizes, fazes, pensas ou sentes. Só narras as consequências do que o utilizador escreveu.
 - Diálogos com travessão (—), à portuguesa. ${p.nome} fala como na ficha (usa os "Exemplos de falas" como guia de estilo).
-- 2 a 4 parágrafos por resposta. Termina num momento que convide o utilizador a agir ou a responder.
+- 1 a 3 parágrafos curtos, no máximo cerca de 180 palavras. Termina num momento que convide o utilizador a agir ou a responder.
 - Faz a história avançar: detalhes do cenário, pequenos acontecimentos, outras personagens da obra quando fizer sentido.
 - Respeita o tom escolhido e a continuidade (memória e resumo abaixo).
 - Quando uma mensagem vier marcada como [NOTA DE AUTOR], é uma instrução para ti, não uma ação da personagem do
@@ -429,7 +429,13 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
 (nomes, acontecimentos, promessas, segredos), frases curtas; lista vazia se não houver; não repitas a memória"]}`;
   }
 
-  const JANELA = 24, FOLGA = 10, MAX_FACTOS = 80;
+  // Orçamento de cada pedido. O plano grátis do Groq aceita 8000 tokens por minuto
+  // (em português ~3,5 letras por token). Cada pedido leva: regras + ficha (~2000 tokens),
+  // as mensagens recentes (até ORCAMENTO_RECENTE letras, ~2000 tokens) e a resposta (~900).
+  // O que fica para trás vai para o resumo, por isso a história pode crescer à vontade.
+  const ORCAMENTO_RECENTE = 7000;  // letras das mensagens recentes enviadas tal e qual
+  const MIN_RECENTES = 4;          // nunca menos do que isto, mesmo que sejam longas
+  const MAX_FACTOS = 40;           // factos da memória enviados (os mais recentes)
 
   // =====================================================================
   //  2. GUARDAR NO BROWSER
@@ -493,12 +499,23 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
   const ESQUEMA_CENA = obj({ texto: S, escolhas: LS, novos_factos: LS });
 
   // Um pedido ao Groq. "json_schema" obriga a resposta a vir no formato pedido.
-  // Se vier estragada, tenta mais uma vez.
-  async function groq(mensagens, { esquema, nome, esforco = "low", max = 1500 } = {}) {
+  //  - Se a resposta vier estragada, tenta mais uma vez.
+  //  - Se bater no limite POR MINUTO, espera o tempo que o Groq indicar (até 60 s) e tenta outra vez.
+  //    "onEspera(segundos)" deixa o ecrã mostrar essa espera.
+  //  - Se bater no limite POR DIA, desiste com uma mensagem própria.
+  const dormir = ms => new Promise(r => setTimeout(r, ms));
+  function segundosDeEspera(msg) {
+    const m = /try again in\s+(?:(\d+)m)?\s*([\d.]+)?\s*(ms|s)?/i.exec(msg || "");
+    if (!m) return 20;
+    const s = (m[1] ? +m[1] * 60 : 0) + (m[2] ? +m[2] / (m[3] === "ms" ? 1000 : 1) : 0);
+    return Math.max(1, Math.ceil(s));
+  }
+  async function groq(mensagens, { esquema, nome, esforco = "low", max = 1500, onEspera } = {}) {
     if (!chave()) throw { code: "sem_chave" };
     const corpo = { model: MODELO, messages: mensagens, max_tokens: max, reasoning_effort: esforco };
     if (esquema) corpo.response_format = { type: "json_schema", json_schema: { name: nome, schema: esquema } };
-    for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    let falhasJson = 0, esperas = 0;
+    while (true) {
       let r;
       try {
         r = await fetch(GROQ_URL, { method: "POST", body: JSON.stringify(corpo),
@@ -508,13 +525,21 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
       if (r.ok) {
         const texto = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || "";
         if (!esquema) return texto.trim();
-        try { return JSON.parse(texto); } catch (e) { if (tentativa === 2) throw { code: "invalid_json" }; continue; }
+        try { return JSON.parse(texto); } catch (e) { if (++falhasJson >= 2) throw { code: "invalid_json" }; continue; }
       }
-      const codigo = d.error && d.error.code;
+      const msg = (d.error && d.error.message) || "";
       if (r.status === 401) throw { code: "chave_errada" };
-      if (r.status === 429) throw { code: "rate_limited" };
-      if (codigo === "json_validate_failed" && tentativa === 1) continue;
-      throw { code: "erro", detalhe: (d.error && d.error.message) || ("Erro " + r.status) };
+      if (r.status === 429) {
+        if (/per day|TPD|RPD/i.test(msg)) throw { code: "limite_dia" };
+        const seg = segundosDeEspera(msg);
+        if (esperas++ >= 2 || seg > 60) throw { code: "rate_limited" };
+        if (onEspera) onEspera(seg);
+        await dormir(seg * 1000 + 500);
+        continue;
+      }
+      if (d.error && d.error.code === "json_validate_failed" && ++falhasJson < 2) continue;
+      if (r.status === 413 || /too large|context length|maximum context/i.test(msg)) throw { code: "demasiado_grande" };
+      throw { code: "erro", detalhe: msg || ("Erro " + r.status) };
     }
   }
 
@@ -522,7 +547,9 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
     switch (e && e.code) {
       case "sem_chave": return "Falta a chave do Groq. Carrega em \"Chave do Groq\" no topo da galeria.";
       case "chave_errada": return "A chave do Groq não é válida. Confirma-a em \"Chave do Groq\" no topo da galeria.";
-      case "rate_limited": return "Chegaste ao limite do plano grátis do Groq por agora. Espera um minuto e tenta outra vez.";
+      case "rate_limited": return "Muitos pedidos seguidos ao Groq. Espera um minuto e tenta outra vez.";
+      case "limite_dia": return "Chegaram ao limite diário grátis do Groq para esta chave. Volta a funcionar amanhã (ou usa outra chave).";
+      case "demasiado_grande": return "Este pedido ficou grande demais para o plano grátis. Tenta uma mensagem mais curta.";
       case "invalid_json": return "A resposta veio estragada. Tenta outra vez.";
       case "sem_rede": return "Sem ligação à internet (ou o Groq está em baixo). Tenta outra vez.";
       default: return "A IA não respondeu" + (e && e.detalhe ? ": " + e.detalhe : ".");
@@ -536,18 +563,32 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
       : { role: "user", content: m.tipo === "nota" ? "[NOTA DE AUTOR] " + m.texto : m.texto });
   }
 
-  // Quando a história fica longa, as partes antigas passam para um resumo.
+  // Onde começam as mensagens recentes: andamos de trás para a frente até encher o
+  // orçamento de letras (mas guardamos sempre pelo menos MIN_RECENTES mensagens).
+  function inicioJanela(c) {
+    let i = c.mensagens.length, letras = 0;
+    while (i > c.resumidas_ate) {
+      const tam = c.mensagens[i - 1].texto.length;
+      if (c.mensagens.length - i >= MIN_RECENTES && letras + tam > ORCAMENTO_RECENTE) break;
+      letras += tam; i--;
+    }
+    return i;
+  }
+  // As mensagens que a IA vai receber tal e qual.
+  const recentes = c => c.mensagens.slice(Math.max(c.resumidas_ate, inicioJanela(c)));
+
+  // O que saiu da janela passa para o resumo (aos bocadinhos, depois de cada cena).
   async function resumirSePreciso(c, p) {
-    if (c.mensagens.length - c.resumidas_ate <= JANELA + FOLGA) return;
-    const fim = c.mensagens.length - JANELA;
+    const fim = inicioJanela(c);
+    if (fim - c.resumidas_ate < 2) return;
     const texto = c.mensagens.slice(c.resumidas_ate, fim).map(m =>
-      (m.tipo === "cena" ? "Narrador: " : m.tipo === "nota" ? "Nota de autor: " : "Utilizador: ") + m.texto).join("\n");
+      (m.tipo === "cena" ? "Narrador: " : m.tipo === "nota" ? "Nota de autor: " : "Utilizador: ") + m.texto).join("\n").slice(-12000);
     try {
       const novo = await groq([{ role: "user", content:
         `Resumo atual de uma fanfic interativa com ${p.nome}:\n${c.resumo || "(vazio)"}\n\nNovas partes:\n${texto}\n\n`
         + "Escreve um novo resumo completo em português de Portugal, no máximo 250 palavras, com os acontecimentos, "
-        + "as personagens que apareceram e a evolução da relação. Responde só com o resumo." }], { max: 1200 });
-      if (novo) { c.resumo = novo; c.resumidas_ate = fim; }
+        + "as personagens que apareceram e a evolução da relação. Responde só com o resumo." }], { max: 700 });
+      if (novo) { c.resumo = novo.slice(0, 3000); c.resumidas_ate = fim; }
     } catch (e) { /* tenta-se outra vez na próxima jogada */ }
   }
 
@@ -790,7 +831,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
                             { role: "user", content: "[NOTA DE AUTOR] Escreve a cena de abertura da história, apresentando o cenário e o primeiro encontro." }],
-                           { esquema: ESQUEMA_CENA, nome: "cena" });
+                           { esquema: ESQUEMA_CENA, nome: "cena", max: 900 });
       aplicarCena(c, d);
       atualizarHistoria(h); gravarConteudo(h.id, c);
       ocupado(false);
@@ -806,7 +847,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
     const novos = (Array.isArray(d && d.novos_factos) ? d.novos_factos : []).map(f => String(f).trim().slice(0, 300))
       .filter(f => f && !ja.has(f.toLowerCase()));
     c.mensagens.push({ tipo: "cena", texto });
-    c.memoria = c.memoria.concat(novos).slice(-MAX_FACTOS);
+    c.memoria = c.memoria.concat(novos).slice(-80);  // guarda até 80; envia os últimos MAX_FACTOS
     c.escolhas = (Array.isArray(d && d.escolhas) ? d.escolhas : []).map(String).filter(s => s.trim()).slice(0, 3);
     return novos;
   }
@@ -862,8 +903,9 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
     definirNota(false);
     desenhar(`<div class="a-escrever">O narrador está a escrever <i>•</i><i>•</i><i>•</i></div>`);
     try {
-      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria, c.resumo) }]
-        .concat(paraTurnos(c.mensagens.slice(c.resumidas_ate))), { esquema: ESQUEMA_CENA, nome: "cena" });
+      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo) }]
+        .concat(paraTurnos(recentes(c))), { esquema: ESQUEMA_CENA, nome: "cena", max: 900,
+          onEspera: seg => desenhar(`<div class="a-escrever">Muitos pedidos seguidos. A tentar outra vez daqui a ${seg} s…</div>`) });
       const novos = aplicarCena(c, d);
       gravarConteudo(hist.id, c); atualizarHistoria(hist);
       if (novos.length) avisarMemoria(novos);
@@ -928,7 +970,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
     try {
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, [], "") },
                             { role: "user", content: "[NOTA DE AUTOR] Escreve a cena de abertura da história, apresentando o cenário e o primeiro encontro." }],
-                           { esquema: ESQUEMA_CENA, nome: "cena" });
+                           { esquema: ESQUEMA_CENA, nome: "cena", max: 900 });
       aplicarCena(cont, d);
       gravarConteudo(hist.id, cont); atualizarHistoria(hist);
       aEspera = false; desenhar();
