@@ -3,23 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
 <title>Sussurros</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Figtree:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap" rel="stylesheet">
 <!--
-  Sussurros — versão estática para o GitHub Pages (sem servidor).
-    - O browser fala DIRETAMENTE com o Groq (o Groq aceita pedidos do browser).
-    - Cada pessoa põe a SUA chave do Groq (fica só no browser dela, nunca no código).
-    - Personagens e conversas ficam guardadas neste browser (localStorage).
-  Três ecrãs: galeria, criar personagem, chat. Mais um painel para a chave.
+  Sussurros — fanfics interativas com as tuas personagens (versão GitHub Pages, sem servidor).
+
+  Como está organizado:
+    PERSONAGEM  -> criada a partir do nome + obra (a IA escreve a ficha)
+    HISTÓRIA    -> cada personagem pode ter várias. Tem uma ideia, universo, o teu papel
+                   e o tom. O NARRADOR escreve na 3.ª pessoa; tu escreves o que fazes.
+    NOTA DE AUTOR -> uma mensagem que não é da tua personagem: muda o rumo da história.
+
+  Técnica:
+    - O browser fala DIRETAMENTE com o Groq; cada pessoa usa a sua chave (fica só no browser).
+    - Tudo fica guardado neste browser (localStorage). "Exportar cópia" faz uma cópia em ficheiro.
 -->
 <style>
   /* Layout: um "telemóvel" centrado de 460px; no telemóvel a sério ocupa o ecrã todo.
-     Visual de uma só cor (noite, tons de vinho e rosa velho), igual em tema claro e escuro. */
+     Visual de uma só cor: noite, tons de vinho e rosa velho; o texto da história em letra de livro. */
   :root {
     color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     --fundo-fora: #08060a;
     --fundo: #120d14;
     --cartao: #1d1620;
@@ -31,16 +37,19 @@
     --sobre-acento: #2a1020;
     --erro: #ff8a9a;
     --italico: #cdb6c2;
-    --italico-meu: #fbe3ec;
+    --papel: #18121b;
     --sombra: rgba(0,0,0,.55);
     --f-titulo: "Cormorant Garamond", Georgia, "Times New Roman", serif;
     --f-texto: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-livro: "Literata", Georgia, "Times New Roman", serif;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { height: 100%; }
   body { margin: 0; background: var(--fundo-fora); color: var(--texto); font-family: var(--f-texto); font-size: 15px; }
   button, input, textarea { font: inherit; color: inherit; }
   button { cursor: pointer; }
+  a { color: var(--acento); }
   :focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
@@ -49,18 +58,17 @@
   .ecra { display: none; flex: 1; flex-direction: column; min-height: 0; }
   .ecra.ativo { display: flex; }
   .gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .rolar { flex: 1; min-height: 0; overflow-y: auto; }
 
   /* ---------- Galeria ---------- */
   .topo-galeria { padding-block: 26px 6px; }
   .marca { font-family: var(--f-titulo); font-size: 36px; font-weight: 600; margin: 0; letter-spacing: .5px; }
   .marca span { color: var(--acento); }
   .sub { color: var(--suave); margin: 4px 0 0; font-size: 14px; }
-  .copia { color: var(--suave); margin: 8px 0 0; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .copia { color: var(--suave); margin: 8px 0 0; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
   .ligacao { background: none; border: 0; padding: 0; color: var(--acento); font-size: 12px; text-decoration: underline; }
-  .aviso-topo { margin: 10px 0 0; background: var(--cartao); border: 1px solid var(--acento2); border-radius: 12px;
-                padding: 10px 12px; font-size: 13px; line-height: 1.45; }
-  .lista { flex: 1; min-height: 0; overflow-y: auto; padding-block: 16px 28px; display: grid;
-           gap: 14px; grid-auto-rows: max-content; align-content: start; }
+  .aviso-topo { margin: 10px 0 0; background: var(--cartao); border: 1px solid var(--acento2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+  .lista { padding-block: 16px 28px; display: grid; gap: 14px; grid-auto-rows: max-content; align-content: start; }
   .carta { border: 0; text-align: left; border-radius: 22px; padding: 0; overflow: hidden; background: var(--cartao); transition: transform .15s; }
   .carta:hover { transform: translateY(-2px); }
   .carta-capa { height: 104px; display: flex; align-items: flex-end; justify-content: space-between; padding: 14px 16px; font-size: 42px; }
@@ -70,14 +78,15 @@
   .carta-nome { font-family: var(--f-titulo); font-size: 25px; font-weight: 600; margin: 0; }
   .carta-frase { margin: 4px 0 0; color: var(--suave); font-size: 14px; line-height: 1.4; }
   .continuar { margin-top: 10px; font-size: 12px; color: var(--acento); font-weight: 600; letter-spacing: .2px; }
-  .criar-carta { border: 1.5px dashed var(--linha); background: transparent; border-radius: 22px; padding: 22px; color: var(--suave); font-size: 15px; }
+  .criar-carta { border: 1.5px dashed var(--linha); background: transparent; border-radius: 22px; padding: 20px; color: var(--suave); font-size: 15px; }
   .criar-carta:hover { border-color: var(--acento); color: var(--acento); }
   .vazio-galeria { text-align: center; padding: 48px 8px; display: grid; gap: 14px; justify-items: center; }
   .vazio-galeria .grande { font-family: var(--f-titulo); font-style: italic; font-size: 30px; color: var(--acento); }
   .vazio-galeria p { color: var(--suave); line-height: 1.55; margin: 0; max-width: 32ch; }
   .exemplos { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-  .exemplo { border: 1px solid var(--linha); background: transparent; border-radius: 99px; padding: 6px 12px; font-size: 13px; color: var(--suave); }
-  .exemplo:hover { border-color: var(--acento); color: var(--texto); }
+  .exemplo, .tom { border: 1px solid var(--linha); background: transparent; border-radius: 99px; padding: 6px 12px; font-size: 13px; color: var(--suave); }
+  .exemplo:hover, .tom:hover { border-color: var(--acento); color: var(--texto); }
+  .tom[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: var(--sobre-acento); font-weight: 600; }
   .botao { border: 0; border-radius: 16px; padding: 13px 22px; background: var(--acento); color: var(--sobre-acento); font-weight: 600; }
   .botao:disabled { opacity: .45; cursor: default; }
   .botao.secundario { background: transparent; color: var(--texto); border: 1px solid var(--linha); }
@@ -86,53 +95,73 @@
   .barra { display: flex; align-items: center; gap: 10px; padding-block: 12px; border-bottom: 1px solid var(--linha); }
   .icone { background: none; border: 0; font-size: 20px; padding: 6px 8px; border-radius: 10px; line-height: 1; }
   .icone:hover { background: var(--linha); }
+  .icone.ligado { background: var(--linha); }
   .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; flex: none; }
   .barra-nome { flex: 1; min-width: 0; }
-  .barra-nome b { font-family: var(--f-titulo); font-size: 22px; font-weight: 600; display: block; line-height: 1.1;
+  .barra-nome b { font-family: var(--f-titulo); font-size: 21px; font-weight: 600; display: block; line-height: 1.15;
                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .barra-nome small { color: var(--suave); font-size: 12px; }
+  .barra-nome small { color: var(--suave); font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* ---------- Criar ---------- */
-  .formulario { flex: 1; min-height: 0; overflow-y: auto; padding-block: 20px; display: flex; flex-direction: column; gap: 14px; }
-  .formulario label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); }
+  /* ---------- Formulários ---------- */
+  .formulario { padding-block: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .formulario label, .rotulo { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); }
   .formulario input, .formulario textarea { width: 100%; margin-top: 6px; background: var(--cartao); border: 1px solid var(--linha);
            border-radius: 14px; padding: 11px 14px; font-size: 15px; outline: none; text-transform: none; letter-spacing: 0; }
   .formulario textarea { resize: vertical; line-height: 1.45; }
   .formulario input:focus, .formulario textarea:focus { border-color: var(--acento2); }
+  .tons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .dica { color: var(--suave); font-size: 13px; line-height: 1.45; margin: 0; }
   .aviso { background: var(--cartao); border: 1px solid var(--acento2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
   .acoes { display: flex; gap: 10px; flex-wrap: wrap; }
   .acoes .botao { flex: 1 1 140px; }
   .carregar { text-align: center; color: var(--suave); padding: 30px 10px; line-height: 1.5; }
   .carregar .grande { font-family: var(--f-titulo); font-style: italic; font-size: 26px; color: var(--acento); display: block; animation: pulsar 1.6s infinite; }
+  @keyframes pulsar { 0%,100% { opacity: .3 } 50% { opacity: 1 } }
 
-  /* ---------- Chat ---------- */
-  .memoria-btn { position: relative; }
-  .contador { position: absolute; top: 0; right: 0; background: var(--acento); color: var(--sobre-acento);
-              font-size: 10px; font-weight: 700; border-radius: 99px; padding: 1px 5px; font-variant-numeric: tabular-nums; }
-  .mensagens { flex: 1; overflow-y: auto; padding-block: 18px; display: flex; flex-direction: column; gap: 12px; }
-  .msg { max-width: 86%; line-height: 1.5; font-size: 15px; white-space: pre-wrap; padding: 11px 14px; border-radius: 18px; overflow-wrap: anywhere; }
-  .msg.personagem { background: var(--cartao); align-self: flex-start; border-top-left-radius: 6px; }
-  .msg.utilizador { background: linear-gradient(135deg, var(--acento2), #9d5d7b); color: #fff; align-self: flex-end; border-top-right-radius: 6px; }
-  .msg em { color: var(--italico); font-style: italic; }
-  .msg.utilizador em { color: var(--italico-meu); }
-  .a-escrever { color: var(--suave); font-size: 13px; font-style: italic; padding-left: 4px; }
+  /* ---------- Página da personagem ---------- */
+  .perfil { padding-block: 18px 8px; display: grid; gap: 10px; }
+  .perfil-frase { color: var(--italico); font-family: var(--f-livro); font-style: italic; line-height: 1.5; margin: 0; }
+  .historias { padding-block: 8px 28px; display: grid; gap: 10px; align-content: start; }
+  .historia { border: 1px solid var(--linha); background: var(--cartao); border-radius: 16px; padding: 14px 16px; text-align: left; display: grid; gap: 4px; }
+  .historia:hover { border-color: var(--acento2); }
+  .historia b { font-family: var(--f-titulo); font-size: 20px; font-weight: 600; }
+  .historia span { color: var(--suave); font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .historia small { color: var(--acento); font-size: 12px; font-weight: 600; }
+
+  /* ---------- A história ---------- */
+  .texto-historia { padding-block: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .cena { font-family: var(--f-livro); font-size: 16.5px; line-height: 1.7; color: var(--texto); overflow-wrap: anywhere; }
+  .cena p { margin: 0 0 .8em; }
+  .cena p:last-child { margin-bottom: 0; }
+  .cena em { color: var(--italico); }
+  .titulo-historia { font-family: var(--f-titulo); font-size: 28px; font-weight: 600; text-align: center; margin: 4px 0 0; text-wrap: balance; }
+  .ornamento { text-align: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
+  .acao { align-self: flex-end; max-width: 86%; background: linear-gradient(135deg, var(--acento2), #9d5d7b); color: #fff;
+          padding: 10px 14px; border-radius: 18px; border-top-right-radius: 6px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .acao em { color: #fbe3ec; }
+  .nota { align-self: center; max-width: 90%; color: var(--acento); font-size: 13px; font-style: italic; text-align: center;
+          border: 1px dashed var(--acento2); border-radius: 12px; padding: 6px 12px; overflow-wrap: anywhere; }
+  .a-escrever { color: var(--suave); font-size: 13px; font-style: italic; }
   .a-escrever i { display: inline-block; animation: pulsar 1.2s infinite; font-style: normal; }
   .a-escrever i:nth-child(2) { animation-delay: .2s; } .a-escrever i:nth-child(3) { animation-delay: .4s; }
-  @keyframes pulsar { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
   .erro { color: var(--erro); font-size: 13px; text-align: center; line-height: 1.45; margin: 0; }
   .escolhas { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
   .escolha { text-align: left; background: transparent; border: 1px solid var(--linha); border-radius: 14px; padding: 9px 12px; font-size: 14px; transition: .15s; }
   .escolha:hover { border-color: var(--acento); }
   .escolha::before { content: "↳ "; color: var(--acento); }
-  .caixa { display: flex; gap: 8px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
+  .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
+  .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
   .caixa textarea { flex: 1; min-width: 0; resize: none; background: var(--cartao); border: 1px solid var(--linha);
              border-radius: 16px; padding: 11px 14px; font-size: 15px; outline: none; }
   .caixa textarea:focus { border-color: var(--acento2); }
+  .caixa.nota-ligada textarea { border-style: dashed; border-color: var(--acento); }
   .lampada { opacity: .45; }
   .lampada.ligada { opacity: 1; }
   .enviar { border: 0; border-radius: 16px; padding: 11px 16px; background: var(--acento); color: var(--sobre-acento); font-weight: 600; }
   .enviar:disabled { opacity: .4; cursor: default; }
+  .memoria-btn { position: relative; }
+  .contador { position: absolute; top: 0; right: 0; background: var(--acento); color: var(--sobre-acento);
+              font-size: 10px; font-weight: 700; border-radius: 99px; padding: 1px 5px; font-variant-numeric: tabular-nums; }
 
   .toast { position: absolute; left: 16px; right: 16px; top: 72px; background: var(--cartao); border: 1px solid var(--acento2);
            border-radius: 14px; padding: 10px 14px; font-size: 13px; line-height: 1.45; opacity: 0; transform: translateY(-8px);
@@ -140,44 +169,42 @@
   .toast.ver { opacity: 1; transform: none; }
   .toast b { color: var(--acento); }
 
-  /* ---------- Painel da memória ---------- */
+  /* ---------- Painéis ---------- */
   .painel { position: absolute; inset: 0; background: var(--sombra); z-index: 10; }
-  .gaveta { position: absolute; left: 0; right: 0; bottom: 0; max-height: 82%; overflow-y: auto; background: var(--cartao);
-            border-radius: 24px 24px 0 0; padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); }
-  .gaveta h3 { font-family: var(--f-titulo); font-size: 25px; font-weight: 600; margin: 0 0 4px; }
-  .gaveta h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); margin: 18px 0 8px; font-weight: 600; }
+  .gaveta { position: absolute; left: 0; right: 0; bottom: 0; max-height: 88%; overflow-y: auto; background: var(--cartao);
+            border-radius: 24px 24px 0 0; padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; }
+  .gaveta h3 { font-family: var(--f-titulo); font-size: 25px; font-weight: 600; margin: 0; }
+  .gaveta h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); margin: 8px 0 0; font-weight: 600; }
+  .gaveta .formulario { padding-block: 0; }
+  .gaveta .formulario input, .gaveta .formulario textarea, .campo-chave { background: var(--fundo); }
   .gaveta ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
   .gaveta li { background: var(--fundo); border-radius: 10px; padding: 8px 12px; font-size: 14px; }
   .gaveta li::before { content: "✦ "; color: var(--acento); }
   .vazio { color: var(--suave); font-size: 14px; font-style: italic; }
   .resumo { font-size: 14px; line-height: 1.55; color: var(--italico); margin: 0; }
-  .perigos { display: grid; gap: 10px; margin-top: 22px; }
-  .formulario-chave { display: grid; gap: 12px; }
-  .formulario-chave input { width: 100%; background: var(--fundo); border: 1px solid var(--linha); border-radius: 14px; padding: 11px 14px; outline: none; }
-  .formulario-chave input:focus { border-color: var(--acento2); }
-  .passos { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; line-height: 1.45; color: var(--italico); }
-  .passos a, .dica a { color: var(--acento); }
-  code { background: var(--fundo); padding: 1px 5px; border-radius: 6px; font-size: 13px; }
+  .perigos { display: grid; gap: 10px; margin-top: 8px; }
   .perigo { width: 100%; background: transparent; border: 1px solid #6a3442; color: var(--erro); padding: 10px; border-radius: 12px; }
+  .campo-chave { width: 100%; border: 1px solid var(--linha); border-radius: 14px; padding: 11px 14px; outline: none; }
+  .passos { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; line-height: 1.45; color: var(--italico); }
+  code { background: var(--fundo); padding: 1px 5px; border-radius: 6px; font-size: 13px; }
 </style>
-
 </head>
 <body>
 <div class="telefone">
 
-  <!-- ECRÃ 1: galeria -->
+  <!-- ECRÃ 1: galeria de personagens -->
   <section class="ecra ativo" id="ecra-galeria">
     <div class="topo-galeria gutter">
       <h1 class="marca">Sussur<span>ros</span></h1>
-      <p class="sub">As tuas personagens. Cada uma lembra-se de ti.</p>
-      <p class="copia">Guardadas neste browser
+      <p class="sub">Fanfics interativas com as tuas personagens.</p>
+      <p class="copia">Guardado neste browser
         <button type="button" class="ligacao" id="exportar">Exportar cópia</button>
         <button type="button" class="ligacao" id="importar">Importar</button>
         <button type="button" class="ligacao" id="abrir-chave">Chave do Groq</button>
         <input type="file" id="ficheiro-copia" accept=".json,application/json" hidden></p>
-      <div id="aviso-claude"></div>
+      <div id="aviso-chave-topo"></div>
     </div>
-    <div class="lista gutter" id="lista"></div>
+    <div class="rolar"><div class="lista gutter" id="lista"></div></div>
   </section>
 
   <!-- ECRÃ 2: criar personagem -->
@@ -186,59 +213,100 @@
       <button class="icone" id="criar-voltar" aria-label="Voltar">←</button>
       <div class="barra-nome"><b>Nova personagem</b><small id="criar-passo">Passo 1 de 2</small></div>
     </div>
-    <form class="formulario gutter" id="passo1">
-      <p class="dica">Escreve quem queres. A IA usa o que sabe da obra para criar a personalidade e a forma de falar. Depois podes rever tudo.</p>
-      <label>Nome<input id="c-nome" maxlength="80" placeholder="Ex: L" required></label>
-      <label>Obra<input id="c-obra" maxlength="120" placeholder="Ex: Death Note"></label>
-      <label>Notas (opcional)<textarea id="c-extra" rows="3" maxlength="1000"
-        placeholder="Algo que queiras acrescentar ou mudar. Ex: passa-se depois do fim da série."></textarea></label>
-      <p class="dica">Para uma personagem tua, deixa a obra vazia e descreve-a nas notas.</p>
-      <button class="botao" id="gerar">Criar ficha</button>
-      <div id="passo1-estado"></div>
-    </form>
-    <form class="formulario gutter" id="passo2" hidden>
-      <div id="aviso-ficha"></div>
-      <label>Nome<input id="r-nome" maxlength="80"></label>
-      <label>Obra<input id="r-obra" maxlength="120"></label>
-      <label>Frase do cartão<input id="r-frase" maxlength="200"></label>
-      <label>Personalidade e forma de falar<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
-      <label>Primeira fala<textarea id="r-saudacao" rows="3" maxlength="1000"></textarea></label>
-      <div class="acoes">
-        <button type="button" class="botao secundario" id="regerar">Gerar outra vez</button>
-        <button class="botao" id="guardar">Guardar e conversar</button>
-      </div>
-    </form>
+    <div class="rolar">
+      <form class="formulario gutter" id="passo1">
+        <p class="dica">Escreve quem queres. A IA usa o que sabe da obra para criar a personalidade e a forma de falar. Depois podes rever tudo.</p>
+        <label>Nome<input id="c-nome" maxlength="80" placeholder="Ex: L" required></label>
+        <label>Obra<input id="c-obra" maxlength="120" placeholder="Ex: Death Note"></label>
+        <label>Notas (opcional)<textarea id="c-extra" rows="3" maxlength="1000" placeholder="Algo que queiras acrescentar ou mudar."></textarea></label>
+        <p class="dica">Para uma personagem tua, deixa a obra vazia e descreve-a nas notas.</p>
+        <button class="botao" id="gerar">Criar ficha</button>
+        <div id="passo1-estado"></div>
+      </form>
+      <form class="formulario gutter" id="passo2" hidden>
+        <div id="aviso-ficha"></div>
+        <label>Nome<input id="r-nome" maxlength="80"></label>
+        <label>Obra<input id="r-obra" maxlength="120"></label>
+        <label>Frase do cartão<input id="r-frase" maxlength="200"></label>
+        <label>Personalidade e forma de falar<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
+        <div class="acoes">
+          <button type="button" class="botao secundario" id="regerar">Gerar outra vez</button>
+          <button class="botao" id="guardar">Guardar personagem</button>
+        </div>
+      </form>
+    </div>
   </section>
 
-  <!-- ECRÃ 3: chat -->
-  <section class="ecra" id="ecra-chat">
+  <!-- ECRÃ 3: página da personagem (as histórias dela) -->
+  <section class="ecra" id="ecra-personagem">
     <div class="barra gutter">
-      <button class="icone" id="voltar" aria-label="Voltar">←</button>
-      <div class="avatar" id="avatar"></div>
-      <div class="barra-nome"><b id="nome"></b><small id="obra"></small></div>
-      <button class="icone memoria-btn" id="abrir-memoria" aria-label="Memória">🧠<span class="contador" id="contador">0</span></button>
+      <button class="icone" id="pers-voltar" aria-label="Voltar">←</button>
+      <div class="avatar" id="pers-avatar"></div>
+      <div class="barra-nome"><b id="pers-nome"></b><small id="pers-obra"></small></div>
+      <button class="icone" id="pers-editar" aria-label="Editar personagem">✎</button>
     </div>
-    <div class="mensagens gutter" id="mensagens"></div>
+    <div class="rolar">
+      <div class="perfil gutter">
+        <p class="perfil-frase" id="pers-frase"></p>
+        <button class="botao" id="nova-historia">Nova história</button>
+      </div>
+      <div class="historias gutter" id="historias"></div>
+    </div>
+  </section>
+
+  <!-- ECRÃ 4: nova história -->
+  <section class="ecra" id="ecra-nova">
+    <div class="barra gutter">
+      <button class="icone" id="nova-voltar" aria-label="Voltar">←</button>
+      <div class="barra-nome"><b>Nova história</b><small id="nova-com"></small></div>
+    </div>
+    <div class="rolar">
+      <form class="formulario gutter" id="form-nova">
+        <p class="dica">Escreve o que quiseres, tudo é opcional. Se não tiveres ideias, carrega em <b>Surpreende-me</b>.</p>
+        <label>A ideia<textarea id="h-premissa" rows="3" maxlength="1500" placeholder="Ex: o L precisa de alguém para se infiltrar numa festa e escolhe-te a ti."></textarea></label>
+        <label>Universo e cenário<textarea id="h-universo" rows="2" maxlength="800" placeholder="Ex: universo alternativo, Lisboa nos dias de hoje, inverno."></textarea></label>
+        <label>O teu papel<textarea id="h-papel" rows="2" maxlength="800" placeholder="Ex: Mariana, 24 anos, hacker que trabalha num café de dia."></textarea></label>
+        <div><span class="rotulo">Tom</span><div class="tons" id="h-tons"></div></div>
+        <div class="acoes">
+          <button type="button" class="botao secundario" id="surpreende">Surpreende-me</button>
+          <button class="botao" id="comecar">Começar história</button>
+        </div>
+        <div id="nova-estado"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ECRÃ 5: a história -->
+  <section class="ecra" id="ecra-historia">
+    <div class="barra gutter">
+      <button class="icone" id="hist-voltar" aria-label="Voltar">←</button>
+      <div class="avatar" id="hist-avatar"></div>
+      <div class="barra-nome"><b id="hist-titulo"></b><small id="hist-com"></small></div>
+      <button class="icone memoria-btn" id="abrir-contexto" aria-label="Contexto e memória">📖<span class="contador" id="contador">0</span></button>
+    </div>
+    <div class="rolar" id="rolar-historia"><div class="texto-historia gutter" id="texto-historia"></div></div>
     <div class="escolhas gutter" id="escolhas"></div>
+    <div class="modo-nota gutter" id="modo-nota" hidden>✎ Nota de autor: diz ao narrador o que mudar (não é uma ação tua).</div>
     <form class="caixa gutter" id="form">
-      <button type="button" class="icone lampada" id="lampada" aria-label="Mostrar sugestões de resposta">💡</button>
-      <textarea id="texto" rows="1" placeholder="Escreve uma mensagem…"></textarea>
+      <button type="button" class="icone lampada" id="lampada" aria-label="Mostrar sugestões">💡</button>
+      <button type="button" class="icone" id="botao-nota" aria-label="Nota de autor" aria-pressed="false">✎</button>
+      <textarea id="texto" rows="1" placeholder="O que fazes ou dizes…"></textarea>
       <button class="enviar" id="enviar">Enviar</button>
     </form>
     <div class="toast" id="toast" role="status"></div>
   </section>
 
-  <!-- Painel da chave do Groq -->
+  <!-- Painel: chave do Groq -->
   <div class="painel" id="painel-chave" hidden>
-    <form class="gaveta gutter formulario-chave" id="form-chave">
+    <form class="gaveta gutter" id="form-chave">
       <h3>Chave do Groq</h3>
-      <p class="dica">A app usa a IA do Groq, que é grátis. Cada pessoa usa a sua própria chave, e ela fica guardada só neste browser.</p>
+      <p class="dica">A app usa a IA do Groq, que é grátis. A chave fica guardada só neste browser.</p>
       <ol class="passos">
         <li>Cria uma conta em <a href="https://console.groq.com" target="_blank" rel="noopener">console.groq.com</a> (podes entrar com a conta Google).</li>
         <li>Vai a <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> e carrega em <b>Create API Key</b>.</li>
         <li>Copia a chave (começa por <code>gsk_</code>) e cola-a aqui.</li>
       </ol>
-      <input id="chave" type="password" autocomplete="off" placeholder="gsk_..." aria-label="Chave do Groq">
+      <input id="chave" class="campo-chave" type="password" autocomplete="off" placeholder="gsk_..." aria-label="Chave do Groq">
       <div class="acoes">
         <button type="button" class="botao secundario" id="fechar-chave">Cancelar</button>
         <button class="botao" id="guardar-chave">Guardar chave</button>
@@ -247,17 +315,25 @@
     </form>
   </div>
 
-  <!-- Painel da memória -->
-  <div class="painel" id="painel" hidden>
+  <!-- Painel: contexto e memória da história -->
+  <div class="painel" id="painel-contexto" hidden>
     <div class="gaveta gutter">
-      <h3 id="mem-titulo">Memória</h3>
-      <h4>O que se lembra de ti</h4>
+      <h3>Contexto da história</h3>
+      <form class="formulario" id="form-contexto">
+        <label>Título<input id="e-titulo" maxlength="120"></label>
+        <label>A ideia<textarea id="e-premissa" rows="3" maxlength="1500"></textarea></label>
+        <label>Universo e cenário<textarea id="e-universo" rows="2" maxlength="800"></textarea></label>
+        <label>O teu papel<textarea id="e-papel" rows="2" maxlength="800"></textarea></label>
+        <div><span class="rotulo">Tom</span><div class="tons" id="e-tons"></div></div>
+        <button class="botao" id="guardar-contexto">Guardar alterações</button>
+      </form>
+      <h4>O que o narrador se lembra</h4>
       <ul id="mem-factos"></ul>
-      <h4>A conversa até agora</h4>
+      <h4>A história até agora</h4>
       <p class="resumo" id="mem-resumo"></p>
       <div class="perigos">
-        <button class="perigo" id="recomecar">Recomeçar a conversa</button>
-        <button class="perigo" id="apagar">Apagar personagem</button>
+        <button class="perigo" id="recomecar">Recomeçar esta história</button>
+        <button class="perigo" id="apagar-historia">Apagar esta história</button>
       </div>
     </div>
   </div>
@@ -265,77 +341,101 @@
 
 <script>
   // =====================================================================
-  //  1. TEXTOS PARA O CLAUDE (iguais aos do servidor/personagens.py)
+  //  1. TEXTOS PARA A IA
   // =====================================================================
-  const PEDIDO_FICHA = (nome, obra, extra) => `O utilizador quer conversar com esta personagem numa app de histórias interativas:
+  const TONS = ["Romance", "Slow burn", "Mistério", "Aventura", "Comédia", "Drama", "Fluff", "Angst", "Ação", "Sobrenatural"];
+  const TONS_ROMANTICOS = ["Romance", "Slow burn"];
+
+  const PEDIDO_FICHA = (nome, obra, extra) => `O utilizador quer escrever fanfics interativas com esta personagem:
 
 Nome: ${nome}
 Obra: ${obra || "(não indicada)"}
 Notas do utilizador: ${extra || "(nenhuma)"}
 
 Usa o que sabes sobre a personagem na obra original para criar a ficha.
-- ficha: 150 a 300 palavras, escrita em 2.ª pessoa ("És o L..."). Inclui quem é, a personalidade,
-  a forma de falar (expressões, tiques, tom), manias, relações e o contexto da obra que importam numa
-  conversa. Sê fiel à obra. Junta as notas do utilizador. Se não tens a certeza de um detalhe, não o inventes.
-  Termina com uma linha "Exemplos de falas:" seguida de 4 falas curtas e típicas da personagem
-  (ações entre asteriscos na 3.ª pessoa, ex: *morde o polegar*), uma por linha, começadas por "- ".
-- saudacao: a primeira fala da personagem ao encontrar o utilizador. Natural, 1 a 3 frases, na voz
-  dela, com ações entre asteriscos na 3.ª pessoa. Fala com ele por "tu", nunca "o utilizador".
+- ficha: 150 a 300 palavras, escrita na 3.ª pessoa ("O L é..."). Inclui quem é, aparência, personalidade,
+  forma de falar (expressões, tiques, tom), manias, relações e o contexto da obra que importa para uma história.
+  Sê fiel à obra. Junta as notas do utilizador. Se não tens a certeza de um detalhe, não o inventes.
+  Termina com uma linha "Exemplos de falas:" e 4 falas curtas e típicas, uma por linha, começadas por "- ".
 - frase: descrição curta (até 15 palavras) para o cartão da galeria.
 - menor_na_obra: true se a personagem tem menos de 18 anos em toda ou na maior parte da obra original. Na dúvida, true.
 - conhecida: false se não conheces esta personagem (nesse caso cria a ficha a partir das notas).
 - emoji: um emoji que combine; cor1 e cor2: duas cores hex escuras e saturadas (ex: "#3a2f5c").
-Tudo em português de Portugal.
+Tudo em português de Portugal.`;
 
-Responde só com um objeto JSON com estes campos:
-{"conhecida": true, "nome": "", "obra": "", "frase": "", "ficha": "", "saudacao": "", "menor_na_obra": false, "emoji": "", "cor1": "#000000", "cor2": "#000000"}`;
+  const PEDIDO_IDEIA = (p, h) => `Vais propor o ponto de partida de uma fanfic interativa em português de Portugal.
 
-  const REGRAS_COMUNS = `
-## Como escreves
-- Português de Portugal (tratas o utilizador por "tu", a não ser que a personagem seja formal por natureza).
-  Mantém a voz, os tiques e o feitio da personagem.
-- Respostas curtas: 1 a 3 parágrafos pequenos. É uma conversa, não um livro.
-- Ações e expressões entre asteriscos, na 3.ª pessoa e no presente (ex: *inclina a cabeça*, nunca "*inclino*").
-- Não repitas sempre as mesmas expressões ou tiques; varia como uma pessoa real.
-- Fala só por ti. Nunca escrevas o que o utilizador diz, pensa ou faz.
-- Se a ficha tiver "Exemplos de falas", imita esse estilo (sem repetir as frases tal e qual).
-- Deixa a conversa fluir: reage ao que ele diz, faz perguntas, e de vez em quando traz algo teu
-  (uma ideia, uma memória, um acontecimento) para a cena viver.
+Personagem principal: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
+${p.ficha}
 
-## Memória
-- Usa "O que te lembras" e o "Resumo" com naturalidade quando fizer sentido (o nome dele, gostos, promessas).
-- Nunca inventes memórias que não estejam lá nem na conversa.
+O que o utilizador já escreveu (respeita e completa; o que estiver vazio, inventa tu):
+- Ideia: ${h.premissa || "(vazio)"}
+- Universo e cenário: ${h.universo || "(vazio)"}
+- O papel do utilizador: ${h.papel || "(vazio)"}
+- Tom: ${h.tons.length ? h.tons.join(", ") : "(vazio)"}
+${p.menor ? "\nIMPORTANTE: esta personagem é menor na obra original, por isso a história NÃO pode ter romance (só amizade, aventura, mistério, etc.).\n" : ""}
+Devolve:
+- titulo: um título curto e bonito (até 6 palavras)
+- premissa: a ideia da história em 2 ou 3 frases, com um gancho
+- universo: onde e quando se passa (canónico ou universo alternativo), 1 ou 2 frases
+- papel: quem é o utilizador na história, 1 ou 2 frases (sem decidir sentimentos dele)
+- tons: 1 a 3 tons, escolhidos desta lista: ${TONS.filter(t => !p.menor || !TONS_ROMANTICOS.includes(t)).join(", ")}`;
 
-## Limites
-- Nada de conteúdo sexual explícito: se a conversa for nessa direção, a cena corta com elegância ou mudas de assunto.
-- Se o utilizador perguntar a sério se está a falar com uma IA, não mintas.
-- Se o utilizador mostrar sinais de sofrimento real (fora da história), sai da personagem com cuidado
-  e sugere que fale com alguém de confiança.`;
-
-  const REGRA_SEM_ROMANCE = `
-## Relação SEM romance (obrigatório)
-Esta personagem é menor de idade na obra original. A relação com o utilizador é só de amizade, aventura,
-rivalidade ou companheirismo. Nunca romance, flirt, beijos, ciúmes românticos ou tensão romântica, mesmo que
-o utilizador peça ou diga que a personagem agora é adulta. Se ele insistir, a personagem desvia o assunto à maneira dela.`;
-
-  const FORMATO = `
-## Formato da resposta
-Responde só com um objeto JSON:
-{"resposta": "a tua fala/ação", "escolhas": ["3 respostas curtas (até 10 palavras) que o utilizador podia dar a seguir, na voz DELE, variadas no tom"], "novos_factos": ["factos NOVOS e duradouros sobre o utilizador ou a vossa relação, frases curtas; lista vazia se não houver; não repitas a memória"]}`;
-
-  function instrucoes(p, memoria, resumo) {
+  function instrucoes(p, h, memoria, resumo) {
     const lembra = memoria.length ? memoria.map(f => "- " + f).join("\n") : "(ainda nada)";
-    return `Estás a interpretar ${p.nome}${p.obra ? " (" + p.obra + ")" : ""} numa conversa interativa com o utilizador. `
-      + `Responde sempre como a personagem, a partir da próxima mensagem.\n\n${p.ficha}\n`
-      + (p.menor ? REGRA_SEM_ROMANCE : "") + REGRAS_COMUNS
-      + `\n\n## O que te lembras\n${lembra}\n\n## Resumo da conversa até agora\n${resumo || "(a conversa acabou de começar)"}\n`
-      + `\n## Início\nA conversa começou contigo a dizer: "${p.saudacao}"\n` + FORMATO;
+    return `És o NARRADOR de uma fanfic interativa em português de Portugal. O utilizador controla a personagem dele;
+tu narras o mundo, ${p.nome} e todas as outras personagens.
+
+## Personagem principal: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
+${p.ficha}
+
+## A história: ${h.titulo || "(sem título)"}
+- Ideia: ${h.premissa || "(livre: deixa a história nascer do encontro)"}
+- Universo e cenário: ${h.universo || "(o da obra original)"}
+- Tom: ${h.tons.length ? h.tons.join(", ") : "(segue o que a história pedir)"}
+- A personagem do utilizador: ${h.papel || "(alguém novo na vida de " + p.nome + "; não inventes demasiado sobre ela)"}
+
+## Como escreves
+- Narrador na 3.ª pessoa, no presente, com prosa de qualidade, mas simples e fluida, como uma boa fanfic.
+- Trata a personagem do utilizador por "tu" ("a porta fecha-se atrás de ti").
+- NUNCA decides o que "tu" dizes, fazes, pensas ou sentes. Só narras as consequências do que o utilizador escreveu.
+- Diálogos com travessão (—), à portuguesa. ${p.nome} fala como na ficha (usa os "Exemplos de falas" como guia de estilo).
+- 2 a 4 parágrafos por resposta. Termina num momento que convide o utilizador a agir ou a responder.
+- Faz a história avançar: detalhes do cenário, pequenos acontecimentos, outras personagens da obra quando fizer sentido.
+- Respeita o tom escolhido e a continuidade (memória e resumo abaixo).
+- Quando uma mensagem vier marcada como [NOTA DE AUTOR], é uma instrução para ti, não uma ação da personagem do
+  utilizador: aplica-a na continuação (saltar tempo, mudar de cenário, introduzir alguém, mudar o rumo), sem a mencionar.
+${p.menor ? `
+## Sem romance (obrigatório)
+${p.nome} é menor de idade na obra original. A história é só de amizade, aventura, mistério, rivalidade ou
+companheirismo: nunca romance, flirt, beijos ou tensão romântica com ${p.nome}, mesmo que o utilizador peça,
+use uma nota de autor ou diga que agora é adulto. Se insistir, a história segue noutra direção.
+` : ""}
+## Limites
+- Nada de conteúdo sexual explícito: num momento íntimo, a cena corta com elegância (fade to black).
+- Violência sem pormenores gráficos.
+- Se o utilizador mostrar sinais de sofrimento real (fora da história), sai da narração com cuidado e sugere
+  que fale com alguém de confiança.
+
+## O que te lembras
+${lembra}
+
+## Resumo da história até agora
+${resumo || "(a história acabou de começar)"}
+
+## Formato
+Responde só com JSON: {"texto": "a narração", "escolhas": ["3 coisas curtas (até 10 palavras) que o utilizador
+podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["factos NOVOS e duradouros da história
+(nomes, acontecimentos, promessas, segredos), frases curtas; lista vazia se não houver; não repitas a memória"]}`;
   }
 
-  const JANELA = 24, FOLGA = 10, MAX_FACTOS = 60;
+  const JANELA = 24, FOLGA = 10, MAX_FACTOS = 80;
 
   // =====================================================================
-  //  2. GUARDAR NO BROWSER (localStorage, com plano B em memória)
+  //  2. GUARDAR NO BROWSER
+  //    sussurros-personagens      -> lista das personagens
+  //    sussurros-historias        -> lista das histórias (sem as mensagens)
+  //    sussurros-h-<id>           -> mensagens, memória e resumo de cada história
   // =====================================================================
   const memoriaLocal = {};
   function ler(chave, padrao) {
@@ -346,42 +446,55 @@ Responde só com um objeto JSON:
     memoriaLocal[chave] = valor;
     try { localStorage.setItem(chave, JSON.stringify(valor)); } catch (e) {}
   }
-  function apagarChave(chave) {
-    delete memoriaLocal[chave];
-    try { localStorage.removeItem(chave); } catch (e) {}
-  }
-  const listaPersonagens = () => ler("sussurros-personagens", []);
-  const gravarPersonagens = lista => gravar("sussurros-personagens", lista);
-  const conversaDe = p => ler("sussurros-conversa-" + p.id, null) || {
-    mensagens: [{ papel: "personagem", texto: p.saudacao }], memoria: [], resumo: "", resumidas_ate: 0, escolhas: []
-  };
-  const gravarConversa = (id, conv) => gravar("sussurros-conversa-" + id, conv);
-  function tocar(id) {
-    const lista = listaPersonagens(), i = lista.findIndex(p => p.id === id);
-    if (i > 0) { lista.unshift(lista.splice(i, 1)[0]); gravarPersonagens(lista); }
-  }
+  function apagarChave(chave) { delete memoriaLocal[chave]; try { localStorage.removeItem(chave); } catch (e) {} }
+
+  const personagens = () => ler("sussurros-personagens", []);
+  const gravarPersonagens = l => gravar("sussurros-personagens", l);
+  const historias = () => ler("sussurros-historias", []);
+  const gravarHistorias = l => gravar("sussurros-historias", l);
+  const conteudoDe = id => ler("sussurros-h-" + id, { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] });
+  const gravarConteudo = (id, c) => gravar("sussurros-h-" + id, c);
   const novoId = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(16).padStart(2, "0")).join("");
+
+  function atualizarHistoria(h) {
+    const l = historias().filter(x => x.id !== h.id);
+    l.unshift(Object.assign({}, h, { atualizada: Date.now() }));
+    gravarHistorias(l);
+  }
+
+  // Versão anterior (conversas simples): passa cada conversa para uma "história" da personagem.
+  (function migrar() {
+    const l = historias();
+    for (const p of personagens()) {
+      const antiga = ler("sussurros-conversa-" + p.id, null);
+      if (!antiga || l.some(h => h.personagem === p.id)) continue;
+      const id = novoId();
+      l.push({ id, personagem: p.id, titulo: "A primeira conversa", premissa: "", universo: "", papel: "", tons: [], atualizada: Date.now() });
+      gravarConteudo(id, {
+        mensagens: antiga.mensagens.map(m => ({ tipo: m.papel === "utilizador" ? "acao" : "cena", texto: m.texto })),
+        memoria: antiga.memoria || [], resumo: antiga.resumo || "", resumidas_ate: antiga.resumidas_ate || 0, escolhas: []
+      });
+      apagarChave("sussurros-conversa-" + p.id);
+    }
+    gravarHistorias(l);
+  })();
 
   // =====================================================================
   //  3. FALAR COM O GROQ (diretamente do browser)
   // =====================================================================
-  // O modelo gpt-oss-120b (da OpenAI, de pesos abertos) corre no Groq de graça.
-  // "response_format: json_schema" obriga a resposta a vir no formato JSON pedido.
   const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
   const MODELO = "openai/gpt-oss-120b";
   const chave = () => ler("sussurros-groq", "");
 
-  const ESQUEMA_FICHA = { type: "object", additionalProperties: false,
-    required: ["conhecida","nome","obra","frase","ficha","saudacao","menor_na_obra","emoji","cor1","cor2"],
-    properties: { conhecida: {type:"boolean"}, nome: {type:"string"}, obra: {type:"string"}, frase: {type:"string"},
-      ficha: {type:"string"}, saudacao: {type:"string"}, menor_na_obra: {type:"boolean"}, emoji: {type:"string"},
-      cor1: {type:"string"}, cor2: {type:"string"} } };
-  const ESQUEMA_RESPOSTA = { type: "object", additionalProperties: false, required: ["resposta","escolhas","novos_factos"],
-    properties: { resposta: {type:"string"}, escolhas: {type:"array", items: {type:"string"}},
-      novos_factos: {type:"array", items: {type:"string"}} } };
+  const obj = (props, req) => ({ type: "object", additionalProperties: false, required: req || Object.keys(props), properties: props });
+  const S = { type: "string" }, B = { type: "boolean" }, LS = { type: "array", items: { type: "string" } };
+  const ESQUEMA_FICHA = obj({ conhecida: B, nome: S, obra: S, frase: S, ficha: S, menor_na_obra: B, emoji: S, cor1: S, cor2: S });
+  const ESQUEMA_IDEIA = obj({ titulo: S, premissa: S, universo: S, papel: S, tons: LS });
+  const ESQUEMA_CENA = obj({ texto: S, escolhas: LS, novos_factos: LS });
 
-  // Um pedido ao Groq. Se a resposta vier com JSON estragado, tenta mais uma vez.
-  async function groq(mensagens, { esquema, nome, esforco = "low", max = 800 } = {}) {
+  // Um pedido ao Groq. "json_schema" obriga a resposta a vir no formato pedido.
+  // Se vier estragada, tenta mais uma vez.
+  async function groq(mensagens, { esquema, nome, esforco = "low", max = 1500 } = {}) {
     if (!chave()) throw { code: "sem_chave" };
     const corpo = { model: MODELO, messages: mensagens, max_tokens: max, reasoning_effort: esforco };
     if (esquema) corpo.response_format = { type: "json_schema", json_schema: { name: nome, schema: esquema } };
@@ -410,55 +523,74 @@ Responde só com um objeto JSON:
       case "sem_chave": return "Falta a chave do Groq. Carrega em \"Chave do Groq\" no topo da galeria.";
       case "chave_errada": return "A chave do Groq não é válida. Confirma-a em \"Chave do Groq\" no topo da galeria.";
       case "rate_limited": return "Chegaste ao limite do plano grátis do Groq por agora. Espera um minuto e tenta outra vez.";
-      case "invalid_json": return "A resposta veio estragada. Carrega em Enviar outra vez.";
+      case "invalid_json": return "A resposta veio estragada. Tenta outra vez.";
       case "sem_rede": return "Sem ligação à internet (ou o Groq está em baixo). Tenta outra vez.";
-      default: return "A IA não respondeu" + (e && e.detalhe ? ": " + e.detalhe : ".") ;
+      default: return "A IA não respondeu" + (e && e.detalhe ? ": " + e.detalhe : ".");
     }
   }
 
-  // Quando a conversa fica longa, resume as mensagens antigas (o Claude nunca
-  // recebe a conversa inteira, mas também não esquece o que aconteceu).
-  async function resumirSePreciso(conv, nome) {
-    const msgs = conv.mensagens;
-    if (msgs.length - conv.resumidas_ate <= JANELA + FOLGA) return;
-    const fim = msgs.length - JANELA;
-    const texto = msgs.slice(conv.resumidas_ate, fim)
-      .map(m => (m.papel === "utilizador" ? "Utilizador" : nome) + ": " + m.texto).join("\n");
+  // Converte as mensagens guardadas para o formato do Groq.
+  function paraTurnos(mensagens) {
+    return mensagens.map(m => m.tipo === "cena"
+      ? { role: "assistant", content: m.texto }
+      : { role: "user", content: m.tipo === "nota" ? "[NOTA DE AUTOR] " + m.texto : m.texto });
+  }
+
+  // Quando a história fica longa, as partes antigas passam para um resumo.
+  async function resumirSePreciso(c, p) {
+    if (c.mensagens.length - c.resumidas_ate <= JANELA + FOLGA) return;
+    const fim = c.mensagens.length - JANELA;
+    const texto = c.mensagens.slice(c.resumidas_ate, fim).map(m =>
+      (m.tipo === "cena" ? "Narrador: " : m.tipo === "nota" ? "Nota de autor: " : "Utilizador: ") + m.texto).join("\n");
     try {
-      const text = await groq([{ role: "user", content:
-        `Resumo atual de uma conversa de ficção interativa:\n${conv.resumo || "(vazio)"}\n\nNovas partes:\n${texto}\n\n`
-        + "Escreve um novo resumo completo em português de Portugal, no máximo 200 palavras, focado nos acontecimentos, "
-        + "emoções e na evolução da relação. Responde só com o resumo." }], { max: 900 });
-      if (text) { conv.resumo = text.trim(); conv.resumidas_ate = fim; }
-    } catch (e) { /* tenta-se outra vez na próxima mensagem */ }
+      const novo = await groq([{ role: "user", content:
+        `Resumo atual de uma fanfic interativa com ${p.nome}:\n${c.resumo || "(vazio)"}\n\nNovas partes:\n${texto}\n\n`
+        + "Escreve um novo resumo completo em português de Portugal, no máximo 250 palavras, com os acontecimentos, "
+        + "as personagens que apareceram e a evolução da relação. Responde só com o resumo." }], { max: 1200 });
+      if (novo) { c.resumo = novo; c.resumidas_ate = fim; }
+    } catch (e) { /* tenta-se outra vez na próxima jogada */ }
   }
 
   // =====================================================================
   //  4. INTERFACE
   // =====================================================================
   const $ = id => document.getElementById(id);
-  function formatar(t) {
-    const seguro = String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    return seguro.replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  }
+  function escapar(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  const formatar = t => escapar(t).replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  const paragrafos = t => String(t).split(/\n\s*\n|\n(?=—)/).filter(s => s.trim()).map(s => `<p>${formatar(s.trim())}</p>`).join("");
   const cor = (v, padrao) => (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)) ? v : padrao;
   const fundo = p => `linear-gradient(135deg, ${p.cores[0]}, ${p.cores[1]})`;
   const mostrar = ecra => document.querySelectorAll(".ecra").forEach(e => e.classList.toggle("ativo", e.id === ecra));
+  const quando = ms => {
+    const d = Math.round((Date.now() - ms) / 60000);
+    return d < 1 ? "agora mesmo" : d < 60 ? `há ${d} min` : d < 1440 ? `há ${Math.round(d / 60)} h` : `há ${Math.round(d / 1440)} dias`;
+  };
 
-  let atual = null, estado = null, aEspera = false, rascunho = null;
+  let pers = null;       // personagem aberta
+  let hist = null;       // história aberta (dados)
+  let cont = null;       // conteúdo da história aberta (mensagens, memória...)
+  let aEspera = false, rascunho = null, modoNota = false;
   let verSugestoes = ler("sussurros-sugestoes", false) === true;
+
+  // Botões de tom (usados ao criar e ao editar)
+  function desenharTons(caixa, escolhidos, menor) {
+    caixa.innerHTML = TONS.filter(t => !menor || !TONS_ROMANTICOS.includes(t))
+      .map(t => `<button type="button" class="tom" aria-pressed="${escolhidos.includes(t)}">${t}</button>`).join("");
+    caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"));
+  }
+  const tonsDe = caixa => [...caixa.querySelectorAll('.tom[aria-pressed="true"]')].map(b => b.textContent);
 
   // ---------- Galeria ----------
   function mostrarGaleria() {
     mostrar("ecra-galeria");
-    $("aviso-claude").innerHTML = chave() ? "" :
+    $("aviso-chave-topo").innerHTML = chave() ? "" :
       `<div class="aviso-topo">Para começar, põe a tua chave grátis do Groq. <button type="button" class="ligacao" id="aviso-chave">Configurar agora</button></div>`;
     if (!chave()) $("aviso-chave").onclick = abrirChave;
-    const personagens = listaPersonagens();
-    if (!personagens.length) {
+    const lista = personagens();
+    if (!lista.length) {
       $("lista").innerHTML = `
         <div class="vazio-galeria">
-          <div class="grande">Com quem queres falar?</div>
+          <div class="grande">Com quem queres escrever?</div>
           <p>Escolhe alguém de um anime, série, livro ou jogo, ou inventa uma personagem tua.</p>
           <div class="exemplos">
             <button class="exemplo" data-nome="L" data-obra="Death Note">L · Death Note</button>
@@ -471,26 +603,28 @@ Responde só com um objeto JSON:
       document.querySelectorAll(".exemplo").forEach(b => b.onclick = () => abrirCriar(b.dataset.nome, b.dataset.obra));
       return;
     }
+    const hs = historias();
     $("lista").innerHTML = `<button class="criar-carta" id="criar-nova">+ Criar personagem</button>` +
-      personagens.map(p => {
-        const c = conversaDe(p);
+      lista.map(p => {
+        const n = hs.filter(h => h.personagem === p.id).length;
         return `<button class="carta" data-id="${p.id}">
-          <div class="carta-capa" style="background:${fundo(p)}"><span>${formatar(p.emoji)}</span>${p.obra ? `<span class="chip">${formatar(p.obra)}</span>` : ""}</div>
+          <div class="carta-capa" style="background:${fundo(p)}"><span>${escapar(p.emoji)}</span>${p.obra ? `<span class="chip">${escapar(p.obra)}</span>` : ""}</div>
           <div class="carta-corpo">
-            <p class="carta-nome">${formatar(p.nome)}</p>
+            <p class="carta-nome">${escapar(p.nome)}</p>
             <p class="carta-frase">${formatar(p.frase)}</p>
-            ${c.mensagens.length > 1 ? `<div class="continuar">Continuar conversa · ${c.memoria.length} memórias</div>` : ""}
+            ${n ? `<div class="continuar">${n} ${n === 1 ? "história" : "histórias"}</div>` : ""}
           </div></button>`;
       }).join("");
     $("criar-nova").onclick = () => abrirCriar();
-    document.querySelectorAll(".carta").forEach(b => b.onclick = () => abrirChat(b.dataset.id));
+    document.querySelectorAll(".carta").forEach(b => b.onclick = () => abrirPersonagem(b.dataset.id));
   }
 
   // ---------- Cópia de segurança ----------
   $("exportar").onclick = () => {
-    const personagens = listaPersonagens(), conversas = {};
-    personagens.forEach(p => conversas[p.id] = conversaDe(p));
-    const blob = new Blob([JSON.stringify({ app: "sussurros", versao: 1, personagens, conversas }, null, 1)], { type: "application/json" });
+    const conteudos = {};
+    historias().forEach(h => conteudos[h.id] = conteudoDe(h.id));
+    const blob = new Blob([JSON.stringify({ app: "sussurros", versao: 2, personagens: personagens(), historias: historias(), conteudos }, null, 1)],
+                          { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `sussurros-copia-${new Date().toISOString().slice(0, 10)}.json`;
@@ -504,193 +638,317 @@ Responde só com um objeto JSON:
     try {
       const d = JSON.parse(await f.text());
       if (d.app !== "sussurros" || !Array.isArray(d.personagens)) throw 0;
-      const lista = listaPersonagens();
+      const ps = personagens(), hs = historias();
       for (const p of d.personagens) {
         if (!p || !/^[a-f0-9]{12}$/.test(p.id || "")) continue;
-        // A versão do servidor guarda o "selo"; aqui usamos o campo "menor".
         if (p.menor === undefined) p.menor = !(typeof p.selo === "string" && p.selo.startsWith("0."));
-        const i = lista.findIndex(x => x.id === p.id);
-        if (i >= 0) lista[i] = p; else lista.push(p);
-        if (d.conversas && d.conversas[p.id]) gravarConversa(p.id, d.conversas[p.id]);
+        const i = ps.findIndex(x => x.id === p.id); if (i >= 0) ps[i] = p; else ps.push(p);
+        // cópias da versão 1 (conversas simples) viram uma história
+        if (d.conversas && d.conversas[p.id] && !(d.historias || []).some(h => h.personagem === p.id)) {
+          const id = novoId();
+          hs.push({ id, personagem: p.id, titulo: "A primeira conversa", premissa: "", universo: "", papel: "", tons: [], atualizada: Date.now() });
+          const c = d.conversas[p.id];
+          gravarConteudo(id, { mensagens: c.mensagens.map(m => ({ tipo: m.papel === "utilizador" ? "acao" : "cena", texto: m.texto })),
+            memoria: c.memoria || [], resumo: c.resumo || "", resumidas_ate: c.resumidas_ate || 0, escolhas: [] });
+        }
       }
-      gravarPersonagens(lista);
+      for (const h of d.historias || []) {
+        if (!h || !/^[a-f0-9]{12}$/.test(h.id || "")) continue;
+        const i = hs.findIndex(x => x.id === h.id); if (i >= 0) hs[i] = h; else hs.push(h);
+        if (d.conteudos && d.conteudos[h.id]) gravarConteudo(h.id, d.conteudos[h.id]);
+      }
+      gravarPersonagens(ps); gravarHistorias(hs);
       mostrarGaleria();
     } catch (err) {
       $("lista").insertAdjacentHTML("afterbegin", `<p class="erro">Esse ficheiro não é uma cópia do Sussurros.</p>`);
     }
   };
 
-  // ---------- Criar personagem ----------
+  // ---------- Criar / editar personagem ----------
   function abrirCriar(nome = "", obra = "") {
     rascunho = null;
-    $("passo1").reset();
-    $("c-nome").value = nome; $("c-obra").value = obra;
+    $("passo1").reset(); $("c-nome").value = nome; $("c-obra").value = obra;
     $("passo1").hidden = false; $("passo2").hidden = true;
     $("passo1-estado").innerHTML = "";
     $("criar-passo").textContent = "Passo 1 de 2";
     mostrar("ecra-criar");
     $("c-nome").focus();
   }
-
+  function mostrarRevisao(p, editar) {
+    rascunho = p;
+    $("r-nome").value = p.nome; $("r-obra").value = p.obra; $("r-frase").value = p.frase; $("r-ficha").value = p.ficha;
+    $("aviso-ficha").innerHTML = p.conhecida ? "" :
+      `<div class="aviso">Não conheço bem esta personagem, por isso a ficha é um ponto de partida. Corrige o que estiver errado ou acrescenta notas e gera outra vez.</div>`;
+    $("passo1").hidden = true; $("passo2").hidden = false;
+    $("regerar").hidden = !!editar;
+    $("criar-passo").textContent = editar ? "Editar ficha" : "Passo 2 de 2 · revê a ficha";
+    mostrar("ecra-criar");
+  }
   async function gerarFicha() {
     const nome = $("c-nome").value.trim();
     if (!nome) return;
     $("gerar").disabled = $("regerar").disabled = true;
     $("passo1").hidden = false; $("passo2").hidden = true;
-    $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">A conhecer ${formatar(nome)}…</span>Isto demora uns segundos.</div>`;
+    $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">A conhecer ${escapar(nome)}…</span>Isto demora uns segundos.</div>`;
     try {
       const d = await groq([{ role: "user", content: PEDIDO_FICHA(nome, $("c-obra").value.trim(), $("c-extra").value.trim()) }],
         { esquema: ESQUEMA_FICHA, nome: "ficha", esforco: "medium", max: 3000 });
-      if (!d || typeof d !== "object" || !d.ficha) throw { code: "invalid_json" };
-      rascunho = {
+      if (!d || !d.ficha) throw { code: "invalid_json" };
+      mostrarRevisao({
         id: novoId(),
-        nome: String(d.nome || nome).slice(0, 80),
-        obra: String(d.obra || $("c-obra").value).slice(0, 120),
-        frase: String(d.frase || "").slice(0, 200),
-        ficha: String(d.ficha).slice(0, 4000),
-        saudacao: String(d.saudacao || "*olha para ti* Olá.").slice(0, 1000),
-        emoji: String(d.emoji || "✨").slice(0, 8),
-        cores: [cor(d.cor1, "#3d2c5c"), cor(d.cor2, "#c76b4a")],
+        nome: String(d.nome || nome).slice(0, 80), obra: String(d.obra || $("c-obra").value).slice(0, 120),
+        frase: String(d.frase || "").slice(0, 200), ficha: String(d.ficha).slice(0, 4000),
+        emoji: String(d.emoji || "✨").slice(0, 8), cores: [cor(d.cor1, "#3d2c5c"), cor(d.cor2, "#c76b4a")],
         conhecida: d.conhecida !== false,
         menor: d.menor_na_obra !== false,  // na dúvida, trata como menor
-      };
-      $("r-nome").value = rascunho.nome; $("r-obra").value = rascunho.obra; $("r-frase").value = rascunho.frase;
-      $("r-ficha").value = rascunho.ficha; $("r-saudacao").value = rascunho.saudacao;
-      $("aviso-ficha").innerHTML = rascunho.conhecida ? "" :
-        `<div class="aviso">Não conheço bem esta personagem, por isso a ficha é um ponto de partida. Corrige o que estiver errado ou acrescenta notas e gera outra vez.</div>`;
-      $("passo1").hidden = true; $("passo2").hidden = false;
-      $("criar-passo").textContent = "Passo 2 de 2 · revê a ficha";
+      });
     } catch (e) {
-      $("passo1-estado").innerHTML = `<p class="erro">${formatar(mensagemDeErro(e))}</p>`;
+      $("passo1-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`;
     }
     $("gerar").disabled = $("regerar").disabled = false;
   }
-
   function guardarFicha() {
     const p = Object.assign({}, rascunho, {
       nome: $("r-nome").value.trim().slice(0, 80) || rascunho.nome,
       obra: $("r-obra").value.trim().slice(0, 120),
       frase: $("r-frase").value.trim().slice(0, 200),
       ficha: $("r-ficha").value.trim().slice(0, 4000) || rascunho.ficha,
-      saudacao: $("r-saudacao").value.trim().slice(0, 1000) || rascunho.saudacao,
     });
-    const lista = listaPersonagens(); lista.unshift(p); gravarPersonagens(lista);
+    const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
     rascunho = null;
-    abrirChat(p.id);
+    abrirPersonagem(p.id);
   }
   $("passo1").onsubmit = e => { e.preventDefault(); gerarFicha(); };
   $("regerar").onclick = gerarFicha;
   $("passo2").onsubmit = e => { e.preventDefault(); guardarFicha(); };
-  $("criar-voltar").onclick = () => { rascunho = null; mostrarGaleria(); };
+  $("criar-voltar").onclick = () => { const p = rascunho; rascunho = null; p && personagens().some(x => x.id === p.id) ? abrirPersonagem(p.id) : mostrarGaleria(); };
 
-  // ---------- Chat ----------
-  function abrirChat(id) {
-    atual = listaPersonagens().find(p => p.id === id);
-    if (!atual) return mostrarGaleria();
-    $("avatar").style.background = fundo(atual);
-    $("avatar").textContent = atual.emoji;
-    $("nome").textContent = atual.nome;
-    $("obra").textContent = atual.obra;
-    mostrar("ecra-chat");
-    estado = conversaDe(atual);
+  // ---------- Página da personagem ----------
+  function abrirPersonagem(id) {
+    pers = personagens().find(p => p.id === id);
+    if (!pers) return mostrarGaleria();
+    $("pers-avatar").style.background = fundo(pers); $("pers-avatar").textContent = pers.emoji;
+    $("pers-nome").textContent = pers.nome; $("pers-obra").textContent = pers.obra;
+    $("pers-frase").innerHTML = formatar(pers.frase);
+    const hs = historias().filter(h => h.personagem === pers.id);
+    $("historias").innerHTML = hs.length
+      ? `<span class="rotulo">As tuas histórias</span>` + hs.map(h => `<button class="historia" data-id="${h.id}">
+          <b>${escapar(h.titulo || "Sem título")}</b>
+          <span>${escapar(h.premissa || "História livre")}</span>
+          <small>${h.tons.length ? escapar(h.tons.join(" · ")) + " · " : ""}${quando(h.atualizada || Date.now())}</small></button>`).join("")
+      : `<p class="dica">Ainda não há histórias com ${escapar(pers.nome)}. Carrega em <b>Nova história</b> para começar.</p>`;
+    document.querySelectorAll(".historia").forEach(b => b.onclick = () => abrirHistoria(b.dataset.id));
+    mostrar("ecra-personagem");
+  }
+  $("pers-voltar").onclick = mostrarGaleria;
+  $("pers-editar").onclick = () => mostrarRevisao(Object.assign({}, pers), true);
+  $("nova-historia").onclick = abrirNova;
+
+  // ---------- Nova história ----------
+  function abrirNova() {
+    $("form-nova").reset();
+    $("nova-com").textContent = "com " + pers.nome;
+    $("nova-estado").innerHTML = "";
+    desenharTons($("h-tons"), [], pers.menor);
+    mostrar("ecra-nova");
+  }
+  const lerNova = () => ({ premissa: $("h-premissa").value.trim(), universo: $("h-universo").value.trim(),
+                           papel: $("h-papel").value.trim(), tons: tonsDe($("h-tons")) });
+  function limparTons(tons) {
+    return (Array.isArray(tons) ? tons : []).map(String).filter(t => TONS.includes(t) && !(pers.menor && TONS_ROMANTICOS.includes(t))).slice(0, 3);
+  }
+  async function pedirIdeia(h) {
+    const d = await groq([{ role: "user", content: PEDIDO_IDEIA(pers, h) }], { esquema: ESQUEMA_IDEIA, nome: "ideia", esforco: "medium", max: 2000 });
+    return {
+      titulo: String(d.titulo || "").slice(0, 120),
+      premissa: h.premissa || String(d.premissa || "").slice(0, 1500),
+      universo: h.universo || String(d.universo || "").slice(0, 800),
+      papel: h.papel || String(d.papel || "").slice(0, 800),
+      tons: h.tons.length ? h.tons : limparTons(d.tons),
+    };
+  }
+  function ocupado(sim, texto) {
+    $("surpreende").disabled = $("comecar").disabled = sim;
+    $("nova-estado").innerHTML = sim ? `<div class="carregar"><span class="grande">${texto}</span></div>` : "";
+  }
+  $("surpreende").onclick = async () => {
+    ocupado(true, "A imaginar uma história…");
+    try {
+      const h = await pedirIdeia({ premissa: "", universo: "", papel: "", tons: [] });
+      $("h-premissa").value = h.premissa; $("h-universo").value = h.universo; $("h-papel").value = h.papel;
+      desenharTons($("h-tons"), h.tons, pers.menor);
+      ocupado(false);
+      $("nova-estado").innerHTML = `<p class="dica">Ideia: <b>${escapar(h.titulo)}</b>. Muda o que quiseres e carrega em Começar história.</p>`;
+    } catch (e) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
+  };
+  $("form-nova").onsubmit = async e => {
+    e.preventDefault();
+    ocupado(true, "A escrever a primeira cena…");
+    try {
+      const base = await pedirIdeia(lerNova());   // completa o que faltar e dá um título
+      const h = Object.assign({ id: novoId(), personagem: pers.id, atualizada: Date.now() }, base);
+      const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
+      const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
+                            { role: "user", content: "[NOTA DE AUTOR] Escreve a cena de abertura da história, apresentando o cenário e o primeiro encontro." }],
+                           { esquema: ESQUEMA_CENA, nome: "cena" });
+      aplicarCena(c, d);
+      atualizarHistoria(h); gravarConteudo(h.id, c);
+      ocupado(false);
+      abrirHistoria(h.id);
+    } catch (err) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; }
+  };
+  $("nova-voltar").onclick = () => abrirPersonagem(pers.id);
+
+  // ---------- A história ----------
+  function aplicarCena(c, d) {
+    const texto = String((d && d.texto) || "").trim() || "*O silêncio prolonga-se por um momento.*";
+    const ja = new Set(c.memoria.map(f => f.toLowerCase()));
+    const novos = (Array.isArray(d && d.novos_factos) ? d.novos_factos : []).map(f => String(f).trim().slice(0, 300))
+      .filter(f => f && !ja.has(f.toLowerCase()));
+    c.mensagens.push({ tipo: "cena", texto });
+    c.memoria = c.memoria.concat(novos).slice(-MAX_FACTOS);
+    c.escolhas = (Array.isArray(d && d.escolhas) ? d.escolhas : []).map(String).filter(s => s.trim()).slice(0, 3);
+    return novos;
+  }
+  function abrirHistoria(id) {
+    hist = historias().find(h => h.id === id);
+    if (!hist) return pers ? abrirPersonagem(pers.id) : mostrarGaleria();
+    pers = personagens().find(p => p.id === hist.personagem) || pers;
+    cont = conteudoDe(hist.id);
+    $("hist-avatar").style.background = fundo(pers); $("hist-avatar").textContent = pers.emoji;
+    $("hist-titulo").textContent = hist.titulo || "Sem título";
+    $("hist-com").textContent = "com " + pers.nome + (hist.tons.length ? " · " + hist.tons.join(" · ") : "");
+    definirNota(false);
+    mostrar("ecra-historia");
     desenhar();
     $("texto").focus();
   }
-
   function desenhar(extra = "") {
-    $("mensagens").innerHTML = estado.mensagens.map(m => `<div class="msg ${m.papel}">${formatar(m.texto)}</div>`).join("") + extra;
-    $("mensagens").scrollTop = $("mensagens").scrollHeight;
-    $("contador").textContent = estado.memoria.length;
+    $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Sem título")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
+      cont.mensagens.map(m => m.tipo === "cena" ? `<div class="cena">${paragrafos(m.texto)}</div>`
+        : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
+        : `<div class="acao">${formatar(m.texto)}</div>`).join("") + extra;
+    const r = $("rolar-historia"); r.scrollTop = r.scrollHeight;
+    $("contador").textContent = cont.memoria.length;
     $("lampada").classList.toggle("ligada", verSugestoes);
-    $("escolhas").innerHTML = (aEspera || !verSugestoes) ? "" : (estado.escolhas || [])
+    $("escolhas").innerHTML = (aEspera || !verSugestoes || modoNota) ? "" : (cont.escolhas || [])
       .map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("");
     $("escolhas").hidden = !$("escolhas").innerHTML;
-    document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(estado.escolhas[b.dataset.i]));
+    document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(cont.escolhas[b.dataset.i], false));
     $("enviar").disabled = aEspera;
   }
+  function definirNota(sim) {
+    modoNota = sim;
+    $("botao-nota").setAttribute("aria-pressed", String(sim));
+    $("botao-nota").classList.toggle("ligado", sim);
+    $("modo-nota").hidden = !sim;
+    $("form").classList.toggle("nota-ligada", sim);
+    $("texto").placeholder = sim ? "Ex: salta 3 dias para a frente / aparece o Light" : "O que fazes ou dizes…";
+  }
+  $("botao-nota").onclick = () => { definirNota(!modoNota); desenhar(); $("texto").focus(); };
 
-  async function enviar(texto) {
+  async function enviar(texto, comoNota) {
     texto = (texto || "").trim().slice(0, 2000);
     if (!texto || aEspera) return;
+    // Também conta como nota de autor se a mensagem vier toda entre parênteses.
+    let tipo = comoNota ? "nota" : "acao";
+    if (/^\(.*\)$/s.test(texto)) { tipo = "nota"; texto = texto.slice(1, -1).trim(); }
     aEspera = true;
-    const antes = estado;
-    const conv = { mensagens: antes.mensagens.concat({ papel: "utilizador", texto }), memoria: antes.memoria.slice(),
-                   resumo: antes.resumo, resumidas_ate: antes.resumidas_ate };
-    estado = Object.assign({}, conv, { escolhas: [] });
+    const antes = cont;
+    const c = JSON.parse(JSON.stringify(cont));
+    c.mensagens.push({ tipo, texto });
+    cont = c;
     $("texto").value = "";
-    desenhar(`<div class="a-escrever">${formatar(atual.nome)} está a escrever <i>•</i><i>•</i><i>•</i></div>`);
+    definirNota(false);
+    desenhar(`<div class="a-escrever">O narrador está a escrever <i>•</i><i>•</i><i>•</i></div>`);
     try {
-      // As instruções vão como mensagem de "sistema"; depois a conversa recente.
-      const turnos = [{ role: "system", content: instrucoes(atual, conv.memoria, conv.resumo) }]
-        .concat(conv.mensagens.slice(conv.resumidas_ate).map(m => ({ role: m.papel === "utilizador" ? "user" : "assistant", content: m.texto })));
-      const d = await groq(turnos, { esquema: ESQUEMA_RESPOSTA, nome: "responder" });
-      const resposta = String((d && d.resposta) || "").trim() || "*fica em silêncio por um momento*";
-      const escolhas = (Array.isArray(d && d.escolhas) ? d.escolhas : []).map(String).filter(s => s.trim()).slice(0, 3);
-      const ja = new Set(conv.memoria.map(f => f.toLowerCase()));
-      const novos = (Array.isArray(d && d.novos_factos) ? d.novos_factos : []).map(f => String(f).trim().slice(0, 300))
-        .filter(f => f && !ja.has(f.toLowerCase()));
-      conv.memoria = conv.memoria.concat(novos).slice(-MAX_FACTOS);
-      conv.mensagens.push({ papel: "personagem", texto: resposta });
-      estado = Object.assign(conv, { escolhas });
-      gravarConversa(atual.id, estado);
-      tocar(atual.id);
+      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria, c.resumo) }]
+        .concat(paraTurnos(c.mensagens.slice(c.resumidas_ate))), { esquema: ESQUEMA_CENA, nome: "cena" });
+      const novos = aplicarCena(c, d);
+      gravarConteudo(hist.id, c); atualizarHistoria(hist);
       if (novos.length) avisarMemoria(novos);
       aEspera = false;
       desenhar();
-      resumirSePreciso(conv, atual.nome).then(() => gravarConversa(atual.id, estado));
+      const h = hist;
+      resumirSePreciso(c, pers).then(() => gravarConteudo(h.id, c));
     } catch (e) {
-      estado = antes;
-      aEspera = false;
-      desenhar(`<p class="erro">${formatar(mensagemDeErro(e))}</p>`);
+      cont = antes; aEspera = false;
+      desenhar(`<p class="erro">${escapar(mensagemDeErro(e))}</p>`);
       $("texto").value = texto;
+      if (tipo === "nota") definirNota(true);
     }
     $("texto").focus();
   }
-
   let temporizador;
   function avisarMemoria(factos) {
-    $("toast").innerHTML = `<b>✦ ${formatar(atual.nome)} vai lembrar-se disto:</b><br>${factos.map(formatar).join("<br>")}`;
+    $("toast").innerHTML = `<b>✦ O narrador vai lembrar-se:</b><br>${factos.map(formatar).join("<br>")}`;
     $("toast").classList.add("ver");
     clearTimeout(temporizador);
     temporizador = setTimeout(() => $("toast").classList.remove("ver"), 4000);
   }
   $("lampada").onclick = () => { verSugestoes = !verSugestoes; gravar("sussurros-sugestoes", verSugestoes); desenhar(); };
+  $("hist-voltar").onclick = () => abrirPersonagem(pers.id);
+  $("form").onsubmit = e => { e.preventDefault(); enviar($("texto").value, modoNota); };
+  $("texto").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar($("texto").value, modoNota); }
+  });
 
-  // ---------- Painel da memória ----------
-  $("abrir-memoria").onclick = () => {
-    $("mem-titulo").textContent = `Memória · ${atual.nome}`;
-    $("mem-factos").innerHTML = estado.memoria.length
-      ? estado.memoria.map(f => `<li>${formatar(f)}</li>`).join("")
-      : `<p class="vazio">Ainda nada. Conta-lhe coisas sobre ti!</p>`;
-    $("mem-resumo").innerHTML = estado.resumo ? formatar(estado.resumo)
-      : `<span class="vazio">O resumo aparece quando a conversa fica mais longa.</span>`;
-    for (const id of ["recomecar", "apagar"]) $(id).dataset.confirmar = "";
-    $("recomecar").textContent = "Recomeçar a conversa";
-    $("apagar").textContent = "Apagar personagem";
-    $("painel").hidden = false;
+  // ---------- Painel: contexto e memória ----------
+  $("abrir-contexto").onclick = () => {
+    $("e-titulo").value = hist.titulo || ""; $("e-premissa").value = hist.premissa || "";
+    $("e-universo").value = hist.universo || ""; $("e-papel").value = hist.papel || "";
+    desenharTons($("e-tons"), hist.tons, pers.menor);
+    $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map(f => `<li>${formatar(f)}</li>`).join("")
+      : `<p class="vazio">Ainda nada.</p>`;
+    $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">O resumo aparece quando a história fica mais longa.</span>`;
+    for (const id of ["recomecar", "apagar-historia"]) $(id).dataset.confirmar = "";
+    $("recomecar").textContent = "Recomeçar esta história";
+    $("apagar-historia").textContent = "Apagar esta história";
+    $("painel-contexto").hidden = false;
   };
-  $("painel").onclick = e => { if (e.target.id === "painel") $("painel").hidden = true; };
+  $("painel-contexto").onclick = e => { if (e.target.id === "painel-contexto") $("painel-contexto").hidden = true; };
+  $("form-contexto").onsubmit = e => {
+    e.preventDefault();
+    hist = Object.assign({}, hist, { titulo: $("e-titulo").value.trim().slice(0, 120), premissa: $("e-premissa").value.trim(),
+      universo: $("e-universo").value.trim(), papel: $("e-papel").value.trim(), tons: tonsDe($("e-tons")) });
+    atualizarHistoria(hist);
+    $("painel-contexto").hidden = true;
+    abrirHistoria(hist.id);
+  };
   function confirmar(botao, texto) {
     if (botao.dataset.confirmar) return true;
     botao.dataset.confirmar = "1"; botao.textContent = texto; return false;
   }
-  $("recomecar").onclick = () => {
-    if (!confirmar($("recomecar"), "Tens a certeza? Apaga a conversa e a memória. Clica outra vez.")) return;
-    apagarChave("sussurros-conversa-" + atual.id);
-    $("painel").hidden = true;
-    abrirChat(atual.id);
+  $("recomecar").onclick = async () => {
+    if (!confirmar($("recomecar"), "Tens a certeza? Apaga o texto e a memória desta história. Clica outra vez.")) return;
+    $("painel-contexto").hidden = true;
+    cont = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
+    aEspera = true;
+    desenhar(`<div class="a-escrever">O narrador está a escrever <i>•</i><i>•</i><i>•</i></div>`);
+    try {
+      const d = await groq([{ role: "system", content: instrucoes(pers, hist, [], "") },
+                            { role: "user", content: "[NOTA DE AUTOR] Escreve a cena de abertura da história, apresentando o cenário e o primeiro encontro." }],
+                           { esquema: ESQUEMA_CENA, nome: "cena" });
+      aplicarCena(cont, d);
+      gravarConteudo(hist.id, cont); atualizarHistoria(hist);
+      aEspera = false; desenhar();
+    } catch (e) {
+      aEspera = false; gravarConteudo(hist.id, cont);
+      desenhar(`<p class="erro">${escapar(mensagemDeErro(e))} Escreve qualquer coisa para começar.</p>`);
+    }
   };
-  $("apagar").onclick = () => {
-    if (!confirmar($("apagar"), `Apagar ${atual.nome} e a conversa toda? Clica outra vez.`)) return;
-    apagarChave("sussurros-conversa-" + atual.id);
-    gravarPersonagens(listaPersonagens().filter(p => p.id !== atual.id));
-    $("painel").hidden = true;
-    mostrarGaleria();
+  $("apagar-historia").onclick = () => {
+    if (!confirmar($("apagar-historia"), "Apagar esta história para sempre? Clica outra vez.")) return;
+    apagarChave("sussurros-h-" + hist.id);
+    gravarHistorias(historias().filter(h => h.id !== hist.id));
+    $("painel-contexto").hidden = true;
+    abrirPersonagem(pers.id);
   };
 
+  // ---------- Painel: chave do Groq ----------
   function abrirChave() { $("chave").value = chave(); $("chave-estado").textContent = ""; $("painel-chave").hidden = false; $("chave").focus(); }
   $("abrir-chave").onclick = abrirChave;
-  $("fechar-chave").onclick = () => { $("painel-chave").hidden = true; mostrarGaleria(); };
+  $("fechar-chave").onclick = () => { $("painel-chave").hidden = true; };
   $("painel-chave").onclick = e => { if (e.target.id === "painel-chave") $("painel-chave").hidden = true; };
   $("form-chave").onsubmit = async e => {
     e.preventDefault();
@@ -710,14 +968,7 @@ Responde só com um objeto JSON:
     $("guardar-chave").disabled = false;
   };
 
-  $("voltar").onclick = mostrarGaleria;
-  $("form").onsubmit = e => { e.preventDefault(); enviar($("texto").value); };
-  $("texto").addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar($("texto").value); }
-  });
-
   mostrarGaleria();
 </script>
-
 </body>
 </html>
