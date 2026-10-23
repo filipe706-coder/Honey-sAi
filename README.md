@@ -8,6 +8,12 @@ teu nome, do que gostas, do que já aconteceu entre vocês.
 Usa-se no browser (PC ou telemóvel). As personagens e conversas ficam guardadas
 no br## Usar já: https://filipe706-coder.github.io/Honey-sAi/
 
+**Fanfics interativas:** crias uma personagem (nome + obra) e, a partir dela, as
+histórias que quiseres: uma ideia (ou "Surpreende-me"), o universo, o teu papel e o
+tom. O narrador escreve na 3.ª pessoa e tu escreves o que a tua personagem faz e diz.
+Com o botão ✎ (ou escrevendo entre parênteses) mandas uma **nota de autor** para
+mudar o rumo, por exemplo "(salta 3 dias)". No 📖 editas o contexto a meio.
+
 Versão no GitHub Pages, sem servidor: o browser fala diretamente com o Groq.
 Na primeira vez, cada pessoa põe a **sua própria chave grátis do Groq**
 (a página explica como); a chave fica só no browser dela.
