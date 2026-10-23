@@ -18,6 +18,9 @@
 #
 # A chave da API fica SÓ aqui no servidor (ficheiro .env), nunca na app.
 
+import datetime
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -25,8 +28,8 @@ import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 # O .env tem de ser lido ANTES de importar o ia.py, porque é lá que está o PROVEDOR.
@@ -46,8 +49,55 @@ JANELA = 24          # nº de mensagens recentes que a IA vê "palavra por palav
 FOLGA = 10           # quando passarmos JANELA+FOLGA, as mais antigas vão para o resumo
 MAX_FACTOS = 60
 MAX_CARACTERES = 2000
+# Limite de pedidos à IA por pessoa por dia, para ninguém gastar a quota toda do Groq.
+MAX_PEDIDOS_DIA = int(os.getenv("MAX_PEDIDOS_DIA", "300"))
 
 app = FastAPI(title="Sussurros")
+
+
+# ---------- Palavra-passe de acesso ----------
+# Se o .env tiver SENHA=..., só entra quem a souber. Quem acerta fica com um
+# "cookie" no browser durante 30 dias (não precisa de a escrever sempre).
+# O cookie guarda uma impressão digital (hash) da senha, nunca a senha em si.
+
+SENHA = os.getenv("SENHA", "").strip()
+COOKIE = "sussurros_acesso"
+
+
+def impressao(senha: str) -> str:
+    return hashlib.sha256(("sussurros:" + senha).encode()).hexdigest()
+
+
+PAGINA_ENTRAR = """<!doctype html><html lang="pt"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Sussurros</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#120d14;color:#f3eaf0;
+font-family:system-ui,sans-serif}form{width:min(320px,90vw);display:grid;gap:12px;text-align:center}
+h1{font-family:Georgia,serif;font-weight:600;margin:0 0 8px}input,button{font:inherit;padding:12px 14px;
+border-radius:14px;border:1px solid #2e2432;background:#1d1620;color:inherit}button{background:#e7a0b4;
+color:#2a1020;border:0;font-weight:600;cursor:pointer}p{color:#ff8a9a;margin:0;font-size:14px}</style>
+</head><body><form method="post" action="/entrar"><h1>Sussurros</h1>
+<input type="password" name="senha" placeholder="Palavra-passe" autofocus required>
+<button>Entrar</button>__ERRO__</form></body></html>"""
+
+
+@app.middleware("http")
+async def exigir_senha(request: Request, chamar):
+    if not SENHA or request.url.path == "/entrar":
+        return await chamar(request)
+    if hmac.compare_digest(request.cookies.get(COOKIE, ""), impressao(SENHA)):
+        return await chamar(request)
+    if request.method == "GET" and request.url.path in ("/", "/conversa"):
+        return HTMLResponse(PAGINA_ENTRAR.replace("__ERRO__", ""))
+    return JSONResponse({"detail": "Precisas da palavra-passe. Recarrega a página."}, status_code=401)
+
+
+@app.post("/entrar")
+def entrar(senha: str = Form("")):
+    if not SENHA or not hmac.compare_digest(senha.strip(), SENHA):
+        return HTMLResponse(PAGINA_ENTRAR.replace("__ERRO__", "<p>Palavra-passe errada.</p>"), status_code=401)
+    r = RedirectResponse("/", status_code=303)
+    r.set_cookie(COOKIE, impressao(SENHA), max_age=30 * 24 * 3600, httponly=True, samesite="lax")
+    return r
 
 FERRAMENTA_RESPOSTA = {
     "name": "responder",
@@ -105,6 +155,17 @@ def abrir_conversa(utilizador: str, p: dict) -> dict:
 
 def guardar_conversa(utilizador: str, pid: str, conv: dict) -> None:
     escrever(pasta_de(utilizador, "conversas") / f"{pid}.json", conv)
+
+
+def contar_pedido(utilizador: str) -> None:
+    """Conta um pedido à IA para esta pessoa e trava se passar o limite do dia."""
+    f = pasta_de(utilizador, ".") / "uso.json"
+    hoje = datetime.date.today().isoformat()
+    uso = ler(f) or {}
+    n = uso.get("n", 0) if uso.get("dia") == hoje else 0
+    if n >= MAX_PEDIDOS_DIA:
+        raise HTTPException(429, f"Chegaste ao limite de {MAX_PEDIDOS_DIA} mensagens por hoje. Volta amanhã!")
+    escrever(f, {"dia": hoje, "n": n + 1})
 
 
 def cor(valor, padrao: str) -> str:
@@ -206,6 +267,7 @@ def gerar_personagem(pedido: PedidoGerar):
     nome = pedido.nome.strip()[:80]
     if not nome:
         raise HTTPException(400, "Escreve o nome da personagem.")
+    contar_pedido(pedido.utilizador)
     try:
         d = ia.fichas.estruturado(
             None,
@@ -280,6 +342,7 @@ def chat(pedido: PedidoChat):
         raise HTTPException(400, "Mensagem vazia ou demasiado longa.")
 
     p = abrir_personagem(pedido.utilizador, pedido.personagem)
+    contar_pedido(pedido.utilizador)
     conv = abrir_conversa(pedido.utilizador, p)
     conv["mensagens"].append({"papel": "utilizador", "texto": texto})
 

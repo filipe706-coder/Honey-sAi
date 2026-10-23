@@ -31,6 +31,31 @@ Cada pessoa usa a sua própria chave.
 
 ---
 
+## Partilhar com um link (o PC fica a ser o servidor)
+
+O `partilhar.bat` cria um link público tipo `https://algo.trycloudflare.com`
+para outra pessoa usar a app a partir do telemóvel ou de outro PC.
+
+1. Fecha a janela preta do servidor, se estiver aberta.
+2. Duplo clique no **`partilhar.bat`**.
+   - Na 1.ª vez oferece-se para instalar o `cloudflared` (programa grátis da
+     Cloudflare que cria o túnel). Depois disso fecha e volta a abrir.
+   - Pede uma **palavra-passe de acesso** (usa só letras e números) e guarda-a
+     como `SENHA=` no `servidor/.env`.
+3. Abre-se uma janela nova com o servidor, e na janela do partilhar aparece
+   uma linha com o link `https://....trycloudflare.com`.
+4. Envia o link **e a palavra-passe** a quem quiseres. Quem entra fica com
+   acesso durante 30 dias nesse browser.
+
+Atenção:
+- O PC tem de estar ligado, com as duas janelas abertas.
+- O link muda de cada vez que corres o `partilhar.bat`.
+- Cada pessoa tem as suas próprias personagens e conversas (guardadas no teu
+  PC, em `servidor/dados/`).
+- Há um limite de 300 pedidos à IA por pessoa por dia (`MAX_PEDIDOS_DIA` no `.env`).
+
+---
+
 ## Como se usa
 
 **Criar uma personagem**
@@ -68,6 +93,7 @@ Browser (app.html) ──▶ Servidor Python (main.py) ──▶ IA (Groq, via i
 | `servidor/personagens.py` | Os textos para a IA: como gerar fichas e as regras da conversa |
 | `servidor/ia.py` | A ligação à IA. É o único ficheiro que sabe que fornecedor usamos |
 | `iniciar.bat` | Instala e arranca tudo |
+| `partilhar.bat` | Cria um link público (túnel Cloudflare) protegido por palavra-passe |
 | `iniciar-ollama.bat` | Alternativa: arranca com uma IA local (Ollama) em vez do Groq |
 | `app/` | Primeira versão da app Android (desatualizada, vai ser refeita) |
 
@@ -98,13 +124,13 @@ instala o Ollama (https://ollama.com/download), abre-o uma vez e usa o
 ---
 
 ## Limites atuais (de propósito)
-- Sem login: o browser guarda um id aleatório. Noutro browser começas do zero.
-- Sem limite de mensagens. Serve para uso pessoal no PC; **não pôr este
-  servidor público na internet assim**.
+- Sem contas: o browser guarda um id aleatório. Noutro browser começas do zero.
+- A proteção é uma palavra-passe partilhada (`SENHA`), suficiente para uso
+  entre amigos, não para uma app pública.
 - Os erros da IA aparecem detalhados na página (útil para testar).
 
 ## Próximos passos
-- Login e limite de mensagens
+- Contas de utilizador a sério
 - Servidor na cloud (Oracle Cloud, grátis) para usar sem o PC ligado
 - App Android
 - Imagens das personagens
