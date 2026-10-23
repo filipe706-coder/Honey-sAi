@@ -6,7 +6,19 @@ forma de falar, e depois conversas com ela. A personagem lembra-se de ti: do
 teu nome, do que gostas, do que já aconteceu entre vocês.
 
 Usa-se no browser (PC ou telemóvel). As personagens e conversas ficam guardadas
-no br## Pôr online com um link fixo (Render, grátis)
+no br## Usar já: https://filipe706-coder.github.io/Honey-sAi/
+
+Versão no GitHub Pages, sem servidor: o browser fala diretamente com o Groq.
+Na primeira vez, cada pessoa põe a **sua própria chave grátis do Groq**
+(a página explica como); a chave fica só no browser dela.
+
+- O código está em `web/index.html` (ramo `main`).
+- O site publicado é o ramo `gh-pages`: para atualizar, copia o `web/index.html`
+  para a raiz do ramo `gh-pages` e faz push. Demora 1 a 2 minutos a aparecer.
+
+---
+
+## Pôr online com um link fixo (Render, grátis)
 
 O Render liga-se a este repositório do GitHub, corre o servidor e dá um link
 fixo tipo `https://honey-sai.onrender.com`. Sempre que fizerem push para o
