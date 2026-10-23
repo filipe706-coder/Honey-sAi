@@ -1,0 +1,18 @@
+# Segredos
+.env
+
+# Python
+__pycache__/
+venv/
+.venv/
+
+# Android
+*.iml
+.gradle/
+local.properties
+.idea/
+build/
+captures/
+.cxx/
+servidor/dados/
+servidor/Modelfile

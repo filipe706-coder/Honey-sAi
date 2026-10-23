@@ -1,0 +1,476 @@
+<!doctype html>
+<!--
+  Sussurros — a "app" no browser (versão 2).
+  Três ecrãs dentro da mesma página:
+    1. Galeria: as tuas personagens (vazia ao início, só com o botão Criar)
+    2. Criar: escreves nome + obra, a IA gera a ficha, tu revês e guardas
+    3. Chat: a conversa com a personagem
+  Tudo fica guardado no SERVIDOR; o browser só guarda um id aleatório teu
+  e a preferência de mostrar ou não as sugestões de resposta.
+-->
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sussurros</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fundo: #120d14; --cartao: #1d1620; --linha: #2e2432;
+    --texto: #f3eaf0; --suave: #a8979f; --acento: #e7a0b4; --acento2: #c9809a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #08060a; color: var(--texto);
+               font-family: Inter, system-ui, sans-serif; }
+  .telefone { max-width: 460px; height: 100%; margin: 0 auto; background: var(--fundo);
+              position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  .ecra { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .ecra.ativo { display: flex; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .titulo { font-family: "Cormorant Garamond", serif; }
+
+  /* ---------- Galeria ---------- */
+  .topo-galeria { padding: 28px 20px 8px; }
+  .marca { font-family: "Cormorant Garamond", serif; font-size: 34px; margin: 0; letter-spacing: .5px; }
+  .marca span { color: var(--acento); }
+  .sub { color: var(--suave); margin: 4px 0 0; font-size: 14px; }
+  .lista { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px 28px; display: grid;
+           gap: 14px; grid-auto-rows: max-content; align-content: start; }
+  .carta { border: 0; text-align: left; border-radius: 22px; padding: 0; overflow: hidden;
+           background: var(--cartao); transition: transform .15s; }
+  .carta:hover { transform: translateY(-2px); }
+  .carta-capa { height: 110px; display: flex; align-items: flex-end; justify-content: space-between;
+                padding: 14px 16px; font-size: 44px; }
+  .chip { font-size: 11px; font-weight: 600; background: rgba(0,0,0,.35); padding: 5px 10px;
+          border-radius: 99px; letter-spacing: .3px; max-width: 65%; white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis; }
+  .carta-corpo { padding: 12px 16px 16px; }
+  .carta-nome { font-family: "Cormorant Garamond", serif; font-size: 24px; margin: 0; }
+  .carta-frase { margin: 4px 0 0; color: var(--suave); font-size: 14px; line-height: 1.4; }
+  .continuar { margin-top: 10px; font-size: 12px; color: var(--acento); font-weight: 600; }
+  .criar-carta { border: 1.5px dashed var(--linha); background: transparent; border-radius: 22px;
+                 padding: 22px; color: var(--suave); font-size: 15px; }
+  .criar-carta:hover { border-color: var(--acento); color: var(--acento); }
+  .vazio-galeria { text-align: center; padding: 60px 24px; }
+  .vazio-galeria .grande { font-size: 54px; }
+  .vazio-galeria p { color: var(--suave); line-height: 1.5; }
+  .botao { border: 0; border-radius: 16px; padding: 13px 22px; background: var(--acento);
+           color: #2a1020; font-weight: 600; }
+  .botao:disabled { opacity: .45; cursor: default; }
+  .botao.secundario { background: transparent; color: var(--texto); border: 1px solid var(--linha); }
+
+  /* ---------- Barra de topo (criar e chat) ---------- */
+  .barra { display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+           border-bottom: 1px solid var(--linha); }
+  .icone { background: none; border: 0; font-size: 20px; padding: 6px 8px; border-radius: 10px; }
+  .icone:hover { background: var(--linha); }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; flex: none; }
+  .barra-nome { flex: 1; min-width: 0; }
+  .barra-nome b { font-family: "Cormorant Garamond", serif; font-size: 21px; font-weight: 600; display: block; line-height: 1.1; }
+  .barra-nome small { color: var(--suave); font-size: 12px; }
+
+  /* ---------- Criar ---------- */
+  .formulario { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .formulario label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); }
+  .formulario input, .formulario textarea { width: 100%; margin-top: 6px; background: var(--cartao); color: var(--texto);
+           border: 1px solid var(--linha); border-radius: 14px; padding: 11px 14px; font: inherit; font-size: 15px; outline: none; }
+  .formulario textarea { resize: vertical; line-height: 1.45; }
+  .formulario input:focus, .formulario textarea:focus { border-color: var(--acento2); }
+  .dica { color: var(--suave); font-size: 13px; line-height: 1.45; margin: 0; }
+  .aviso { background: #2a1f2e; border: 1px solid var(--acento2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+  .acoes { display: flex; gap: 10px; }
+  .acoes .botao { flex: 1; }
+  .carregar { text-align: center; color: var(--suave); padding: 40px 10px; }
+  .carregar .grande { font-size: 40px; display: block; animation: pulsar 1.4s infinite; }
+
+  /* ---------- Chat ---------- */
+  .memoria-btn { position: relative; }
+  .contador { position: absolute; top: 0; right: 0; background: var(--acento); color: #2a1020;
+              font-size: 10px; font-weight: 700; border-radius: 99px; padding: 1px 5px; }
+  .mensagens { flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 86%; line-height: 1.5; font-size: 15px; white-space: pre-wrap; padding: 11px 14px; border-radius: 18px; }
+  .msg.personagem { background: var(--cartao); align-self: flex-start; border-top-left-radius: 6px; }
+  .msg.utilizador { background: linear-gradient(135deg, var(--acento2), #9d5d7b); align-self: flex-end; border-top-right-radius: 6px; }
+  .msg em { color: #cdb6c2; font-style: italic; }
+  .msg.utilizador em { color: #fbe3ec; }
+  .a-escrever { color: var(--suave); font-size: 13px; font-style: italic; padding-left: 4px; }
+  .a-escrever i { display: inline-block; animation: pulsar 1.2s infinite; font-style: normal; }
+  .a-escrever i:nth-child(2) { animation-delay: .2s; } .a-escrever i:nth-child(3) { animation-delay: .4s; }
+  @keyframes pulsar { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
+  .erro { color: #ff8a9a; font-size: 13px; text-align: center; line-height: 1.4; }
+  .escolhas { display: flex; flex-direction: column; gap: 6px; padding: 0 16px 8px; }
+  .escolha { text-align: left; background: transparent; border: 1px solid var(--linha);
+             border-radius: 14px; padding: 9px 12px; font-size: 14px; color: var(--texto); transition: .15s; }
+  .escolha:hover { border-color: var(--acento); background: rgba(231,160,180,.08); }
+  .escolha::before { content: "↳ "; color: var(--acento); }
+  .caixa { display: flex; gap: 8px; padding: 10px 14px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
+  .caixa textarea { flex: 1; resize: none; background: var(--cartao); color: var(--texto); border: 1px solid var(--linha);
+             border-radius: 16px; padding: 11px 14px; font: inherit; font-size: 15px; outline: none; }
+  .caixa textarea:focus { border-color: var(--acento2); }
+  .lampada { opacity: .45; }
+  .lampada.ligada { opacity: 1; }
+  .enviar { border: 0; border-radius: 16px; padding: 11px 16px; background: var(--acento); color: #2a1020; font-weight: 600; }
+  .enviar:disabled { opacity: .4; cursor: default; }
+
+  .toast { position: absolute; left: 16px; right: 16px; top: 72px; background: #2a1f2e; border: 1px solid var(--acento2);
+           border-radius: 14px; padding: 10px 14px; font-size: 13px; opacity: 0; transform: translateY(-8px);
+           transition: .3s; pointer-events: none; z-index: 5; }
+  .toast.ver { opacity: 1; transform: none; }
+  .toast b { color: var(--acento); }
+
+  /* ---------- Painel da memória ---------- */
+  .painel { position: absolute; inset: 0; background: rgba(0,0,0,.55); display: none; z-index: 10; }
+  .painel.ver { display: block; }
+  .gaveta { position: absolute; left: 0; right: 0; bottom: 0; max-height: 82%; overflow-y: auto;
+            background: var(--cartao); border-radius: 24px 24px 0 0; padding: 20px; }
+  .gaveta h3 { font-family: "Cormorant Garamond", serif; font-size: 24px; margin: 0 0 4px; }
+  .gaveta h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); margin: 18px 0 8px; }
+  .gaveta ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .gaveta li { background: var(--fundo); border-radius: 10px; padding: 8px 12px; font-size: 14px; }
+  .gaveta li::before { content: "✦ "; color: var(--acento); }
+  .vazio { color: var(--suave); font-size: 14px; font-style: italic; }
+  .resumo { font-size: 14px; line-height: 1.5; color: #d9c9d1; margin: 0; }
+  .perigo { margin-top: 10px; width: 100%; background: transparent; border: 1px solid #6a3442; color: #ff9fb0;
+            padding: 10px; border-radius: 12px; }
+  .perigo:first-of-type { margin-top: 22px; }
+</style>
+</head>
+<body>
+<div class="telefone">
+
+  <!-- ECRÃ 1: galeria -->
+  <section class="ecra ativo" id="ecra-galeria">
+    <div class="topo-galeria">
+      <h1 class="marca">Sussur<span>ros</span></h1>
+      <p class="sub">As tuas personagens. Cada uma lembra-se de ti.</p>
+    </div>
+    <div class="lista" id="lista"></div>
+  </section>
+
+  <!-- ECRÃ 2: criar personagem -->
+  <section class="ecra" id="ecra-criar">
+    <div class="barra">
+      <button class="icone" id="criar-voltar" title="Voltar">←</button>
+      <div class="barra-nome"><b>Nova personagem</b><small id="criar-passo">Passo 1 de 2</small></div>
+    </div>
+
+    <!-- Passo 1: nome e obra -->
+    <form class="formulario" id="passo1">
+      <p class="dica">Escreve quem queres. A IA usa o que sabe da obra para criar a personalidade e a forma de falar. Depois podes rever tudo.</p>
+      <label>Nome<input id="c-nome" maxlength="80" placeholder="Ex: L" required></label>
+      <label>Obra<input id="c-obra" maxlength="120" placeholder="Ex: Death Note"></label>
+      <label>Notas (opcional)<textarea id="c-extra" rows="3" maxlength="1000"
+        placeholder="Algo que queiras acrescentar ou mudar. Ex: passa-se depois do fim da série."></textarea></label>
+      <p class="dica">Também podes inventar uma personagem tua: deixa a obra vazia e descreve-a nas notas.</p>
+      <button class="botao" id="gerar">Criar ficha ✨</button>
+      <div id="passo1-estado"></div>
+    </form>
+
+    <!-- Passo 2: rever a ficha gerada -->
+    <form class="formulario" id="passo2" style="display:none">
+      <div id="aviso-ficha"></div>
+      <label>Nome<input id="r-nome" maxlength="80"></label>
+      <label>Obra<input id="r-obra" maxlength="120"></label>
+      <label>Frase do cartão<input id="r-frase" maxlength="200"></label>
+      <label>Personalidade e forma de falar<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
+      <label>Primeira fala<textarea id="r-saudacao" rows="3" maxlength="1000"></textarea></label>
+      <div class="acoes">
+        <button type="button" class="botao secundario" id="regerar">Gerar outra vez</button>
+        <button class="botao" id="guardar">Guardar e conversar</button>
+      </div>
+      <div id="passo2-estado"></div>
+    </form>
+  </section>
+
+  <!-- ECRÃ 3: chat -->
+  <section class="ecra" id="ecra-chat">
+    <div class="barra">
+      <button class="icone" id="voltar" title="Voltar">←</button>
+      <div class="avatar" id="avatar"></div>
+      <div class="barra-nome"><b id="nome"></b><small id="obra"></small></div>
+      <button class="icone memoria-btn" id="abrir-memoria" title="Memória">🧠<span class="contador" id="contador">0</span></button>
+    </div>
+    <div class="mensagens" id="mensagens"></div>
+    <div class="escolhas" id="escolhas"></div>
+    <form class="caixa" id="form">
+      <button type="button" class="icone lampada" id="lampada" title="Mostrar sugestões de resposta">💡</button>
+      <textarea id="texto" rows="1" placeholder="Escreve uma mensagem…"></textarea>
+      <button class="enviar" id="enviar">Enviar</button>
+    </form>
+    <div class="toast" id="toast"></div>
+  </section>
+
+  <!-- Painel da memória -->
+  <div class="painel" id="painel">
+    <div class="gaveta">
+      <h3 id="mem-titulo">Memória</h3>
+      <h4>O que se lembra de ti</h4>
+      <ul id="mem-factos"></ul>
+      <h4>A conversa até agora</h4>
+      <p class="resumo" id="mem-resumo"></p>
+      <button class="perigo" id="recomecar">Recomeçar a conversa</button>
+      <button class="perigo" id="apagar">Apagar personagem</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- Pequenas ajudas ----------
+  // localStorage pode falhar (modo privado, etc.), por isso vai sempre dentro de try.
+  function guardado(chave, valor) {
+    try {
+      if (valor === undefined) return localStorage.getItem(chave);
+      localStorage.setItem(chave, valor);
+    } catch (e) { return null; }
+  }
+  function obterId() {
+    let id = guardado("sussurros-id");
+    if (!id) {
+      id = crypto.randomUUID ? crypto.randomUUID() : (String(Math.random()).slice(2) + Date.now());
+      guardado("sussurros-id", id);
+    }
+    return id;
+  }
+  const EU = obterId();
+  const $ = id => document.getElementById(id);
+
+  // Escapa HTML (para ninguém injetar código) e põe *ações* em itálico.
+  function formatar(t) {
+    const seguro = String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return seguro.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  }
+  const fundo = p => `linear-gradient(135deg, ${p.cores[0]}, ${p.cores[1]})`;
+
+  async function api(caminho, corpo) {
+    const r = await fetch(caminho, corpo ? {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo)
+    } : undefined);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.detail || "Erro " + r.status);
+    return d;
+  }
+
+  function mostrar(ecra) {
+    document.querySelectorAll(".ecra").forEach(e => e.classList.toggle("ativo", e.id === ecra));
+  }
+
+  let personagens = [];
+  let atual = null;      // personagem aberta no chat
+  let estado = null;     // {mensagens, memoria, resumo, escolhas}
+  let aEspera = false;
+  let rascunho = null;   // ficha gerada, à espera de revisão
+  let verSugestoes = guardado("sussurros-sugestoes") === "1";
+
+  // ---------- Galeria ----------
+  async function mostrarGaleria() {
+    mostrar("ecra-galeria");
+    personagens = await api(`/personagens?utilizador=${EU}`);
+
+    if (!personagens.length) {
+      $("lista").innerHTML = `
+        <div class="vazio-galeria">
+          <div class="grande">✨</div>
+          <p>Ainda não tens personagens.<br>Escolhe alguém de um anime, série, livro ou jogo, ou inventa a tua.</p>
+          <button class="botao" id="criar-primeira">Criar personagem</button>
+        </div>`;
+      $("criar-primeira").onclick = abrirCriar;
+      return;
+    }
+
+    const historias = await Promise.all(personagens.map(p => api(`/historia/${p.id}?utilizador=${EU}`)));
+    $("lista").innerHTML = `<button class="criar-carta" id="criar-nova">+ Criar personagem</button>` +
+      personagens.map((p, i) => {
+        const n = historias[i].mensagens.length;
+        return `
+        <button class="carta" data-id="${p.id}">
+          <div class="carta-capa" style="background:${fundo(p)}"><span>${formatar(p.emoji)}</span>${p.obra ? `<span class="chip">${formatar(p.obra)}</span>` : ""}</div>
+          <div class="carta-corpo">
+            <p class="carta-nome">${formatar(p.nome)}</p>
+            <p class="carta-frase">${formatar(p.frase)}</p>
+            ${n > 1 ? `<div class="continuar">Continuar conversa · ${historias[i].memoria.length} memórias</div>` : ""}
+          </div>
+        </button>`;
+      }).join("");
+    $("criar-nova").onclick = abrirCriar;
+    document.querySelectorAll(".carta").forEach(b => b.onclick = () => abrirChat(b.dataset.id));
+  }
+
+  // ---------- Criar personagem ----------
+  function abrirCriar() {
+    rascunho = null;
+    $("passo1").reset();
+    $("passo1").style.display = "";
+    $("passo2").style.display = "none";
+    $("passo1-estado").innerHTML = "";
+    $("criar-passo").textContent = "Passo 1 de 2";
+    mostrar("ecra-criar");
+    $("c-nome").focus();
+  }
+
+  async function gerarFicha() {
+    const nome = $("c-nome").value.trim();
+    if (!nome) return;
+    $("gerar").disabled = $("regerar").disabled = true;
+    $("passo1").style.display = "";
+    $("passo2").style.display = "none";
+    $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">✨</span>A conhecer ${formatar(nome)}…</div>`;
+    try {
+      // Se já havia um rascunho (carregaste em "Gerar outra vez"), apaga-o.
+      if (rascunho) api(`/personagens/${rascunho.id}/apagar`, { utilizador: EU, personagem: rascunho.id }).catch(() => {});
+      rascunho = await api("/personagens/gerar", {
+        utilizador: EU, nome, obra: $("c-obra").value, extra: $("c-extra").value
+      });
+      $("r-nome").value = rascunho.nome;
+      $("r-obra").value = rascunho.obra;
+      $("r-frase").value = rascunho.frase;
+      $("r-ficha").value = rascunho.ficha;
+      $("r-saudacao").value = rascunho.saudacao;
+      $("aviso-ficha").innerHTML = rascunho.conhecida ? "" :
+        `<div class="aviso">Não conheço bem esta personagem, por isso a ficha é um ponto de partida. Corrige o que estiver errado ou acrescenta notas e gera outra vez.</div>`;
+      $("passo1").style.display = "none";
+      $("passo2").style.display = "";
+      $("passo2-estado").innerHTML = "";
+      $("criar-passo").textContent = "Passo 2 de 2 · revê a ficha";
+    } catch (e) {
+      $("passo1-estado").innerHTML = `<p class="erro">${formatar(e.message)}</p>`;
+    }
+    $("gerar").disabled = $("regerar").disabled = false;
+  }
+
+  async function guardarFicha() {
+    $("guardar").disabled = true;
+    try {
+      const p = await api(`/personagens/${rascunho.id}/guardar`, {
+        utilizador: EU, nome: $("r-nome").value, obra: $("r-obra").value, frase: $("r-frase").value,
+        ficha: $("r-ficha").value, saudacao: $("r-saudacao").value
+      });
+      rascunho = null;
+      personagens = await api(`/personagens?utilizador=${EU}`);
+      await abrirChat(p.id);
+    } catch (e) {
+      $("passo2-estado").innerHTML = `<p class="erro">${formatar(e.message)}</p>`;
+    }
+    $("guardar").disabled = false;
+  }
+
+  $("passo1").onsubmit = e => { e.preventDefault(); gerarFicha(); };
+  $("regerar").onclick = gerarFicha;
+  $("passo2").onsubmit = e => { e.preventDefault(); guardarFicha(); };
+  $("criar-voltar").onclick = () => {
+    if (rascunho) api(`/personagens/${rascunho.id}/apagar`, { utilizador: EU, personagem: rascunho.id }).catch(() => {});
+    rascunho = null;
+    mostrarGaleria();
+  };
+
+  // ---------- Chat ----------
+  async function abrirChat(id) {
+    atual = personagens.find(p => p.id === id);
+    $("avatar").style.background = fundo(atual);
+    $("avatar").textContent = atual.emoji;
+    $("nome").textContent = atual.nome;
+    $("obra").textContent = atual.obra;
+    mostrar("ecra-chat");
+    estado = await api(`/historia/${id}?utilizador=${EU}`);
+    desenhar();
+    $("texto").focus();
+  }
+
+  function desenhar(extra = "") {
+    $("mensagens").innerHTML = estado.mensagens
+      .map(m => `<div class="msg ${m.papel}">${formatar(m.texto)}</div>`).join("") + extra;
+    $("mensagens").scrollTop = $("mensagens").scrollHeight;
+    $("contador").textContent = estado.memoria.length;
+    $("lampada").classList.toggle("ligada", verSugestoes);
+    $("escolhas").innerHTML = (aEspera || !verSugestoes) ? "" : (estado.escolhas || [])
+      .map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("");
+    document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(estado.escolhas[b.dataset.i]));
+    $("enviar").disabled = aEspera;
+  }
+
+  async function enviar(texto) {
+    texto = (texto || "").trim();
+    if (!texto || aEspera) return;
+    aEspera = true;
+    estado.mensagens.push({ papel: "utilizador", texto });
+    $("texto").value = "";
+    desenhar(`<div class="a-escrever">${formatar(atual.nome)} está a escrever <i>•</i><i>•</i><i>•</i></div>`);
+    try {
+      const r = await api("/chat", { utilizador: EU, personagem: atual.id, texto });
+      estado.mensagens.push({ papel: "personagem", texto: r.resposta });
+      estado.escolhas = r.escolhas;
+      estado.memoria.push(...r.novos_factos);
+      if (r.novos_factos.length) avisarMemoria(r.novos_factos);
+      aEspera = false;
+      desenhar();
+    } catch (e) {
+      estado.mensagens.pop();
+      aEspera = false;
+      desenhar(`<div class="erro">${formatar(e.message)}</div>`);
+      $("texto").value = texto;
+    }
+    $("texto").focus();
+  }
+
+  let temporizador;
+  function avisarMemoria(factos) {
+    $("toast").innerHTML = `<b>✦ ${formatar(atual.nome)} vai lembrar-se disto:</b><br>${factos.map(formatar).join("<br>")}`;
+    $("toast").classList.add("ver");
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => $("toast").classList.remove("ver"), 4000);
+  }
+
+  $("lampada").onclick = () => {
+    verSugestoes = !verSugestoes;
+    guardado("sussurros-sugestoes", verSugestoes ? "1" : "0");
+    desenhar();
+  };
+
+  // ---------- Painel da memória ----------
+  $("abrir-memoria").onclick = () => {
+    $("mem-titulo").textContent = `Memória · ${atual.nome}`;
+    $("mem-factos").innerHTML = estado.memoria.length
+      ? estado.memoria.map(f => `<li>${formatar(f)}</li>`).join("")
+      : `<p class="vazio">Ainda nada. Conta-lhe coisas sobre ti!</p>`;
+    $("mem-resumo").innerHTML = estado.resumo
+      ? formatar(estado.resumo)
+      : `<span class="vazio">O resumo aparece quando a conversa fica mais longa.</span>`;
+    for (const id of ["recomecar", "apagar"]) $(id).dataset.confirmar = "";
+    $("recomecar").textContent = "Recomeçar a conversa";
+    $("apagar").textContent = "Apagar personagem";
+    $("painel").classList.add("ver");
+  };
+  $("painel").onclick = e => { if (e.target.id === "painel") $("painel").classList.remove("ver"); };
+
+  // Pede confirmação com um 2.º clique (sem janelas de alerta).
+  function confirmar(botao, texto) {
+    if (botao.dataset.confirmar) return true;
+    botao.dataset.confirmar = "1";
+    botao.textContent = texto;
+    return false;
+  }
+  $("recomecar").onclick = async () => {
+    if (!confirmar($("recomecar"), "Tens a certeza? Apaga a conversa e a memória. Clica outra vez.")) return;
+    await api("/recomecar", { utilizador: EU, personagem: atual.id });
+    $("painel").classList.remove("ver");
+    abrirChat(atual.id);
+  };
+  $("apagar").onclick = async () => {
+    if (!confirmar($("apagar"), `Apagar ${atual.nome} e a conversa toda? Clica outra vez.`)) return;
+    await api(`/personagens/${atual.id}/apagar`, { utilizador: EU, personagem: atual.id });
+    $("painel").classList.remove("ver");
+    mostrarGaleria();
+  };
+
+  $("voltar").onclick = mostrarGaleria;
+  $("form").onsubmit = e => { e.preventDefault(); enviar($("texto").value); };
+  $("texto").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar($("texto").value); }
+  });
+
+  mostrarGaleria().catch(e => {
+    $("lista").innerHTML = `<p class="erro">Não consegui falar com o servidor: ${formatar(e.message)}</p>`;
+  });
+</script>
+</body>
+</html>
