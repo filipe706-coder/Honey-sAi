@@ -72,6 +72,7 @@
   .lista { padding-block: 16px 28px; display: grid; gap: 14px; grid-auto-rows: max-content; align-content: start; }
   .carta { border: 0; text-align: left; border-radius: 22px; padding: 0; overflow: hidden; background: var(--cartao); transition: transform .15s; }
   .carta:hover { transform: translateY(-2px); }
+  .carta-capa.com-foto { height: 180px; }
   .carta-capa { height: 104px; display: flex; align-items: flex-end; justify-content: space-between; padding: 14px 16px; font-size: 42px; }
   .chip { font-size: 11px; font-weight: 600; background: rgba(0,0,0,.35); color: #fff; padding: 5px 10px; border-radius: 99px;
           letter-spacing: .3px; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -113,6 +114,20 @@
   .atalho { text-align: left; border: 1px solid var(--acento2); background: transparent; border-radius: 14px; padding: 11px 14px;
             color: var(--acento); font-weight: 600; }
   .atalho:hover { background: var(--cartao); }
+  .modos { display: flex; gap: 6px; padding-top: 16px; }
+  .modo { flex: 1; border: 1px solid var(--linha); background: transparent; border-radius: 12px; padding: 10px; color: var(--suave); font-weight: 600; }
+  .modo[aria-selected="true"] { background: var(--cartao); color: var(--texto); border-color: var(--acento2); }
+  .seccao { background: var(--cartao); border-radius: 18px; padding: 16px; display: grid; gap: 12px; }
+  .seccao h3 { font-family: var(--f-titulo); font-size: 22px; font-weight: 600; margin: 0; }
+  .seccao input, .seccao textarea { background: var(--fundo); }
+  .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .avatar-linha { display: flex; gap: 14px; align-items: center; }
+  .carregar-avatar { width: 96px; height: 96px; flex: none; border-radius: 18px; border: 1.5px dashed var(--linha); display: grid; place-items: center;
+                     cursor: pointer; background: var(--fundo) center/cover no-repeat; color: var(--suave); text-transform: none; letter-spacing: 0; }
+  .carregar-avatar span { display: grid; justify-items: center; font-size: 26px; line-height: 1; }
+  .carregar-avatar small { font-size: 11px; margin-top: 4px; }
+  .carregar-avatar.com-foto { border-style: solid; border-color: var(--acento2); }
+  .carregar-avatar.com-foto span { display: none; }
   .tons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .dica { color: var(--suave); font-size: 13px; line-height: 1.45; margin: 0; }
   .aviso { background: var(--cartao); border: 1px solid var(--acento2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
@@ -223,17 +238,24 @@
       <div class="barra-nome"><b>Nova personagem</b><small id="criar-passo">Passo 1 de 2</small></div>
     </div>
     <div class="rolar">
+      <div class="gutter modos" id="modos" role="tablist">
+        <button type="button" class="modo" id="modo-ia" role="tab">A IA conhece</button>
+        <button type="button" class="modo" id="modo-mao" role="tab">Criar à mão</button>
+      </div>
       <form class="formulario gutter" id="passo1">
         <p class="dica">Escreve quem queres. A IA usa o que sabe da obra para criar a personalidade e a forma de falar. Depois podes rever tudo.</p>
         <label>Nome<input id="c-nome" maxlength="80" placeholder="Ex: L" required></label>
         <label>Obra<input id="c-obra" maxlength="120" placeholder="Ex: Death Note"></label>
-        <label>Notas (opcional)<textarea id="c-extra" rows="3" maxlength="1000" placeholder="Algo que queiras acrescentar ou mudar."></textarea></label>
-        <p class="dica">Para uma personagem tua, deixa a obra vazia e descreve-a nas notas.</p>
+        <label>Informação sobre a personagem (opcional)<textarea id="c-extra" rows="5" maxlength="4000"
+          placeholder="Cola aqui texto da wiki/Fandom ou escreve o que sabes. A IA usa isto em vez de adivinhar."></textarea></label>
+        <p class="dica">Se a IA não conhecer bem a personagem, usa <b>Criar à mão</b>.</p>
         <button class="botao" id="gerar">Criar ficha</button>
         <div id="passo1-estado"></div>
       </form>
       <form class="formulario gutter" id="passo2" hidden>
         <div id="aviso-ficha"></div>
+        <div class="avatar-linha"><label class="carregar-avatar" for="r-foto"><span id="r-foto-ver">+<small>Avatar</small></span></label>
+          <input type="file" id="r-foto" accept="image/*" hidden><p class="dica">Toca para pôr uma imagem (opcional).</p></div>
         <label>Nome<input id="r-nome" maxlength="80"></label>
         <label>Obra<input id="r-obra" maxlength="120"></label>
         <label>Frase do cartão<input id="r-frase" maxlength="200"></label>
@@ -242,6 +264,44 @@
           <button type="button" class="botao secundario" id="regerar">Gerar outra vez</button>
           <button class="botao" id="guardar">Guardar personagem</button>
         </div>
+      </form>
+
+      <!-- Criar à mão -->
+      <form class="formulario gutter" id="mao" hidden>
+        <div class="seccao">
+          <h3>Informações básicas</h3>
+          <p class="dica">Identidade e aparência da personagem. Os campos com * são obrigatórios.</p>
+          <div class="avatar-linha"><label class="carregar-avatar" for="m-foto"><span id="m-foto-ver">+<small>Avatar</small></span></label>
+            <input type="file" id="m-foto" accept="image/*" hidden><p class="dica">Toca para escolher uma imagem da galeria.</p></div>
+          <label>Nome *<input id="m-nome" maxlength="40" required></label>
+          <div class="duas">
+            <label>Idade *<input id="m-idade" inputmode="numeric" maxlength="4" placeholder="ex.: 22" required></label>
+            <label>Altura<input id="m-altura" maxlength="10" placeholder="ex.: 1,88 m"></label>
+          </div>
+          <div><span class="rotulo">Género</span><div class="tons" id="m-genero"></div></div>
+          <label>Ocupação<input id="m-ocupacao" maxlength="60" placeholder="ex.: capitão do esquadrão, barista, CEO"></label>
+          <label>De que obra é (opcional)<input id="m-obra" maxlength="120" placeholder="Deixa vazio se a personagem é tua"></label>
+          <label>Aparência<textarea id="m-aparencia" rows="2" maxlength="600" placeholder="Cabelo, olhos, roupa, o que se nota nela à primeira vista."></textarea></label>
+        </div>
+        <div class="seccao">
+          <h3>Personalidade</h3>
+          <p class="dica">Escolhe até 4 tipos. A IA adapta a forma de agir a cada um.</p>
+          <div class="tons" id="m-tipos"></div>
+          <label>Descreve à tua maneira<textarea id="m-personalidade" rows="3" maxlength="1000" placeholder="Ex: parece frio e mandão, mas repara em tudo e protege quem gosta sem o admitir."></textarea></label>
+          <label>Forma de falar<textarea id="m-fala" rows="2" maxlength="400" placeholder="Ex: frases curtas e secas, sarcasmo, chama-te 'miúda' quando quer irritar-te."></textarea></label>
+          <label>Exemplos de falas<textarea id="m-exemplos" rows="3" maxlength="600" placeholder="Uma por linha. Ex: — Outra vez atrasada? Típico."></textarea></label>
+        </div>
+        <div class="seccao">
+          <h3>Perfil</h3>
+          <label>Relação contigo, motivações e objetivos<textarea id="m-perfil" rows="3" maxlength="1000" placeholder="Ex: é o teu rival no treino desde a academia; quer ser o melhor e odeia perder para ti."></textarea></label>
+          <label>Histórico (passado, família, gostos e manias)<textarea id="m-historico" rows="4" maxlength="2000" placeholder="Ex: cresceu na rua, é obcecado por limpeza e bebe chá preto."></textarea></label>
+          <label>Frase do cartão (opcional)<input id="m-frase" maxlength="120" placeholder="Aparece na galeria"></label>
+        </div>
+        <div class="acoes">
+          <button type="button" class="botao secundario" id="completar">Completar com IA</button>
+          <button class="botao" id="guardar-mao">Criar personagem</button>
+        </div>
+        <div id="mao-estado"></div>
       </form>
     </div>
   </section>
@@ -359,12 +419,34 @@
   const TONS = ["Romance", "Slow burn", "Mistério", "Aventura", "Comédia", "Drama", "Fluff", "Angst", "Ação", "Sobrenatural"];
   const TONS_ROMANTICOS = ["Romance", "Slow burn"];
   const RELACOES = ["Livre", "Melhores amigos", "Rivais", "Colegas", "Desconhecidos"];
+  const GENEROS = ["Masculino", "Feminino", "Não binário"];
+  // Tipos de personalidade: o texto explica à IA como a personagem age.
+  const PERSONALIDADES = {
+    "Tsundere": "tsundere: brusco ou irritadiço por fora, carinhoso por dentro; nega o que sente e fica embaraçado quando é apanhado",
+    "Kuudere": "kuudere: calmo, frio e de poucas palavras; o carinho aparece em pequenos gestos raros",
+    "Dandere": "dandere: tímido e calado com quem não conhece; abre-se aos poucos com quem confia",
+    "Frio por fora, doce por dentro": "parece distante e duro, mas é atento e terno quando ninguém está a ver",
+    "Protetor": "protetor: preocupa-se com a segurança dos outros e mete-se à frente quando há perigo",
+    "Sarcástico": "sarcástico: humor seco e respostas afiadas, usa a ironia para esconder o que sente",
+    "Brincalhão": "brincalhão: provoca, faz piadas e não leva nada a sério à primeira",
+    "Confiante": "confiante: seguro de si, direto, gosta de desafios",
+    "Tímido": "tímido: hesita, cora com facilidade e fala baixo quando está nervoso",
+    "Misterioso": "misterioso: fala pouco de si, tem segredos e responde a perguntas com perguntas",
+    "Rebelde": "rebelde: desafia regras e autoridade, faz as coisas à sua maneira",
+    "Charmoso": "charmoso: galanteador e carismático, sabe exatamente o que dizer",
+    "Teimoso": "teimoso: nunca dá o braço a torcer e odeia admitir que errou",
+    "Competitivo": "competitivo: transforma tudo numa competição e detesta perder",
+    "Leal": "leal: fiel aos seus até ao fim, mesmo quando não o diz",
+    "Carinhoso": "carinhoso: afetuoso e atencioso, demonstra o que sente sem medo",
+  };
+  const PALETAS = [["#3d2c5c", "#c76b4a"], ["#22304a", "#5a4a7a"], ["#2b2b2b", "#b08d57"], ["#1f2f5c", "#8f6fd1"],
+                   ["#4a1f2e", "#c9809a"], ["#1e3b34", "#6fa38a"], ["#3a2a1a", "#c4874e"], ["#2a1f45", "#d17fa6"]];
 
   const PEDIDO_FICHA = (nome, obra, extra) => `O utilizador quer escrever fanfics interativas com esta personagem:
 
 Nome: ${nome}
 Obra: ${obra || "(não indicada)"}
-Notas do utilizador: ${extra || "(nenhuma)"}
+Informação dada pelo utilizador (tem prioridade sobre o que sabes): ${extra || "(nenhuma)"}
 
 Usa o que sabes sobre a personagem na obra original para criar a ficha.
 - ficha: 120 a 220 palavras, escrita na 3.ª pessoa ("O L é..."). Inclui quem é, aparência, personalidade,
@@ -444,7 +526,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     const slow = !p.menor && h.tons.includes("Slow burn");
     return REGRAS_NARRADOR + (slow ? regrasSlowBurn(p, h, nCena) : "")
       + (p.menor ? `\nSEM ROMANCE: ${p.nome} é menor na obra original. Só amizade, aventura, mistério ou rivalidade; nunca romance, flirt ou tensão romântica com ${p.nome}, mesmo que o utilizador peça ou diga que é adulto.` : "")
-      + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 1800)}`
+      + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 2200)}`
       + `\n\n## História: ${h.titulo || "sem título"}`
       + (h.premissa ? `\nIdeia: ${h.premissa}` : "")
       + `\nCenário: ${h.universo || "o da obra"}`
@@ -643,6 +725,12 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   const paragrafos = t => String(t).split(/\n\s*\n|\n(?=—)/).filter(s => s.trim()).map(s => `<p>${formatar(s.trim())}</p>`).join("");
   const cor = (v, padrao) => (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)) ? v : padrao;
   const fundo = p => `linear-gradient(135deg, ${p.cores[0]}, ${p.cores[1]})`;
+  // Com avatar: a imagem como capa (com uma sombra em baixo para a etiqueta se ler); sem avatar: as cores.
+  const capa = p => p.avatar ? `linear-gradient(to top, rgba(0,0,0,.55), transparent 55%), center 25% / cover no-repeat url(${p.avatar})` : fundo(p);
+  function pintarAvatar(el, p) {
+    el.style.background = p.avatar ? `center / cover no-repeat url(${p.avatar})` : fundo(p);
+    el.textContent = p.avatar ? "" : p.emoji;
+  }
   const mostrar = ecra => document.querySelectorAll(".ecra").forEach(e => e.classList.toggle("ativo", e.id === ecra));
   const quando = ms => {
     const d = Math.round((Date.now() - ms) / 60000);
@@ -699,7 +787,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       lista.map(p => {
         const n = hs.filter(h => h.personagem === p.id).length;
         return `<button class="carta" data-id="${p.id}">
-          <div class="carta-capa" style="background:${fundo(p)}"><span>${escapar(p.emoji)}</span>${p.obra ? `<span class="chip">${escapar(p.obra)}</span>` : ""}</div>
+          <div class="carta-capa${p.avatar ? " com-foto" : ""}" style="background:${capa(p)}"><span>${p.avatar ? "" : escapar(p.emoji)}</span>${p.obra ? `<span class="chip">${escapar(p.obra)}</span>` : ""}</div>
           <div class="carta-corpo">
             <p class="carta-nome">${escapar(p.nome)}</p>
             <p class="carta-frase">${formatar(p.frase)}</p>
@@ -756,10 +844,17 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   };
 
   // ---------- Criar / editar personagem ----------
+  function escolherModo(modo) {
+    $("modo-ia").setAttribute("aria-selected", String(modo === "ia"));
+    $("modo-mao").setAttribute("aria-selected", String(modo === "mao"));
+    $("passo1").hidden = modo !== "ia"; $("passo2").hidden = true; $("mao").hidden = modo !== "mao";
+    $("criar-passo").textContent = modo === "mao" ? "Criar à mão" : "Passo 1 de 2";
+  }
   function abrirCriar(nome = "", obra = "") {
-    rascunho = null;
+    rascunho = null; fotoNova = null;
     $("passo1").reset(); $("c-nome").value = nome; $("c-obra").value = obra;
-    $("passo1").hidden = false; $("passo2").hidden = true;
+    $("modos").hidden = false;
+    escolherModo("ia");
     $("passo1-estado").innerHTML = "";
     $("criar-passo").textContent = "Passo 1 de 2";
     mostrar("ecra-criar");
@@ -769,8 +864,10 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     rascunho = p;
     $("r-nome").value = p.nome; $("r-obra").value = p.obra; $("r-frase").value = p.frase; $("r-ficha").value = p.ficha;
     $("aviso-ficha").innerHTML = p.conhecida ? "" :
-      `<div class="aviso">Não conheço bem esta personagem, por isso a ficha é um ponto de partida. Corrige o que estiver errado ou acrescenta notas e gera outra vez.</div>`;
-    $("passo1").hidden = true; $("passo2").hidden = false;
+      `<div class="aviso">Não conheço bem esta personagem, por isso esta ficha é genérica. Cola informação sobre ela e gera outra vez, ou <button type="button" class="ligacao" id="ir-mao">cria-a à mão</button>.</div>`;
+    if (!p.conhecida) $("ir-mao").onclick = () => abrirMao(null, { nome: p.nome, obra: p.obra });
+    $("passo1").hidden = true; $("passo2").hidden = false; $("mao").hidden = true; $("modos").hidden = true;
+    fotoNova = null; mostrarFoto($("r-foto"), p.avatar);
     $("regerar").hidden = !!editar;
     $("criar-passo").textContent = editar ? "Editar ficha" : "Passo 2 de 2 · revê a ficha";
     mostrar("ecra-criar");
@@ -804,21 +901,165 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       obra: $("r-obra").value.trim().slice(0, 120),
       frase: $("r-frase").value.trim().slice(0, 200),
       ficha: $("r-ficha").value.trim().slice(0, 4000) || rascunho.ficha,
+      avatar: fotoNova !== null ? fotoNova : rascunho.avatar,
     });
     const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
     rascunho = null;
     abrirPersonagem(p.id);
   }
+  // ---------- Avatar: reduz a imagem para 320x320 (fica pequena para guardar no browser) ----------
+  let fotoNova = null;   // null = não mudou; "" = sem foto; "data:..." = foto nova
+  async function reduzirFoto(ficheiro) {
+    const img = await createImageBitmap(ficheiro);
+    const lado = Math.min(img.width, img.height), tam = 320;
+    const tela = document.createElement("canvas"); tela.width = tela.height = tam;
+    tela.getContext("2d").drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, tam, tam);
+    return tela.toDataURL("image/jpeg", 0.82);
+  }
+  function mostrarFoto(input, url) {
+    const caixa = input.previousElementSibling;
+    caixa.style.backgroundImage = url ? `url(${url})` : "";
+    caixa.classList.toggle("com-foto", !!url);
+  }
+  for (const id of ["m-foto", "r-foto"]) $(id).onchange = async e => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try { fotoNova = await reduzirFoto(f); mostrarFoto($(id), fotoNova); }
+    catch (err) { $(id === "m-foto" ? "mao-estado" : "aviso-ficha").innerHTML = `<p class="erro">Não consegui abrir essa imagem. Experimenta outra (JPG ou PNG).</p>`; }
+  };
+
+  // ---------- Criar à mão ----------
+  let editarId = null;   // id da personagem que estamos a editar (ou null se é nova)
+  function botoesUnicos(caixa, lista, escolhida) {
+    caixa.innerHTML = lista.map(x => `<button type="button" class="tom" aria-pressed="${x === escolhida}">${x}</button>`).join("");
+    caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => {
+      const ja = b.getAttribute("aria-pressed") === "true";
+      caixa.querySelectorAll(".tom").forEach(x => x.setAttribute("aria-pressed", "false"));
+      b.setAttribute("aria-pressed", String(!ja));
+    });
+  }
+  function desenharTipos(escolhidos) {
+    const caixa = $("m-tipos");
+    caixa.innerHTML = Object.keys(PERSONALIDADES).map(t => `<button type="button" class="tom" aria-pressed="${escolhidos.includes(t)}">${t}</button>`).join("");
+    caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => {
+      const ligar = b.getAttribute("aria-pressed") !== "true";
+      if (ligar && caixa.querySelectorAll('.tom[aria-pressed="true"]').length >= 4) return;   // máximo 4
+      b.setAttribute("aria-pressed", String(ligar));
+    });
+  }
+  const CAMPOS = ["nome", "idade", "altura", "ocupacao", "obra", "aparencia", "personalidade", "fala", "exemplos", "perfil", "historico", "frase"];
+  function abrirMao(p, base) {
+    editarId = p ? p.id : null;
+    fotoNova = null;
+    const c = (p && p.campos) || Object.assign({ genero: "", tipos: [] }, base || {});
+    $("mao").reset();
+    for (const k of CAMPOS) $("m-" + k).value = c[k] || "";
+    botoesUnicos($("m-genero"), GENEROS, c.genero);
+    desenharTipos(c.tipos || []);
+    mostrarFoto($("m-foto"), p ? p.avatar : "");
+    $("mao-estado").innerHTML = "";
+    $("guardar-mao").textContent = p ? "Guardar alterações" : "Criar personagem";
+    $("modos").hidden = !!p;
+    escolherModo("mao");
+    if (p) $("criar-passo").textContent = "Editar personagem";
+    mostrar("ecra-criar");
+  }
+  function lerMao() {
+    const c = {};
+    for (const k of CAMPOS) c[k] = $("m-" + k).value.trim();
+    c.genero = ($("m-genero").querySelector('.tom[aria-pressed="true"]') || {}).textContent || "";
+    c.tipos = [...$("m-tipos").querySelectorAll('.tom[aria-pressed="true"]')].map(b => b.textContent);
+    return c;
+  }
+  // Junta os campos numa ficha de texto para o narrador.
+  function montarFicha(c) {
+    const linhas = [];
+    const id = [c.idade && c.idade + " anos", c.genero && c.genero.toLowerCase(), c.altura, c.ocupacao].filter(Boolean).join(", ");
+    linhas.push(`${c.nome}${id ? " — " + id : ""}.`);
+    if (c.aparencia) linhas.push("Aparência: " + c.aparencia);
+    if (c.tipos.length) linhas.push("Tipo de personalidade: " + c.tipos.map(t => PERSONALIDADES[t]).join("; ") + ".");
+    if (c.personalidade) linhas.push("Personalidade: " + c.personalidade);
+    if (c.fala) linhas.push("Forma de falar: " + c.fala);
+    if (c.perfil) linhas.push("Relação com o utilizador e objetivos: " + c.perfil);
+    if (c.historico) linhas.push("Histórico: " + c.historico);
+    if (c.exemplos) linhas.push("Exemplos de falas:\n" + c.exemplos.split("\n").map(l => l.trim()).filter(Boolean).map(l => "- " + l.replace(/^[-–—]\s*/, "")).join("\n"));
+    return linhas.join("\n");
+  }
+  function maoOcupado(sim, texto) {
+    $("completar").disabled = $("guardar-mao").disabled = sim;
+    $("mao-estado").innerHTML = sim ? `<div class="carregar"><span class="grande">${texto}</span></div>` : "";
+  }
+
+  // "Completar com IA": preenche só os campos vazios, coerentes com o que já está escrito.
+  const ESQUEMA_COMPLETAR = obj({ aparencia: S, personalidade: S, fala: S, exemplos: S, perfil: S, historico: S, frase: S });
+  $("completar").onclick = async () => {
+    const c = lerMao();
+    if (!c.nome) { $("mao-estado").innerHTML = `<p class="erro">Escreve pelo menos o nome.</p>`; return; }
+    maoOcupado(true, "A completar a personagem…");
+    try {
+      const d = await groq([{ role: "user", content: `Estás a ajudar a criar uma personagem para fanfics interativas.
+O que o utilizador já escreveu (NÃO mudes nada disto; os campos vazios és tu que preenches, coerentes com o resto):
+${JSON.stringify(Object.assign({}, c, { tipos: c.tipos.map(t => PERSONALIDADES[t]) }), null, 1)}
+${c.obra ? "A personagem é da obra \"" + c.obra + "\": usa o que sabes dela, sem inventar factos que não tenhas a certeza." : "A personagem é original do utilizador."}
+Devolve TODOS os campos pedidos. Para os campos que já estão preenchidos, devolve exatamente o mesmo texto.
+- aparencia: 1 ou 2 frases. personalidade: 2 ou 3 frases. fala: 1 frase sobre o tom e expressões.
+- exemplos: 4 falas curtas e típicas, uma por linha, começadas por "— ".
+- perfil: relação com o utilizador e objetivos, 1 ou 2 frases. historico: 2 ou 3 frases. frase: descrição de até 12 palavras.
+Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esforco: "medium", max: 2500 });
+      for (const k of Object.keys(ESQUEMA_COMPLETAR.properties))
+        if (!$("m-" + k).value.trim() && d[k]) $("m-" + k).value = String(d[k]).slice(0, +$("m-" + k).maxLength || 2000);
+      maoOcupado(false);
+      $("mao-estado").innerHTML = `<p class="dica">Preenchi os campos que estavam vazios. Muda o que quiseres e carrega em ${escapar($("guardar-mao").textContent)}.</p>`;
+    } catch (e) { maoOcupado(false); $("mao-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
+  };
+
+  // Guardar: a idade decide a regra de menores; se for de uma obra, a IA confirma a idade na obra.
+  $("mao").onsubmit = async e => {
+    e.preventDefault();
+    const c = lerMao();
+    const idade = parseInt(c.idade, 10);
+    if (!c.nome) { $("mao-estado").innerHTML = `<p class="erro">Falta o nome.</p>`; return; }
+    if (!Number.isFinite(idade) || idade < 1) { $("mao-estado").innerHTML = `<p class="erro">Escreve a idade em números (ex.: 22).</p>`; $("m-idade").focus(); return; }
+    let menor = idade < 18;
+    const antiga = editarId ? personagens().find(x => x.id === editarId) : null;
+    if (!menor && c.obra && !(antiga && antiga.campos && antiga.campos.obra === c.obra && antiga.campos.nome === c.nome)) {
+      maoOcupado(true, "A confirmar a personagem…");
+      try {
+        const d = await groq([{ role: "user", content: `A personagem "${c.nome}" da obra "${c.obra}": na obra original, tem menos de 18 anos em toda ou na maior parte da história? Na dúvida, responde true.` }],
+          { esquema: obj({ menor_na_obra: B }), nome: "idade", max: 400 });
+        menor = d.menor_na_obra !== false;
+      } catch (err) { maoOcupado(false); $("mao-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; return; }
+      maoOcupado(false);
+    } else if (!menor && antiga) menor = !!antiga.menor;
+    const p = Object.assign({}, antiga || { id: novoId(), emoji: "✨", cores: PALETAS[Math.floor(Math.random() * PALETAS.length)] }, {
+      nome: c.nome, obra: c.obra,
+      frase: c.frase || [c.ocupacao, c.tipos.slice(0, 2).join(", ").toLowerCase()].filter(Boolean).join(" · ") || "Personagem original",
+      ficha: montarFicha(c).slice(0, 4000),
+      campos: c, conhecida: true, menor,
+      avatar: fotoNova !== null ? fotoNova : (antiga ? antiga.avatar : ""),
+    });
+    const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
+    editarId = null;
+    abrirPersonagem(p.id);
+    if (menor && idade >= 18) $("historias").insertAdjacentHTML("afterbegin",
+      `<p class="aviso">${escapar(p.nome)} é menor na obra original, por isso as histórias com esta personagem não têm romance.</p>`);
+  };
+  $("modo-ia").onclick = () => escolherModo("ia");
+  $("modo-mao").onclick = () => abrirMao(null, { nome: $("c-nome").value.trim(), obra: $("c-obra").value.trim() });
+
   $("passo1").onsubmit = e => { e.preventDefault(); gerarFicha(); };
   $("regerar").onclick = gerarFicha;
   $("passo2").onsubmit = e => { e.preventDefault(); guardarFicha(); };
-  $("criar-voltar").onclick = () => { const p = rascunho; rascunho = null; p && personagens().some(x => x.id === p.id) ? abrirPersonagem(p.id) : mostrarGaleria(); };
+  $("criar-voltar").onclick = () => {
+    const id = editarId || (rascunho && rascunho.id); rascunho = null; editarId = null;
+    id && personagens().some(x => x.id === id) ? abrirPersonagem(id) : mostrarGaleria();
+  };
 
   // ---------- Página da personagem ----------
   function abrirPersonagem(id) {
     pers = personagens().find(p => p.id === id);
     if (!pers) return mostrarGaleria();
-    $("pers-avatar").style.background = fundo(pers); $("pers-avatar").textContent = pers.emoji;
+    pintarAvatar($("pers-avatar"), pers);
     $("pers-nome").textContent = pers.nome; $("pers-obra").textContent = pers.obra;
     $("pers-frase").innerHTML = formatar(pers.frase);
     const hs = historias().filter(h => h.personagem === pers.id);
@@ -832,7 +1073,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     mostrar("ecra-personagem");
   }
   $("pers-voltar").onclick = mostrarGaleria;
-  $("pers-editar").onclick = () => mostrarRevisao(Object.assign({}, pers), true);
+  $("pers-editar").onclick = () => pers.campos ? abrirMao(pers) : mostrarRevisao(Object.assign({}, pers), true);
   $("nova-historia").onclick = abrirNova;
 
   // ---------- Nova história ----------
@@ -917,7 +1158,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     if (!hist) return pers ? abrirPersonagem(pers.id) : mostrarGaleria();
     pers = personagens().find(p => p.id === hist.personagem) || pers;
     cont = conteudoDe(hist.id);
-    $("hist-avatar").style.background = fundo(pers); $("hist-avatar").textContent = pers.emoji;
+    pintarAvatar($("hist-avatar"), pers);
     $("hist-titulo").textContent = hist.titulo || "Sem título";
     $("hist-com").textContent = "com " + pers.nome + (hist.relacao && hist.relacao !== "Livre" ? " · " + hist.relacao : "") + (hist.tons.length ? " · " + hist.tons.join(" · ") : "");
     definirNota(false);
