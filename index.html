@@ -609,7 +609,13 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   //  3. FALAR COM O GROQ (diretamente do browser)
   // =====================================================================
   const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-  const MODELO = "openai/gpt-oss-120b";
+  // Dois modelos da mesma conta do Groq, cada um com o seu limite diário (200 000 tokens).
+  // Usa-se o grande; quando o limite dele acaba, a app passa sozinha para o pequeno.
+  const MODELOS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+  const NOME_MODELO = { "openai/gpt-oss-120b": "modelo grande", "openai/gpt-oss-20b": "modelo pequeno" };
+  // Que modelos já chegaram ao limite hoje (guardado por dia).
+  function esgotados() { const e = ler("sussurros-esgotados", {}); return e.dia === hoje() ? e.modelos : []; }
+  function marcarEsgotado(m) { gravar("sussurros-esgotados", { dia: hoje(), modelos: [...new Set(esgotados().concat(m))] }); mostrarUso(); }
   const chave = () => ler("sussurros-groq", "");
 
   const obj = (props, req) => ({ type: "object", additionalProperties: false, required: req || Object.keys(props), properties: props });
@@ -627,14 +633,15 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   const dormir = ms => new Promise(r => setTimeout(r, ms));
 
   // Quantos tokens este browser gastou hoje (o Groq grátis dá 200 000 por dia e por chave).
-  const LIMITE_DIA = 200000;
+  const LIMITE_DIA = 200000 * 2;   // dois modelos, 200 000 cada
   const hoje = () => new Date().toISOString().slice(0, 10);
   function usoHoje() { const u = ler("sussurros-uso", {}); return u.dia === hoje() ? u.tokens : 0; }
   function contarUso(n) { gravar("sussurros-uso", { dia: hoje(), tokens: usoHoje() + n }); mostrarUso(); }
   function mostrarUso() {
     const t = usoHoje(), el = document.getElementById("uso");
     if (!el) return;
-    el.textContent = `Hoje: ${(t / 1000).toLocaleString("pt-PT", { maximumFractionDigits: 1 })} mil de 200 mil tokens (${Math.min(100, Math.round(t / LIMITE_DIA * 100))}%)`;
+    const esg = esgotados().filter(m => m === MODELOS[0]).length ? " · a usar o modelo pequeno" : "";
+    el.textContent = `Hoje: ${(t / 1000).toLocaleString("pt-PT", { maximumFractionDigits: 1 })} mil de 400 mil tokens (${Math.min(100, Math.round(t / LIMITE_DIA * 100))}%)${esg}`;
     el.hidden = !chave();
   }
   function segundosDeEspera(msg) {
@@ -643,9 +650,15 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     const s = (m[1] ? +m[1] * 60 : 0) + (m[2] ? +m[2] / (m[3] === "ms" ? 1000 : 1) : 0);
     return Math.max(1, Math.ceil(s));
   }
-  async function groq(mensagens, { esquema, nome, esforco = "low", max = 1500, onEspera } = {}) {
+  //  - "preferir" escolhe o modelo a tentar primeiro (os resumos usam o pequeno, para poupar o grande).
+  //  - Se um modelo chegar ao limite do dia ou do minuto, passa para o outro antes de desistir ou esperar.
+  async function groq(mensagens, { esquema, nome, esforco = "low", max = 1500, onEspera, preferir = 0 } = {}) {
     if (!chave()) throw { code: "sem_chave" };
-    const corpo = { model: MODELO, messages: mensagens, max_tokens: max, reasoning_effort: esforco };
+    const ordem = preferir ? [MODELOS[1], MODELOS[0]] : MODELOS.slice();
+    const livres = () => ordem.filter(m => !esgotados().includes(m));
+    if (!livres().length) throw { code: "limite_dia" };
+    const corpo = { model: livres()[0], messages: mensagens, max_tokens: max, reasoning_effort: esforco };
+    const tentadosNoMinuto = new Set();
     if (esquema) corpo.response_format = { type: "json_schema", json_schema: { name: nome, schema: esquema } };
     let falhasJson = 0, esperas = 0;
     while (true) {
@@ -664,7 +677,16 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       const msg = (d.error && d.error.message) || "";
       if (r.status === 401) throw { code: "chave_errada" };
       if (r.status === 429) {
-        if (/per day|TPD|RPD/i.test(msg)) throw { code: "limite_dia" };
+        if (/per day|TPD|RPD/i.test(msg)) {           // limite do DIA deste modelo: passa para o outro
+          marcarEsgotado(corpo.model);
+          if (!livres().length) throw { code: "limite_dia" };
+          corpo.model = livres()[0];
+          continue;
+        }
+        // limite do MINUTO: primeiro experimenta o outro modelo (tem o seu próprio limite); se não der, espera
+        tentadosNoMinuto.add(corpo.model);
+        const outro = livres().find(m => !tentadosNoMinuto.has(m));
+        if (outro) { corpo.model = outro; continue; }
         const seg = segundosDeEspera(msg);
         if (esperas++ >= 2 || seg > 60) throw { code: "rate_limited" };
         if (onEspera) onEspera(seg);
@@ -682,7 +704,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       case "sem_chave": return "Falta a chave do Groq. Carrega em \"Chave do Groq\" no topo da galeria.";
       case "chave_errada": return "A chave do Groq não é válida. Confirma-a em \"Chave do Groq\" no topo da galeria.";
       case "rate_limited": return "Muitos pedidos seguidos ao Groq. Espera um minuto e tenta outra vez.";
-      case "limite_dia": return "Chegaram ao limite diário grátis do Groq para esta chave. Volta a funcionar amanhã (ou usa outra chave).";
+      case "limite_dia": return "Chegaste ao limite de hoje do plano grátis do Groq (nos dois modelos). Volta a funcionar amanhã.";
       case "demasiado_grande": return "Este pedido ficou grande demais para o plano grátis. Tenta uma mensagem mais curta.";
       case "invalid_json": return "A resposta veio estragada. Tenta outra vez.";
       case "sem_rede": return "Sem ligação à internet (ou o Groq está em baixo). Tenta outra vez.";
@@ -723,7 +745,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       const novo = await groq([{ role: "user", content:
         `Resumo atual de uma fanfic interativa com ${p.nome}:\n${c.resumo || "(vazio)"}\n\nNovas partes:\n${texto}\n\n`
         + "Escreve um novo resumo completo em português de Portugal, no máximo 150 palavras, com os acontecimentos, "
-        + "as personagens que apareceram e a evolução da relação. Responde só com o resumo." }], { max: 450 });
+        + "as personagens que apareceram e a evolução da relação. Responde só com o resumo." }], { max: 450, preferir: 1 });
       if (novo) { c.resumo = novo.slice(0, 1400); c.resumidas_ate = fim; }
     } catch (e) { /* tenta-se outra vez na próxima jogada */ }
   }
