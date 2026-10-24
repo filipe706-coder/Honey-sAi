@@ -828,8 +828,9 @@ There are never lines for "you".
 "escolhas": [3 short replies, first person: one about what is happening,
 one funny or teasing, and one about the relationship between you two (getting closer, teasing or showing something vulnerable)],
 "novos_factos": [new, lasting facts, short sentences; [] if none],
-"proximidade": how this scene changed the main character's feelings toward "you": -2 (hurt or pushed away), -1, 0 (nothing changed, the most common),
-1 (a little closer) or 2 (a big moment). Be honest and stingy: most scenes are 0 or 1}`;
+"proximidade": how the user's last message (what "you" said or did) changed the main character's feelings toward "you": -2 (hurt or pushed away), -1,
+0 (nothing changed, the most common), 1 (a little closer) or 2 (a big moment). Judge only what "you" did, never what the characters did on their own.
+If "you" did nothing (opening scene, author's note, or the story just moving on), it's 0. Be honest and stingy}`;
 
   // Regras extra quando a história é slow burn (e a personagem é adulta na obra).
   // "nCena" é o número da cena: dá ritmo à relação para nada acontecer cedo demais.
@@ -882,7 +883,7 @@ one funny or teasing, and one about the relationship between you two (getting cl
       + (outros.length ? "\n\n## Others in this group (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}`
           + (hx(x) ? ` · with you: ${hx(x).slice(0, 160)}` : "")).join("\n") : "")
       + (menores.length ? `\nNO ROMANCE with ${menores.join(", ")}: minors in their original work. Never romance, flirting or romantic tension with them.` : "")
-      + `\nIn the JSON, instead of "proximidade" return "proximidades": [{"quem": name, "passo": -2..2}] for each character in the scene whose feelings toward "you" changed (leave out the ones that didn't). Each one has their own feelings: one can get closer while another gets jealous or distant.`;
+      + `\nIn the JSON, instead of "proximidade" return "proximidades": [{"quem": name, "passo": -2..2}] for each character in the scene whose feelings toward "you" changed because of what "you" said or did (leave out the ones that didn't). Each one has their own feelings: one can get closer while another gets jealous or distant.`;
   }
 
   function instrucoes(p, h, memoria, resumo, nCena = 0, prox = null) {
@@ -1982,12 +1983,16 @@ ${texto}`;
     c.escolhas = (Array.isArray(d && d.escolhas) ? d.escolhas : []).map(String).filter(s => s.trim()).slice(0, 3);
     // a cena guarda os factos e as sugestões que trouxe: assim dá para a desfazer sem deixar restos
     const limitar = v => Math.max(0, Math.min(100, v));
+    // A barra só mexe quando a cena responde ao que TU disseste ou fizeste.
+    // Abertura, "Continue" e notas de autor não contam (tu não fizeste nada).
+    const ultima = c.mensagens[c.mensagens.length - 1];
+    const contaParaRelacao = !!ultima && ultima.tipo === "acao";
     let cena;
     if (h && h.mundo) {
       const elenco = elencoCena(h), mudou = {};
       c.proxs = Object.assign({}, c.proxs);
       for (const x of (Array.isArray(d && d.proximidades) ? d.proximidades : [])) {
-        const quem = acharPorNome(elenco, x && x.quem), passo = [-2, -1, 0, 1, 2].includes(x && x.passo) ? x.passo : 0;
+        const quem = acharPorNome(elenco, x && x.quem), passo = contaParaRelacao && [-2, -1, 0, 1, 2].includes(x && x.passo) ? x.passo : 0;
         if (!quem || !passo || quem.id in mudou) continue;
         const antes = valorProx(c, h, quem.id);
         c.proxs[quem.id] = limitar(antes + passo * pontosPorPasso(h));
@@ -2000,7 +2005,7 @@ ${texto}`;
              : Object.keys(falas).sort((a, b) => falas[b] - falas[a])[0] || h.personagem;
       cena = { proxs: mudou };
     } else {
-      const antes = proxDe(c, h || {}), passo = [-2, -1, 0, 1, 2].includes(d && d.proximidade) ? d.proximidade : 0;
+      const antes = proxDe(c, h || {}), passo = contaParaRelacao && [-2, -1, 0, 1, 2].includes(d && d.proximidade) ? d.proximidade : 0;
       c.proximidade = limitar(antes + passo * pontosPorPasso(h || {}));
       cena = { prox: c.proximidade - antes };
     }
