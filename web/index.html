@@ -148,11 +148,18 @@
   .historia small { color: var(--acento); font-size: 12px; font-weight: 600; }
 
   /* ---------- A história ---------- */
-  .texto-historia { padding-block: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .texto-historia { padding-block: 20px; display: flex; flex-direction: column; gap: 12px; }
   .cena { font-family: var(--f-livro); font-size: 16.5px; line-height: 1.7; color: var(--texto); overflow-wrap: anywhere; }
   .cena p { margin: 0 0 .8em; }
   .cena p:last-child { margin-bottom: 0; }
   .cena em { color: var(--italico); }
+  .fala { display: flex; gap: 8px; align-items: flex-end; max-width: 90%; }
+  .mini-avatar { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
+                 font-size: 14px; font-weight: 600; color: #fff; }
+  .balao { background: var(--cartao); border-radius: 18px; border-bottom-left-radius: 6px; padding: 9px 13px;
+           line-height: 1.5; font-size: 15px; overflow-wrap: anywhere; min-width: 0; }
+  .balao b { display: block; font-size: 12px; color: var(--acento); font-weight: 600; margin-bottom: 2px; }
+  .balao em { color: var(--italico); }
   .titulo-historia { font-family: var(--f-titulo); font-size: 28px; font-weight: 600; text-align: center; margin: 4px 0 0; text-wrap: balance; }
   .ornamento { text-align: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .acao { align-self: flex-end; max-width: 86%; background: linear-gradient(135deg, var(--acento2), #9d5d7b); color: #fff;
@@ -487,7 +494,7 @@ Devolve:
 "estás a fazer", subtil, tarte; nunca formas do Brasil como tela, câmera, terno, sutil, torta, "está fazendo", "se levanta").
 - 3.ª pessoa, presente. O utilizador é "tu". Interpretas todas as outras personagens e o ambiente, mas NUNCA decides
   o que "tu" dizes, fazes, pensas ou sentes, nem reações tuas (corar, coração acelerado). Reages ao que ele escreve.
-- 1 a 3 parágrafos curtos (máx. ~150 palavras). Diálogos com travessão (—).
+- Curto: no máximo ~150 palavras no total, entre narração e falas.
 - TU CONDUZES A HISTÓRIA: em cada cena traz algo novo pela mão das personagens ou do mundo (um convite, uma
   provocação, um segredo, um problema, alguém que chega). O utilizador só reage; não esperes que ele invente o rumo.
 - Acaba SEMPRE com uma personagem a falar diretamente com "tu" (pergunta, desafio, convite) ou numa situação que
@@ -498,7 +505,10 @@ Devolve:
 - [NOTA DE AUTOR] é uma instrução para ti (saltar tempo, mudar cenário, trazer alguém): aplica-a sem a mencionar.
 - Sem conteúdo sexual explícito (a cena corta com elegância). Violência sem pormenores gráficos.
 - Se o utilizador mostrar sofrimento real fora da história, sai da narração com cuidado e sugere ajuda.
-Responde só com JSON: {"texto": narração, "escolhas": [3 respostas curtas, 1.ª pessoa, em bom português: uma sobre o que está a acontecer,
+Responde só com JSON. A cena vai em "partes", por ordem: cada parte é narração (descrição, ações, gestos) ou uma fala
+(só as palavras ditas, sem travessão nem "diz ele"; o gesto vai numa narração antes ou depois). Nunca há falas de "tu".
+{"partes": [{"tipo": "narracao", "quem": "", "texto": "..."}, {"tipo": "fala", "quem": "nome de quem fala", "texto": "..."}],
+"escolhas": [3 respostas curtas, 1.ª pessoa, em bom português: uma sobre o que está a acontecer,
 uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, picar ou mostrar algo vulnerável)],
 "novos_factos": [factos novos e duradouros, frases curtas; [] se nada]}`;
 
@@ -605,7 +615,8 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   const S = { type: "string" }, B = { type: "boolean" }, LS = { type: "array", items: { type: "string" } };
   const ESQUEMA_FICHA = obj({ conhecida: B, nome: S, obra: S, frase: S, ficha: S, menor_na_obra: B, emoji: S, cor1: S, cor2: S });
   const ESQUEMA_IDEIA = obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS });
-  const ESQUEMA_CENA = obj({ texto: S, escolhas: LS, novos_factos: LS });
+  const ESQUEMA_PARTE = obj({ tipo: { type: "string", enum: ["narracao", "fala"] }, quem: S, texto: S });
+  const ESQUEMA_CENA = obj({ partes: { type: "array", items: ESQUEMA_PARTE }, escolhas: LS, novos_factos: LS });
 
   // Um pedido ao Groq. "json_schema" obriga a resposta a vir no formato pedido.
   //  - Se a resposta vier estragada, tenta mais uma vez.
@@ -722,6 +733,21 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   const $ = id => document.getElementById(id);
   function escapar(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   const formatar = t => escapar(t).replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  // Uma cena: a narração em texto corrido; cada fala num balão com o avatar e o nome.
+  // (As cenas antigas, sem "partes", continuam a aparecer como texto corrido.)
+  const corDoNome = nome => PALETAS[[...nome].reduce((a, ch) => a + ch.charCodeAt(0), 0) % PALETAS.length][1];
+  function avatarDe(nome) {
+    const eDele = pers && nome.toLowerCase() === pers.nome.toLowerCase();
+    if (eDele && pers.avatar) return `<span class="mini-avatar" style="background:center/cover url(${pers.avatar})"></span>`;
+    if (eDele) return `<span class="mini-avatar" style="background:${fundo(pers)}">${escapar(pers.emoji)}</span>`;
+    return `<span class="mini-avatar" style="background:${corDoNome(nome)}">${escapar([...nome][0] || "?")}</span>`;
+  }
+  function desenharCena(m) {
+    if (!m.partes) return `<div class="cena">${paragrafos(m.texto)}</div>`;
+    return m.partes.map(x => x.tipo === "fala"
+      ? `<div class="fala">${avatarDe(x.quem)}<div class="balao"><b>${escapar(x.quem)}</b>${formatar(x.texto)}</div></div>`
+      : `<div class="cena">${paragrafos(x.texto)}</div>`).join("");
+  }
   const paragrafos = t => String(t).split(/\n\s*\n|\n(?=—)/).filter(s => s.trim()).map(s => `<p>${formatar(s.trim())}</p>`).join("");
   const cor = (v, padrao) => (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)) ? v : padrao;
   const fundo = p => `linear-gradient(135deg, ${p.cores[0]}, ${p.cores[1]})`;
@@ -1144,11 +1170,19 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
 
   // ---------- A história ----------
   function aplicarCena(c, d) {
-    const texto = String((d && d.texto) || "").trim() || "*O silêncio prolonga-se por um momento.*";
+    let partes = (Array.isArray(d && d.partes) ? d.partes : [])
+      .map(x => ({ tipo: x && x.tipo === "fala" ? "fala" : "narracao", quem: String((x && x.quem) || "").trim().slice(0, 60),
+                   texto: String((x && x.texto) || "").trim().replace(/^[—–-]\s*/, "") }))
+      .filter(x => x.texto);
+    // sem nome, uma fala é da personagem principal
+    partes.forEach(x => { if (x.tipo === "fala" && !x.quem) x.quem = pers.nome; });
+    if (!partes.length && d && d.texto) partes = [{ tipo: "narracao", quem: "", texto: String(d.texto).trim() }];
+    if (!partes.length) partes = [{ tipo: "narracao", quem: "", texto: "*O silêncio prolonga-se por um momento.*" }];
+    const texto = partes.map(x => x.tipo === "fala" ? `${x.quem}: — ${x.texto}` : x.texto).join("\n\n");
     const ja = new Set(c.memoria.map(f => f.toLowerCase()));
     const novos = (Array.isArray(d && d.novos_factos) ? d.novos_factos : []).map(f => String(f).trim().slice(0, 300))
       .filter(f => f && !ja.has(f.toLowerCase()));
-    c.mensagens.push({ tipo: "cena", texto });
+    c.mensagens.push({ tipo: "cena", texto, partes });
     c.memoria = c.memoria.concat(novos).slice(-80);  // guarda até 80; envia os últimos MAX_FACTOS
     c.escolhas = (Array.isArray(d && d.escolhas) ? d.escolhas : []).map(String).filter(s => s.trim()).slice(0, 3);
     return novos;
@@ -1168,7 +1202,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
   }
   function desenhar(extra = "") {
     $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Sem título")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
-      cont.mensagens.map(m => m.tipo === "cena" ? `<div class="cena">${paragrafos(m.texto)}</div>`
+      cont.mensagens.map(m => m.tipo === "cena" ? desenharCena(m)
         : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
         : m.tipo === "continuar" ? `<div class="continuou" aria-hidden="true">· · ·</div>`
         : `<div class="acao">${formatar(m.texto)}</div>`).join("") + extra;
