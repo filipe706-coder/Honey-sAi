@@ -203,6 +203,19 @@
   .continuar-btn { align-self: flex-start; background: transparent; border: 0; color: var(--acento); font-weight: 600; font-size: 14px; padding: 4px 2px; }
   .continuar-btn small { color: var(--suave); font-weight: 400; margin-left: 6px; }
   .continuar-btn:hover { text-decoration: underline; }
+  /* Capítulos, "Previously on…" e os botões de refazer/desfazer */
+  .capitulo { text-align: center; display: grid; gap: 2px; margin: 18px 0 2px; }
+  .capitulo small { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--acento2); font-weight: 600; }
+  .capitulo b { font-family: var(--f-titulo); font-size: 22px; font-weight: 600; font-style: italic; text-wrap: balance; }
+  .recap { position: absolute; left: 16px; right: 16px; top: 72px; z-index: 4; background: var(--cartao); border: 1px solid var(--acento2);
+           border-radius: 14px; padding: 12px 40px 12px 14px; box-shadow: 0 8px 24px var(--sombra); max-height: 45%; overflow-y: auto; }
+  .recap b { color: var(--acento); font-family: var(--f-titulo); font-size: 19px; font-style: italic; font-weight: 600; display: block; }
+  .recap p { margin: 4px 0 0; color: var(--italico); font-family: var(--f-livro); font-size: 14.5px; line-height: 1.55; }
+  .recap .fechar { position: absolute; top: 6px; right: 6px; }
+  .linha-acoes { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .mini-acoes { display: flex; gap: 6px; }
+  .mini-acao { background: transparent; border: 1px solid var(--linha); border-radius: 99px; padding: 4px 10px; font-size: 12px; color: var(--suave); }
+  .mini-acao:hover { border-color: var(--acento); color: var(--texto); }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
@@ -460,6 +473,7 @@
       <button class="enviar" id="enviar">Send</button>
     </form>
     <div class="toast" id="toast" role="status"></div>
+    <div class="recap" id="recap" role="status" hidden></div>
   </section>
 
   <!-- Painel: chave do Groq -->
@@ -680,6 +694,8 @@ one funny or teasing, and one about the relationship between you two (getting cl
   // minuto (em português ~3,5 letras por token). Cada jogada leva: instruções + ficha +
   // memória + resumo (~1300 tokens), as mensagens recentes (~1000) e a resposta (~500).
   // O que sai da janela vai para o resumo, de vez em quando (não em todas as jogadas).
+  const NOTA_ABERTURA = "[AUTHOR'S NOTE] Write the opening scene of the story, introducing the setting and the first encounter.";
+  const CENAS_POR_CAPITULO = 10;
   const ORCAMENTO_RECENTE = 3500;  // letras das mensagens recentes enviadas tal e qual
   const MIN_RECENTES = 2;          // nunca menos do que isto (a última cena e a tua jogada)
   const MAX_FACTOS = 15;           // factos da memória enviados (os mais recentes)
@@ -1408,7 +1424,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
       if (!h.mundo) { delete h.mundo; delete h.elenco; }
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
-                            { role: "user", content: "[AUTHOR'S NOTE] Write the opening scene of the story, introducing the setting and the first encounter." }],
+                            { role: "user", content: NOTA_ABERTURA }],
                            { esquema: ESQUEMA_CENA, nome: "cena", max: 700 });
       aplicarCena(c, d);
       atualizarHistoria(h); gravarConteudo(h.id, c);
@@ -1444,9 +1460,10 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     const ja = new Set(c.memoria.map(f => f.toLowerCase()));
     const novos = (Array.isArray(d && d.novos_factos) ? d.novos_factos : []).map(f => String(f).trim().slice(0, 300))
       .filter(f => f && !ja.has(f.toLowerCase()));
-    c.mensagens.push({ tipo: "cena", texto, partes });
-    c.memoria = c.memoria.concat(novos).slice(-80);  // guarda até 80; envia os últimos MAX_FACTOS
     c.escolhas = (Array.isArray(d && d.escolhas) ? d.escolhas : []).map(String).filter(s => s.trim()).slice(0, 3);
+    // a cena guarda os factos e as sugestões que trouxe: assim dá para a desfazer sem deixar restos
+    c.mensagens.push({ tipo: "cena", texto, partes, factos: novos, escolhas: c.escolhas });
+    c.memoria = c.memoria.concat(novos).slice(-80);  // guarda até 80; envia os últimos MAX_FACTOS
     return novos;
   }
   function abrirHistoria(id) {
@@ -1462,22 +1479,47 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     definirNota(false);
     mostrar("ecra-historia");
     desenhar();
+    mostrarRecap(hist, cont, pers);
     $("texto").focus();
   }
+  const nCenas = c => c.mensagens.filter(m => m.tipo === "cena").length;
+  // Em que mensagem começa cada capítulo: a cada 10 cenas (o cabeçalho vai antes da tua jogada que abriu o capítulo).
+  function iniciosDeCapitulo(c) {
+    const inicios = {}; let k = 0;
+    c.mensagens.forEach((m, i) => {
+      if (m.tipo !== "cena") return;
+      if (k % CENAS_POR_CAPITULO === 0) inicios[i > 0 && c.mensagens[i - 1].tipo !== "cena" ? i - 1 : i] = k / CENAS_POR_CAPITULO + 1;
+      k++;
+    });
+    return inicios;
+  }
+  // O que se pode refazer/desfazer (nunca o que já foi para o resumo).
+  const podeRefazer = c => { const n = c.mensagens.length; return n > 0 && c.mensagens[n - 1].tipo === "cena" && n - 1 >= c.resumidas_ate; };
+  const podeDesfazer = c => { const n = c.mensagens.length; return n >= 2 && c.mensagens[n - 1].tipo === "cena" && c.mensagens[n - 2].tipo !== "cena" && n - 2 >= c.resumidas_ate; };
+
   function desenhar(extra = "") {
+    const caps = cont.capitulos || [];
+    const comCapitulos = nCenas(cont) > CENAS_POR_CAPITULO || caps.length > 0;
+    const inicios = comCapitulos ? iniciosDeCapitulo(cont) : {};
+    const cabecalho = n => `<div class="capitulo"><small>Chapter ${n}</small>${caps[n - 1] ? `<b>${escapar(caps[n - 1])}</b>` : ""}</div>`;
     $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Untitled")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
-      cont.mensagens.map(m => m.tipo === "cena" ? desenharCena(m)
+      cont.mensagens.map((m, i) => (inicios[i] ? cabecalho(inicios[i]) : "") + (m.tipo === "cena" ? desenharCena(m)
         : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
         : m.tipo === "continuar" ? `<div class="continuou" aria-hidden="true">· · ·</div>`
-        : `<div class="acao">${formatar(m.texto)}</div>`).join("") + extra;
+        : `<div class="acao">${formatar(m.texto)}</div>`)).join("") + extra;
     const r = $("rolar-historia"); r.scrollTop = r.scrollHeight;
     $("contador").textContent = cont.memoria.length;
     $("lampada").classList.toggle("ligada", verSugestoes);
+    const botoes = (podeRefazer(cont) ? `<button class="mini-acao" id="refazer" title="Write this scene again">↻ Redo</button>` : "")
+      + (podeDesfazer(cont) ? `<button class="mini-acao" id="desfazer" title="Take back your last move">↩ Undo</button>` : "");
     $("escolhas").innerHTML = (aEspera || modoNota) ? "" :
       (verSugestoes ? (cont.escolhas || []).map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("") : "")
-      + (cont.mensagens.length ? `<button class="continuar-btn" id="continuar">Continue ▸ <small>let the story move on</small></button>` : "");
+      + (cont.mensagens.length ? `<div class="linha-acoes"><button class="continuar-btn" id="continuar">Continue ▸ <small>let the story move on</small></button>`
+        + `<div class="mini-acoes">${botoes}</div></div>` : "");
     $("escolhas").hidden = !$("escolhas").innerHTML;
     if ($("continuar")) $("continuar").onclick = () => enviar("", false);
+    if ($("refazer")) $("refazer").onclick = refazer;
+    if ($("desfazer")) $("desfazer").onclick = desfazer;
     document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(cont.escolhas[b.dataset.i], false));
     $("enviar").disabled = aEspera;
   }
@@ -1499,32 +1541,133 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     if (tipo === "continuar" && comoNota) return;   // nota de autor vazia não faz nada
     // Também conta como nota de autor se a mensagem vier toda entre parênteses.
     if (/^\(.*\)$/s.test(texto)) { tipo = "nota"; texto = texto.slice(1, -1).trim(); }
-    aEspera = true;
     const antes = cont;
     const c = JSON.parse(JSON.stringify(cont));
     c.mensagens.push({ tipo, texto });
-    cont = c;
     $("texto").value = "";
     definirNota(false);
+    if (!await pedirCena(c, antes)) {
+      $("texto").value = texto;
+      if (tipo === "nota") definirNota(true);
+    }
+    $("texto").focus();
+  }
+
+  // Pede a próxima cena para o conteúdo "c" (sem mensagens = a cena de abertura).
+  // Se falhar, volta ao conteúdo "antes" e mostra o erro. Devolve true se correu bem.
+  async function pedirCena(c, antes, sufixoErro = "") {
+    aEspera = true; cont = c;
+    $("recap").hidden = true;
     desenhar(`<div class="a-escrever">The narrator is writing <i>•</i><i>•</i><i>•</i></div>`);
     try {
-      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + c.mensagens.filter(m => m.tipo === "cena").length) }]
-        .concat(paraTurnos(recentes(c))), { esquema: ESQUEMA_CENA, nome: "cena", max: 700,
+      const turnos = c.mensagens.length ? paraTurnos(recentes(c)) : [{ role: "user", content: NOTA_ABERTURA }];
+      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + nCenas(c)) }]
+        .concat(turnos), { esquema: ESQUEMA_CENA, nome: "cena", max: 700,
           onEspera: seg => desenhar(`<div class="a-escrever">Too many requests in a row. Trying again in ${seg} s…</div>`) });
       const novos = aplicarCena(c, d);
       gravarConteudo(hist.id, c); atualizarHistoria(hist);
       if (novos.length) avisarMemoria(novos);
       aEspera = false;
       desenhar();
-      const h = hist;
-      resumirSePreciso(c, pers).then(() => gravarConteudo(h.id, c));
+      // Em segundo plano: o resumo e o título do capítulo (com o modelo pequeno)
+      const h = hist, p = pers;
+      resumirSePreciso(c, p).then(() => tituloCapitulo(c, p)).then(() => guardarFundo(h, c));
+      return true;
     } catch (e) {
       cont = antes; aEspera = false;
-      desenhar(`<p class="erro">${escapar(mensagemDeErro(e))}</p>`);
-      $("texto").value = texto;
-      if (tipo === "nota") definirNota(true);
+      desenhar(`<p class="erro">${escapar(mensagemDeErro(e))}${sufixoErro}</p>`);
+      return false;
     }
+  }
+
+  // Tira a última cena e os factos que ela trouxe; as sugestões voltam a ser as da cena anterior.
+  function tirarUltimaCena(c) {
+    const m = c.mensagens.pop();
+    const tirar = new Set((m.factos || []).map(f => f.toLowerCase()));
+    c.memoria = c.memoria.filter(f => !tirar.has(f.toLowerCase()));
+    const anterior = [...c.mensagens].reverse().find(x => x.tipo === "cena");
+    c.escolhas = (anterior && anterior.escolhas) || [];
+    c.resumidas_ate = Math.min(c.resumidas_ate, c.mensagens.length);
+    c.capitulos = (c.capitulos || []).slice(0, Math.floor(nCenas(c) / CENAS_POR_CAPITULO));
+    delete c.recap;
+  }
+  // ↻ Outra versão da última cena (a tua jogada fica igual).
+  async function refazer() {
+    if (aEspera || !podeRefazer(cont)) return;
+    const antes = cont, c = JSON.parse(JSON.stringify(cont));
+    tirarUltimaCena(c);
+    await pedirCena(c, antes);
+  }
+  // ↩ Desfaz a tua última jogada e a cena que veio depois; o teu texto volta para a caixa para o mudares.
+  function desfazer() {
+    if (aEspera || !podeDesfazer(cont)) return;
+    const c = JSON.parse(JSON.stringify(cont));
+    tirarUltimaCena(c);
+    const minha = c.mensagens.pop();
+    c.resumidas_ate = Math.min(c.resumidas_ate, c.mensagens.length);
+    cont = c;
+    gravarConteudo(hist.id, c); atualizarHistoria(hist);
+    definirNota(minha.tipo === "nota");
+    desenhar();
+    $("texto").value = minha.tipo === "continuar" ? "" : minha.texto;
     $("texto").focus();
+  }
+
+  // Título do capítulo: quando um capítulo de 10 cenas acaba (ou falta o título de um antigo), pede-o ao modelo pequeno.
+  async function tituloCapitulo(c, p) {
+    const completos = Math.floor(nCenas(c) / CENAS_POR_CAPITULO);
+    c.capitulos = c.capitulos || [];
+    let n = 0;
+    while (n < completos && c.capitulos[n]) n++;
+    if (n >= completos) return;
+    // as mensagens desse capítulo
+    const idx = []; c.mensagens.forEach((m, i) => { if (m.tipo === "cena") idx.push(i); });
+    const ini = n === 0 ? 0 : idx[n * CENAS_POR_CAPITULO - 1] + 1, fim = idx[(n + 1) * CENAS_POR_CAPITULO - 1] + 1;
+    const texto = c.mensagens.slice(ini, fim).filter(m => m.tipo !== "continuar")
+      .map(m => (m.tipo === "cena" ? "" : "You: ") + m.texto).join("\n").slice(-5000);
+    try {
+      const t = await groq([{ role: "user", content: `Here is chapter ${n + 1} of an interactive fanfic with ${p.nome}:\n${texto}\n\n`
+        + "Give this chapter a short, evocative title (2 to 6 words), in English. Reply only with the title, without quotation marks." }],
+        { max: 300, preferir: 1 });
+      const titulo = String(t || "").split("\n")[0].replace(/^["'“”*\s]+|["'“”*.\s]+$/g, "").slice(0, 60);
+      if (titulo) c.capitulos[n] = titulo;
+    } catch (e) { /* tenta-se outra vez na próxima jogada */ }
+  }
+  // Guarda o resultado das tarefas em segundo plano sem apagar jogadas feitas entretanto.
+  function guardarFundo(h, c) {
+    if (cont === c) { gravarConteudo(h.id, c); if (hist && hist.id === h.id && !aEspera) desenhar(); return; }
+    const atual = hist && hist.id === h.id ? cont : conteudoDe(h.id);
+    if (c.resumidas_ate > atual.resumidas_ate && c.resumidas_ate <= atual.mensagens.length - 2) { atual.resumo = c.resumo; atual.resumidas_ate = c.resumidas_ate; }
+    const completos = Math.floor(nCenas(atual) / CENAS_POR_CAPITULO);
+    (c.capitulos || []).forEach((t, i) => { if (t && i < completos && !(atual.capitulos || [])[i]) (atual.capitulos = atual.capitulos || [])[i] = t; });
+    gravarConteudo(h.id, atual);
+  }
+
+  // "Previously on…": quando voltas a uma história depois de umas horas, um resumo curto de onde ficaste.
+  const RECAP_DEPOIS = 3 * 3600 * 1000;   // 3 horas
+  async function mostrarRecap(h, c, p) {
+    const caixa = $("recap");
+    caixa.hidden = true;
+    if (Date.now() - (h.atualizada || Date.now()) < RECAP_DEPOIS || nCenas(c) < 3) return;
+    const pintar = (corpo) => {
+      caixa.innerHTML = `<b>Previously…</b>${corpo}<button type="button" class="icone fechar" aria-label="Close">×</button>`;
+      caixa.querySelector(".fechar").onclick = () => { caixa.hidden = true; };
+      caixa.hidden = false;
+    };
+    if (c.recap && c.recap.ate === c.mensagens.length) return pintar(`<p>${formatar(c.recap.texto)}</p>`);
+    pintar(`<p class="a-escrever">remembering <i>•</i><i>•</i><i>•</i></p>`);
+    const ultimos = c.mensagens.slice(-8).filter(m => m.tipo !== "continuar")
+      .map(m => (m.tipo === "cena" ? "" : m.tipo === "nota" ? "Author's note: " : "You: ") + m.texto).join("\n").slice(-5000);
+    try {
+      const t = await groq([{ role: "user", content: `Interactive fanfic with ${p.nome}. Summary of the story so far: ${c.resumo || "(none)"}\n\nLatest moments:\n${ultimos}\n\n`
+        + `Write a "Previously on…" recap for the reader, who is "you" in the story: 2 to 4 sentences, 70 words at most, in English, `
+        + "in the second person, ending with where things stand right now. Reply only with the recap." }], { max: 500, preferir: 1 });
+      if (!hist || hist.id !== h.id || !$("ecra-historia").classList.contains("ativo") || caixa.hidden) return;
+      const texto = String(t || "").slice(0, 600);
+      if (!texto) { caixa.hidden = true; return; }
+      if (cont === c) { c.recap = { ate: c.mensagens.length, texto }; gravarConteudo(h.id, c); }
+      pintar(`<p>${formatar(texto)}</p>`);
+    } catch (e) { caixa.hidden = true; }
   }
   let temporizador;
   function avisarMemoria(factos) {
@@ -1534,7 +1677,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     temporizador = setTimeout(() => $("toast").classList.remove("ver"), 4000);
   }
   $("lampada").onclick = () => { verSugestoes = !verSugestoes; gravar("sussurros-sugestoes", verSugestoes); desenhar(); };
-  $("hist-voltar").onclick = voltar;
+  $("hist-voltar").onclick = () => { $("recap").hidden = true; voltar(); };
   // Enviar com a caixa vazia não faz nada (para não avançar sem querer); para isso há o "Continuar ▸".
   $("form").onsubmit = e => { e.preventDefault(); if ($("texto").value.trim()) enviar($("texto").value, modoNota); };
   $("texto").addEventListener("keydown", e => {
@@ -1565,6 +1708,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     $("apagar-historia").textContent = "Delete this story";
     $("uso-painel").textContent = (document.getElementById("uso") || {}).textContent || "";
     $("painel-contexto").hidden = false;
+    $("recap").hidden = true;
   };
   $("painel-contexto").onclick = e => { if (e.target.id === "painel-contexto") $("painel-contexto").hidden = true; };
   $("form-contexto").onsubmit = e => {
@@ -1582,20 +1726,9 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
   $("recomecar").onclick = async () => {
     if (!confirmar($("recomecar"), "Are you sure? This erases the text and memory of this story. Tap again.")) return;
     $("painel-contexto").hidden = true;
-    cont = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
-    aEspera = true;
-    desenhar(`<div class="a-escrever">The narrator is writing <i>•</i><i>•</i><i>•</i></div>`);
-    try {
-      const d = await groq([{ role: "system", content: instrucoes(pers, hist, [], "") },
-                            { role: "user", content: "[AUTHOR'S NOTE] Write the opening scene of the story, introducing the setting and the first encounter." }],
-                           { esquema: ESQUEMA_CENA, nome: "cena", max: 700 });
-      aplicarCena(cont, d);
-      gravarConteudo(hist.id, cont); atualizarHistoria(hist);
-      aEspera = false; desenhar();
-    } catch (e) {
-      aEspera = false; gravarConteudo(hist.id, cont);
-      desenhar(`<p class="erro">${escapar(mensagemDeErro(e))} Write something to begin.</p>`);
-    }
+    const vazio = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
+    gravarConteudo(hist.id, vazio);
+    await pedirCena(JSON.parse(JSON.stringify(vazio)), vazio, " Write something to begin.");
   };
   $("apagar-historia").onclick = () => {
     if (!confirmar($("apagar-historia"), "Delete this story forever? Tap again.")) return;
