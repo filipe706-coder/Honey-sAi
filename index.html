@@ -153,6 +153,10 @@
   .escolha { text-align: left; background: transparent; border: 1px solid var(--linha); border-radius: 14px; padding: 9px 12px; font-size: 14px; transition: .15s; }
   .escolha:hover { border-color: var(--acento); }
   .escolha::before { content: "↳ "; color: var(--acento); }
+  .continuar-btn { align-self: flex-start; background: transparent; border: 0; color: var(--acento); font-weight: 600; font-size: 14px; padding: 4px 2px; }
+  .continuar-btn small { color: var(--suave); font-weight: 400; margin-left: 6px; }
+  .continuar-btn:hover { text-decoration: underline; }
+  .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
   .caixa textarea { flex: 1; min-width: 0; resize: none; background: var(--cartao); border: 1px solid var(--linha);
@@ -297,7 +301,7 @@
     <form class="caixa gutter" id="form">
       <button type="button" class="icone lampada" id="lampada" aria-label="Mostrar sugestões">💡</button>
       <button type="button" class="icone" id="botao-nota" aria-label="Nota de autor" aria-pressed="false">✎</button>
-      <textarea id="texto" rows="1" placeholder="O que fazes ou dizes…"></textarea>
+      <textarea id="texto" rows="1" placeholder="O que dizes ou fazes…"></textarea>
       <button class="enviar" id="enviar">Enviar</button>
     </form>
     <div class="toast" id="toast" role="status"></div>
@@ -400,12 +404,16 @@ Devolve:
 "estás a fazer"; nunca formas do Brasil como tela, câmera, terno, "está fazendo", "se levanta").
 - 3.ª pessoa, presente. O utilizador é "tu". Interpretas todas as outras personagens e o ambiente, mas NUNCA decides
   o que "tu" dizes, fazes, pensas ou sentes, nem reações tuas (corar, coração acelerado). Reages ao que ele escreve.
-- 1 a 3 parágrafos curtos (máx. ~150 palavras). Diálogos com travessão (—). Acaba num momento para ele agir.
+- 1 a 3 parágrafos curtos (máx. ~150 palavras). Diálogos com travessão (—).
+- TU CONDUZES A HISTÓRIA: em cada cena traz algo novo pela mão das personagens ou do mundo (um convite, uma
+  provocação, um segredo, um problema, alguém que chega). O utilizador só reage; não esperes que ele invente o rumo.
+- Acaba SEMPRE com uma personagem a falar diretamente com "tu" (pergunta, desafio, convite) ou numa situação que
+  exige uma resposta dele já. Nunca acabes numa descrição parada.
 - Personagens fiéis à ficha; usa os exemplos de falas só como estilo, nunca os repitas. Faz a história avançar.
 - [NOTA DE AUTOR] é uma instrução para ti (saltar tempo, mudar cenário, trazer alguém): aplica-a sem a mencionar.
 - Sem conteúdo sexual explícito (a cena corta com elegância). Violência sem pormenores gráficos.
 - Se o utilizador mostrar sofrimento real fora da história, sai da narração com cuidado e sugere ajuda.
-Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que ele podia fazer, 1.ª pessoa],
+Responde só com JSON: {"texto": narração, "escolhas": [3 respostas curtas e diferentes ao que acabou de acontecer, 1.ª pessoa],
 "novos_factos": [factos novos e duradouros, frases curtas; [] se nada]}`;
 
   // Regras extra quando a história é slow burn (e a personagem é adulta na obra).
@@ -588,6 +596,8 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
   function paraTurnos(mensagens) {
     return mensagens.map(m => m.tipo === "cena"
       ? { role: "assistant", content: m.texto }
+      : m.tipo === "continuar"
+      ? { role: "user", content: "[NOTA DE AUTOR] Continua tu: avança a história até à próxima situação que peça uma resposta minha, sem decidir nada por mim." }
       : { role: "user", content: m.tipo === "nota" ? "[NOTA DE AUTOR] " + m.texto : m.texto });
   }
 
@@ -610,7 +620,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
     const fim = inicioJanela(c);
     if (fim - c.resumidas_ate < LOTE_RESUMO) return;   // ainda não compensa gastar um pedido
     const texto = c.mensagens.slice(c.resumidas_ate, fim).map(m =>
-      (m.tipo === "cena" ? "Narrador: " : m.tipo === "nota" ? "Nota de autor: " : "Utilizador: ") + m.texto).join("\n").slice(-12000);
+      (m.tipo === "cena" ? "Narrador: " : m.tipo === "nota" ? "Nota de autor: " : m.tipo === "continuar" ? "(o utilizador deixou a história avançar)" : "Utilizador: ") + (m.tipo === "continuar" ? "" : m.texto)).join("\n").slice(-12000);
     try {
       const novo = await groq([{ role: "user", content:
         `Resumo atual de uma fanfic interativa com ${p.nome}:\n${c.resumo || "(vazio)"}\n\nNovas partes:\n${texto}\n\n`
@@ -639,7 +649,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
   let hist = null;       // história aberta (dados)
   let cont = null;       // conteúdo da história aberta (mensagens, memória...)
   let aEspera = false, rascunho = null, modoNota = false;
-  let verSugestoes = ler("sussurros-sugestoes", false) === true;
+  let verSugestoes = ler("sussurros-sugestoes", true) === true;   // ligadas por defeito
 
   // Botões de tom (usados ao criar e ao editar)
   function desenharTons(caixa, escolhidos, menor) {
@@ -915,13 +925,16 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
     $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Sem título")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
       cont.mensagens.map(m => m.tipo === "cena" ? `<div class="cena">${paragrafos(m.texto)}</div>`
         : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
+        : m.tipo === "continuar" ? `<div class="continuou" aria-hidden="true">· · ·</div>`
         : `<div class="acao">${formatar(m.texto)}</div>`).join("") + extra;
     const r = $("rolar-historia"); r.scrollTop = r.scrollHeight;
     $("contador").textContent = cont.memoria.length;
     $("lampada").classList.toggle("ligada", verSugestoes);
-    $("escolhas").innerHTML = (aEspera || !verSugestoes || modoNota) ? "" : (cont.escolhas || [])
-      .map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("");
+    $("escolhas").innerHTML = (aEspera || modoNota) ? "" :
+      (verSugestoes ? (cont.escolhas || []).map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("") : "")
+      + (cont.mensagens.length ? `<button class="continuar-btn" id="continuar">Continuar ▸ <small>deixa a história avançar</small></button>` : "");
     $("escolhas").hidden = !$("escolhas").innerHTML;
+    if ($("continuar")) $("continuar").onclick = () => enviar("", false);
     document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(cont.escolhas[b.dataset.i], false));
     $("enviar").disabled = aEspera;
   }
@@ -931,15 +944,17 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
     $("botao-nota").classList.toggle("ligado", sim);
     $("modo-nota").hidden = !sim;
     $("form").classList.toggle("nota-ligada", sim);
-    $("texto").placeholder = sim ? "Ex: salta 3 dias para a frente / aparece o Light" : "O que fazes ou dizes…";
+    $("texto").placeholder = sim ? "Ex: salta 3 dias para a frente / aparece o Light" : "O que dizes ou fazes…";
   }
   $("botao-nota").onclick = () => { definirNota(!modoNota); desenhar(); $("texto").focus(); };
 
   async function enviar(texto, comoNota) {
     texto = (texto || "").trim().slice(0, 2000);
-    if (!texto || aEspera) return;
+    if (aEspera) return;
+    // Enviar sem escrever nada = "Continuar": a IA avança sozinha.
+    let tipo = !texto ? "continuar" : comoNota ? "nota" : "acao";
+    if (tipo === "continuar" && comoNota) return;   // nota de autor vazia não faz nada
     // Também conta como nota de autor se a mensagem vier toda entre parênteses.
-    let tipo = comoNota ? "nota" : "acao";
     if (/^\(.*\)$/s.test(texto)) { tipo = "nota"; texto = texto.slice(1, -1).trim(); }
     aEspera = true;
     const antes = cont;
@@ -977,9 +992,10 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
   }
   $("lampada").onclick = () => { verSugestoes = !verSugestoes; gravar("sussurros-sugestoes", verSugestoes); desenhar(); };
   $("hist-voltar").onclick = () => abrirPersonagem(pers.id);
-  $("form").onsubmit = e => { e.preventDefault(); enviar($("texto").value, modoNota); };
+  // Enviar com a caixa vazia não faz nada (para não avançar sem querer); para isso há o "Continuar ▸".
+  $("form").onsubmit = e => { e.preventDefault(); if ($("texto").value.trim()) enviar($("texto").value, modoNota); };
   $("texto").addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar($("texto").value, modoNota); }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if ($("texto").value.trim()) enviar($("texto").value, modoNota); }
   });
 
   // ---------- Painel: contexto e memória ----------
