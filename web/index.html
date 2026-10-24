@@ -52,12 +52,16 @@
     --f-texto: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
     --f-livro: "Literata", Georgia, "Times New Roman", serif;
     --escala: 1;   /* tamanho da letra da história (muda em "Aa") */
+    --texto-historia: #dcc5d1;   /* letra da história: rosa-lilás claro em vez de branco */
+    --enfase: #f0b9cb;           /* *itálicos* da história */
   }
   /* Tema "Night": ainda mais escuro, bom para ler às escuras (e poupa bateria em ecrãs OLED) */
-  :root[data-tema="noite"] { --fundo-fora: #000; --fundo: #000; --cartao: #100d12; --linha: #1f1923; --texto: #e6dbe2; --suave: #8f8088; --papel: #000; }
+  :root[data-tema="noite"] { --fundo-fora: #000; --fundo: #000; --cartao: #100d12; --linha: #1f1923; --texto: #e6dbe2; --suave: #8f8088; --papel: #000;
+    --texto-historia: #cdb6c2; --enfase: #e3a9bc; }
   /* Tema claro */
-  :root[data-tema="claro"] { color-scheme: light; --fundo-fora: #efe6ea; --fundo: #fbf7f9; --cartao: #ffffff; --linha: #e8dbe1; --texto: #2a1a22;
-    --suave: #7a6570; --acento: #b24d6c; --acento2: #c9809a; --sobre-acento: #fff; --erro: #c0344f; --italico: #6b4658; --papel: #fff; --sombra: rgba(42,26,34,.3); }
+  :root[data-tema="claro"] { color-scheme: light; --fundo-fora: #eadde3; --fundo: #f8eef2; --cartao: #fdf5f8; --linha: #ead8e0; --texto: #3d2533;
+    --suave: #7d6472; --acento: #b24d6c; --acento2: #c9809a; --sobre-acento: #fdf5f8; --erro: #c0344f; --italico: #6b4658; --papel: #fdf5f8;
+    --sombra: rgba(61,37,51,.3); --texto-historia: #4a2c3c; --enfase: #8f4766; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { height: 100%; }
@@ -189,18 +193,19 @@
 
   /* ---------- A história ---------- */
   .texto-historia { padding-block: 20px; display: flex; flex-direction: column; gap: 12px; }
-  .cena { font-family: var(--f-livro); font-size: calc(16.5px * var(--escala)); line-height: 1.7; color: var(--texto); overflow-wrap: anywhere; }
+  .cena { font-family: var(--f-livro); font-size: calc(16.5px * var(--escala)); line-height: 1.7; color: var(--texto-historia); overflow-wrap: anywhere; }
   .cena p { margin: 0 0 .8em; }
   .cena p:last-child { margin-bottom: 0; }
-  .cena em { color: var(--italico); }
+  .cena em { color: var(--enfase); }
   .fala { display: flex; gap: 8px; align-items: flex-end; max-width: 90%; }
   .mini-avatar { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
                  font-size: 14px; font-weight: 600; color: #fff; }
   .balao { background: var(--cartao); border-radius: 18px; border-bottom-left-radius: 6px; padding: 9px 13px;
            line-height: 1.5; font-size: calc(15px * var(--escala)); overflow-wrap: anywhere; min-width: 0; }
   .balao b { display: block; font-size: 12px; color: var(--acento); font-weight: 600; margin-bottom: 2px; }
-  .balao em { color: var(--italico); }
-  .titulo-historia { font-family: var(--f-titulo); font-size: 28px; font-weight: 600; text-align: center; margin: 4px 0 0; text-wrap: balance; }
+  .balao { color: var(--texto-historia); }
+  .balao em { color: var(--enfase); }
+  .titulo-historia { color: var(--texto-historia); font-family: var(--f-titulo); font-size: 28px; font-weight: 600; text-align: center; margin: 4px 0 0; text-wrap: balance; }
   .ornamento { text-align: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .acao { align-self: flex-end; max-width: 86%; background: linear-gradient(135deg, var(--acento2), #9d5d7b); color: #fff;
           padding: 10px 14px; border-radius: 18px; border-top-right-radius: 6px; line-height: 1.5; font-size: calc(15px * var(--escala)); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -213,6 +218,7 @@
   .erro { color: var(--erro); font-size: 13px; text-align: center; line-height: 1.45; margin: 0; }
   .escolhas { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
   .escolha { text-align: left; background: transparent; border: 1px solid var(--linha); border-radius: 14px; padding: 9px 12px; font-size: calc(14px * var(--escala)); transition: .15s; }
+  .escolha { color: var(--texto-historia); }
   .escolha:hover { border-color: var(--acento); }
   .escolha::before { content: "↳ "; color: var(--acento); }
   .continuar-btn { align-self: flex-start; background: transparent; border: 0; color: var(--acento); font-weight: 600; font-size: 14px; padding: 4px 2px; }
@@ -238,7 +244,7 @@
   /* Fundo da história com a imagem da personagem: os textos ficam em "vidro" por cima */
   :root { --vidro: rgba(18,13,20,.74); --vidro-forte: rgba(18,13,20,.86); }
   :root[data-tema="noite"] { --vidro: rgba(0,0,0,.72); --vidro-forte: rgba(0,0,0,.86); }
-  :root[data-tema="claro"] { --vidro: rgba(255,255,255,.82); --vidro-forte: rgba(255,255,255,.92); }
+  :root[data-tema="claro"] { --vidro: rgba(253,245,248,.84); --vidro-forte: rgba(253,245,248,.93); }
   #ecra-historia { position: relative; isolation: isolate; }
   .fundo-historia { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
   .fundo-historia .imagem { position: absolute; inset: 0; background: center 20% / cover no-repeat; }
