@@ -482,7 +482,9 @@
     </div>
     <div class="rolar">
       <form class="formulario gutter" id="form-nova">
+        <!-- PERSONAS: DESLIGADO POR AGORA ("You are" / personas). Para voltar a ligar, tira os comentários marcados com "PERSONAS".
         <div id="h-persona-linha"><span class="rotulo">You are</span><div class="tons" id="h-persona"></div></div>
+        -->
         <div class="opcoes" id="opcoes"></div>
         <button type="button" class="ligacao" id="outras-opcoes">↻ Show 3 other ideas</button>
         <label>Or write your own idea<textarea id="h-premissa" rows="2" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
@@ -524,7 +526,9 @@
       <p class="uso" id="uso" hidden></p>
       <div class="menu">
         <button type="button" class="menu-item" id="abrir-chave">🔑 Groq key</button>
+        <!-- PERSONAS: DESLIGADO POR AGORA ("You are" / personas). Para voltar a ligar, tira os comentários marcados com "PERSONAS".
         <button type="button" class="menu-item" id="abrir-personas">👤 Your personas</button>
+        -->
         <button type="button" class="menu-item" id="abrir-aspeto">Aa  Display</button>
         <button type="button" class="menu-item" id="instalar" hidden>⤓ Install on your phone</button>
         <button type="button" class="menu-item" id="exportar">⬇ Export backup</button>
@@ -661,7 +665,9 @@
       <form class="formulario" id="form-contexto">
         <label>Title<input id="e-titulo" maxlength="120"></label>
         <label>The idea<textarea id="e-premissa" rows="3" maxlength="1500"></textarea></label>
+        <!-- PERSONAS: DESLIGADO POR AGORA ("You are" / personas). Para voltar a ligar, tira os comentários marcados com "PERSONAS".
         <div><span class="rotulo">You are</span><div class="tons" id="e-persona"></div></div>
+        -->
         <label>Your role in this story<textarea id="e-papel" rows="2" maxlength="800"></textarea></label>
         <div><span class="rotulo">Your relationship</span><div class="tons" id="e-relacao"></div></div>
         <div><span class="rotulo">Tone</span><div class="tons" id="e-tons"></div></div>
@@ -1705,11 +1711,14 @@ ${texto}`;
     $("nova-estado").innerHTML = "";
     $("h-premissa").placeholder = m ? "e.g. the night before the comeback, the power goes out in the dorm."
                                     : "e.g. " + pers.nome + " needs someone to go undercover at a party and picks you.";
-    // a persona: a última usada (ou a única que existe); só aparece a escolha se houver personas
-    const ps = personas(), ultima = ler("sussurros-persona-ultima", "");
-    personaNova = personaDe(ultima) ? ultima : ps.length === 1 ? ps[0].id : "";
-    $("h-persona-linha").hidden = !ps.length;
-    if (ps.length) desenharPersonas($("h-persona"), personaNova, id => { personaNova = id; pedirOpcoes(); });
+    // PERSONAS: DESLIGADO POR AGORA ("You are" / personas). Para voltar a ligar, tira os comentários marcados com "PERSONAS".
+    // Enquanto estiver desligado, as histórias novas começam sem persona.
+    personaNova = "";
+    // // a persona: a última usada (ou a única que existe); só aparece a escolha se houver personas
+    // const ps = personas(), ultima = ler("sussurros-persona-ultima", "");
+    // personaNova = personaDe(ultima) ? ultima : ps.length === 1 ? ps[0].id : "";
+    // $("h-persona-linha").hidden = !ps.length;
+    // if (ps.length) desenharPersonas($("h-persona"), personaNova, id => { personaNova = id; pedirOpcoes(); });
     atualizarNovaCom();
     mostrar("ecra-nova");
     pedirOpcoes();
@@ -2166,11 +2175,12 @@ ${texto}`;
     $("e-titulo").value = hist.titulo || ""; $("e-premissa").value = hist.premissa || "";
     $("e-papel").value = hist.papel || "";
     let personaCtx = personaDe(hist.persona) ? hist.persona : "";
-    desenharPersonas($("e-persona"), personaCtx, id => {
-      personaCtx = id; $("e-persona").dataset.id = id;
-      desenharTons($("e-tons"), tonsDe($("e-tons")), pers.menor || eMenor(personaDe(id)));
-    });
-    $("e-persona").dataset.id = personaCtx;
+    // PERSONAS: DESLIGADO POR AGORA ("You are" / personas). Para voltar a ligar, tira os comentários marcados com "PERSONAS".
+    // desenharPersonas($("e-persona"), personaCtx, id => {
+    //   personaCtx = id; $("e-persona").dataset.id = id;
+    //   desenharTons($("e-tons"), tonsDe($("e-tons")), pers.menor || eMenor(personaDe(id)));
+    // });
+    // $("e-persona").dataset.id = personaCtx;
     desenharTons($("e-tons"), hist.tons, pers.menor || eMenor(personaDe(personaCtx)));
     desenharRelacao($("e-relacao"), hist.relacao);
     $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map(f => `<li>${formatar(f)}</li>`).join("") : `<p class="vazio">Nothing yet.</p>`;
@@ -2188,7 +2198,7 @@ ${texto}`;
     e.preventDefault();
     hist = Object.assign({}, hist, { titulo: $("e-titulo").value.trim().slice(0, 120), premissa: $("e-premissa").value.trim(),
       papel: $("e-papel").value.trim(), relacao: relacaoDe($("e-relacao")), tons: tonsDe($("e-tons")),
-      persona: $("e-persona").dataset.id || null });
+      persona: hist.persona || null });   // PERSONAS: com a escolha desligada, fica a que a história já tinha. Ligado era: $("e-persona").dataset.id || null
     if (!hist.persona) delete hist.persona;
     atualizarHistoria(hist);
     $("painel-contexto").hidden = true;
@@ -2333,7 +2343,8 @@ ${texto}`;
     $("persona-estado").textContent = "";
     $("painel-personas").hidden = false;
   }
-  $("abrir-personas").onclick = () => abrirPersonas(null);
+  // PERSONAS: botão das definições desligado por agora
+  // $("abrir-personas").onclick = () => abrirPersonas(null);
   $("fechar-personas").onclick = () => { $("painel-personas").hidden = true; };
   $("painel-personas").onclick = e => { if (e.target.id === "painel-personas") $("painel-personas").hidden = true; };
   $("form-persona").onsubmit = e => {
