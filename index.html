@@ -153,6 +153,25 @@
   .apagar-h.confirmar { color: #fff; background: #8a3a4a; border-color: #8a3a4a; font-weight: 600; }
   .apagar-todas { justify-self: start; margin-top: 6px; }
 
+  /* ---------- Universos ---------- */
+  .mundos { display: flex; gap: 10px; overflow-x: auto; min-width: 0; padding-bottom: 4px; scroll-snap-type: x mandatory; }
+  .mundo-carta { flex: 0 0 72%; scroll-snap-align: start; border: 0; text-align: left; border-radius: 18px; padding: 0; overflow: hidden; background: var(--cartao); }
+  .mundo-capa { height: 78px; display: flex; align-items: flex-end; padding: 10px 14px; font-size: 30px; }
+  .mundo-capa.com-foto { height: 110px; }
+  .mundo-corpo { padding: 10px 14px 14px; display: grid; gap: 2px; }
+  .mundo-corpo b { font-family: var(--f-titulo); font-size: 21px; font-weight: 600; }
+  .mundo-corpo span { color: var(--suave); font-size: 13px; line-height: 1.35; }
+  .mundo-corpo small { color: var(--acento); font-size: 12px; font-weight: 600; margin-top: 4px; }
+  .criar-mundo { flex: 0 0 44%; scroll-snap-align: start; border: 1.5px dashed var(--linha); background: transparent; border-radius: 18px; color: var(--suave); padding: 14px; }
+  .criar-mundo:hover { border-color: var(--acento); color: var(--acento); }
+  .mundo-bloco { display: grid; gap: 8px; padding-block: 12px; }
+  .canon { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .canon li { background: var(--cartao); border-radius: 10px; padding: 4px 4px 4px 12px; font-size: 14px; display: flex; gap: 6px; align-items: center; justify-content: space-between; line-height: 1.4; }
+  .canon li::before { content: "✦"; color: var(--acento); }
+  .canon li span { flex: 1; }
+  .elenco-bloco { display: grid; gap: 4px; }
+  .canonizar { margin-left: 6px; }
+
   /* ---------- A história ---------- */
   .texto-historia { padding-block: 20px; display: flex; flex-direction: column; gap: 12px; }
   .cena { font-family: var(--f-livro); font-size: 16.5px; line-height: 1.7; color: var(--texto); overflow-wrap: anywhere; }
@@ -336,6 +355,65 @@
     </div>
   </section>
 
+  <!-- ECRÃ 3b: página de um universo -->
+  <section class="ecra" id="ecra-mundo">
+    <div class="barra gutter">
+      <button class="icone" id="mundo-voltar" aria-label="Back">←</button>
+      <div class="avatar" id="mundo-avatar"></div>
+      <div class="barra-nome"><b id="mundo-nome"></b><small id="mundo-sub"></small></div>
+      <button class="icone" id="mundo-editar" aria-label="Edit universe">✎</button>
+    </div>
+    <div class="rolar">
+      <div class="perfil gutter">
+        <p class="perfil-frase" id="mundo-frase"></p>
+        <p class="dica" id="mundo-descricao"></p>
+        <button class="botao" id="mundo-nova-historia">New story in this universe</button>
+        <div id="mundo-estado-p"></div>
+      </div>
+      <div class="mundo-bloco gutter">
+        <span class="rotulo">Who lives here</span>
+        <p class="dica">Tap a character from your gallery to add or remove them.</p>
+        <div class="tons" id="mundo-elenco"></div>
+        <button type="button" class="atalho" id="mundo-nova-pers">+ Create a new character for this universe</button>
+      </div>
+      <div class="mundo-bloco gutter">
+        <span class="rotulo">Canon</span>
+        <ul class="canon" id="mundo-canon"></ul>
+      </div>
+      <div class="historias gutter" id="mundo-historias"></div>
+    </div>
+  </section>
+
+  <!-- ECRÃ 3c: criar / editar universo -->
+  <section class="ecra" id="ecra-mundo-editar">
+    <div class="barra gutter">
+      <button class="icone" id="mw-voltar" aria-label="Back">←</button>
+      <div class="barra-nome"><b id="mw-titulo">New universe</b><small>Only the name is required</small></div>
+    </div>
+    <div class="rolar">
+      <form class="formulario gutter" id="form-mundo">
+        <p class="dica">Make up a world of your own, or base it on one you know. Leave fields empty and tap <b>Fill in with AI</b>.</p>
+        <div class="avatar-linha"><label class="carregar-avatar" for="mw-foto"><span>+<small>Cover</small></span></label>
+          <input type="file" id="mw-foto" accept="image/*" hidden><p class="dica">Tap to add a cover picture (optional).</p></div>
+        <label>Name *<input id="mw-nome" maxlength="60" placeholder="e.g. Ashveil Academy" required></label>
+        <label>Based on (optional)<input id="mw-obra" maxlength="120" placeholder="e.g. Attack on Titan · empty if it's original"></label>
+        <label>Kind of world<input id="mw-genero" maxlength="80" placeholder="e.g. dark fantasy, magic school, cyberpunk city"></label>
+        <label>The world<textarea id="mw-descricao" rows="4" maxlength="1200" placeholder="How it works, the era, the atmosphere, what's going on right now."></textarea></label>
+        <label>Places<textarea id="mw-lugares" rows="3" maxlength="800" placeholder="One per line. e.g. The Glass Library: forbidden after midnight."></textarea></label>
+        <label>Groups and factions<textarea id="mw-grupos" rows="3" maxlength="800" placeholder="One per line. e.g. The Night Wardens: guard the city, trust nobody."></textarea></label>
+        <label>Rules<textarea id="mw-regras" rows="3" maxlength="800" placeholder="Magic, technology, laws, what's impossible here."></textarea></label>
+        <label>Canon facts<textarea id="mw-canon" rows="3" maxlength="1500" placeholder="One per line. Things that stay true in every story here."></textarea></label>
+        <label>Card tagline<input id="mw-frase" maxlength="120" placeholder="Shown in the gallery"></label>
+        <div class="acoes">
+          <button type="button" class="botao secundario" id="completar-mundo">Fill in with AI</button>
+          <button class="botao" id="guardar-mundo">Create universe</button>
+        </div>
+        <div id="mundo-estado"></div>
+        <div class="perigos" id="mw-perigos"><button type="button" class="perigo" id="apagar-mundo">Delete this universe</button></div>
+      </form>
+    </div>
+  </section>
+
   <!-- ECRÃ 4: nova história -->
   <section class="ecra" id="ecra-nova">
     <div class="barra gutter">
@@ -345,9 +423,13 @@
     <div class="rolar">
       <form class="formulario gutter" id="form-nova">
         <p class="dica">Write whatever you like, it's all optional. Out of ideas? Tap <b>Surprise me</b>.</p>
+        <div class="elenco-bloco" id="h-elenco-bloco" hidden>
+          <span class="rotulo">Main character</span><div class="tons" id="h-principal"></div>
+          <span class="rotulo" style="margin-top:10px">Also in the story (up to 3)</span><div class="tons" id="h-outros"></div>
+        </div>
         <button type="button" class="atalho" id="atalho-slow">✦ Slow burn between friends or rivals</button>
         <label>The idea<textarea id="h-premissa" rows="3" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
-        <label>World and setting<textarea id="h-universo" rows="2" maxlength="800" placeholder="e.g. alternate universe, modern-day London, winter."></textarea></label>
+        <label><span id="h-universo-rotulo">World and setting</span><textarea id="h-universo" rows="2" maxlength="800" placeholder="e.g. alternate universe, modern-day London, winter."></textarea></label>
         <label>Your role<textarea id="h-papel" rows="2" maxlength="800" placeholder="e.g. Cat, 24, a hacker who works at a café by day."></textarea></label>
         <div><span class="rotulo">Your relationship</span><div class="tons" id="h-relacao"></div></div>
         <div><span class="rotulo">Tone</span><div class="tons" id="h-tons"></div></div>
@@ -486,7 +568,7 @@ Everything in English.`;
   const PEDIDO_IDEIA = (p, h) => `Suggest the starting point of an interactive fanfic, in English.
 
 Main character: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
-${p.ficha}
+${p.ficha}${h.mundo ? blocoMundo(mundoDe(h.mundo)) : ""}${(h.elenco || []).length ? "\nAlso in the story: " + h.elenco.map(id => (personagens().find(x => x.id === id) || {}).nome).filter(Boolean).join(", ") : ""}
 
 What the user already wrote (respect it and build on it; invent whatever is empty):
 - Idea: ${h.premissa || "(empty)"}
@@ -549,14 +631,43 @@ one funny or teasing, and one about the relationship between you two (getting cl
 - Current phase (scene ${nCena + 1}): ${fase}`;
   }
 
+  // ---------- Universos: o mundo e quem vive nele ----------
+  const linhas = t => String(t || "").split("\n").map(l => l.trim()).filter(Boolean);
+  // Cada campo é cortado para o pedido não crescer demais (~700 tokens no máximo).
+  function blocoMundo(m) {
+    if (!m) return "";
+    const canon = linhas(m.canon).slice(-10);
+    return `\n\n## The universe: ${m.nome}${m.obra ? " (based on " + m.obra + ")" : ""}`
+      + (m.genero ? `\nKind of world: ${m.genero}` : "")
+      + (m.descricao ? `\n${m.descricao.slice(0, 900)}` : "")
+      + (m.lugares ? `\nPlaces:\n${m.lugares.slice(0, 400)}` : "")
+      + (m.grupos ? `\nGroups and factions:\n${m.grupos.slice(0, 400)}` : "")
+      + (m.regras ? `\nRules of this world (never break them):\n${m.regras.slice(0, 400)}` : "")
+      + (canon.length ? `\nCanon (true in every story in this universe):\n${canon.map(f => "- " + f).join("\n")}` : "");
+  }
+  // Quem está na história recebe uma ficha média; quem só vive no universo recebe uma linha.
+  function blocoElenco(p, h) {
+    const m = h.mundo && mundoDe(h.mundo);
+    if (!m) return "";
+    const todos = personagens();
+    const elenco = (h.elenco || []).map(id => todos.find(x => x.id === id)).filter(x => x && x.id !== p.id).slice(0, 3);
+    const outros = membros(m).filter(x => x.id !== p.id && !elenco.some(e => e.id === x.id)).slice(0, 8);
+    const menores = elenco.concat(outros).filter(x => x.menor).map(x => x.nome);
+    return (elenco.length ? "\n\n## Also in this story\n" + elenco.map(x => `### ${x.nome}\n${String(x.ficha).slice(0, 900)}`).join("\n") : "")
+      + (outros.length ? "\n\n## Others who live in this world (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}`).join("\n") : "")
+      + (menores.length ? `\nNO ROMANCE with ${menores.join(", ")}: minors in their original work. Never romance, flirting or romantic tension with them.` : "");
+  }
+
   function instrucoes(p, h, memoria, resumo, nCena = 0) {
     const slow = !p.menor && h.tons.includes("Slow burn");
     return REGRAS_NARRADOR + (slow ? regrasSlowBurn(p, h, nCena) : "")
       + (p.menor ? `\nNO ROMANCE: ${p.nome} is a minor in the original work. Only friendship, adventure, mystery or rivalry; never romance, flirting or romantic tension with ${p.nome}, even if the user asks or says they're an adult.` : "")
+      + blocoMundo(h.mundo && mundoDe(h.mundo))
       + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 2200)}`
+      + blocoElenco(p, h)
       + `\n\n## Story: ${h.titulo || "untitled"}`
       + (h.premissa ? `\nIdea: ${h.premissa}` : "")
-      + `\nSetting: ${h.universo || "the original work's"}`
+      + `\nSetting: ${h.universo || (h.mundo && mundoDe(h.mundo) ? "somewhere in " + mundoDe(h.mundo).nome : "the original work's")}`
       + (h.relacao && h.relacao !== "Open" ? `\nRelationship between them: ${h.relacao}` : "")
       + (h.tons.length ? `\nTone: ${h.tons.join(", ")}` : "")
       + `\nThe user is: ${h.papel || "someone new in " + p.nome + "'s life"}. In the narration they are ALWAYS "you", never their name; `
@@ -597,6 +708,12 @@ one funny or teasing, and one about the relationship between you two (getting cl
   const gravarHistorias = l => gravar("sussurros-historias", l);
   const conteudoDe = id => ler("sussurros-h-" + id, { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] });
   const gravarConteudo = (id, c) => gravar("sussurros-h-" + id, c);
+  // Universos: { id, nome, obra, genero, descricao, lugares, grupos, regras, canon, frase, emoji, cores, avatar, personagens: [ids] }
+  const mundos = () => ler("sussurros-universos", []);
+  const gravarMundos = l => gravar("sussurros-universos", l);
+  const mundoDe = id => mundos().find(m => m.id === id);
+  function atualizarMundo(m) { const l = mundos().filter(x => x.id !== m.id); l.unshift(Object.assign({}, m, { atualizada: Date.now() })); gravarMundos(l); }
+  const membros = m => (m.personagens || []).map(id => personagens().find(p => p.id === id)).filter(Boolean);
   const novoId = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(16).padStart(2, "0")).join("");
 
   function atualizarHistoria(h) {
@@ -782,10 +899,12 @@ one funny or teasing, and one about the relationship between you two (getting cl
   // Uma cena: a narração em texto corrido; cada fala num balão com o avatar e o nome.
   // (As cenas antigas, sem "partes", continuam a aparecer como texto corrido.)
   const corDoNome = nome => PALETAS[[...nome].reduce((a, ch) => a + ch.charCodeAt(0), 0) % PALETAS.length][1];
+  // Procura quem fala entre a personagem principal e o elenco (pelo nome completo ou pelo primeiro nome).
   function avatarDe(nome) {
-    const eDele = pers && nome.toLowerCase() === pers.nome.toLowerCase();
-    if (eDele && pers.avatar) return `<span class="mini-avatar" style="background:center/cover url(${pers.avatar})"></span>`;
-    if (eDele) return `<span class="mini-avatar" style="background:${fundo(pers)}">${escapar(pers.emoji)}</span>`;
+    const n = nome.toLowerCase(), cand = [pers].concat(elencoVisivel).filter(Boolean);
+    const q = cand.find(x => x.nome.toLowerCase() === n) || cand.find(x => x.nome.split(" ")[0].toLowerCase() === n.split(" ")[0]);
+    if (q && q.avatar) return `<span class="mini-avatar" style="background:center/cover url(${q.avatar})"></span>`;
+    if (q) return `<span class="mini-avatar" style="background:${fundo(q)}">${escapar(q.emoji)}</span>`;
     return `<span class="mini-avatar" style="background:${corDoNome(nome)}">${escapar([...nome][0] || "?")}</span>`;
   }
   function desenharCena(m) {
@@ -810,6 +929,11 @@ one funny or teasing, and one about the relationship between you two (getting cl
   };
 
   let pers = null;       // personagem aberta
+  let mundo = null;      // universo aberto
+  let mundoAlvo = null;  // id do universo para onde vai a personagem que se está a criar
+  let novaMundo = null;  // id do universo da história que se está a criar
+  let elencoVisivel = []; // personagens que podem aparecer na história aberta (para os avatares)
+  let origem = { tipo: "pers" };   // de onde se abriu a história (para o botão voltar)
   let hist = null;       // história aberta (dados)
   let cont = null;       // conteúdo da história aberta (mensagens, memória...)
   let aEspera = false, rascunho = null, modoNota = false;
@@ -837,8 +961,8 @@ one funny or teasing, and one about the relationship between you two (getting cl
       `<div class="aviso-topo">To get started, add your free Groq key. <button type="button" class="ligacao" id="aviso-chave">Set it up now</button></div>`;
     if (!chave()) $("aviso-chave").onclick = abrirChave;
     mostrarUso();
-    const lista = personagens();
-    if (!lista.length) {
+    const lista = personagens(), ms = mundos(), hs = historias();
+    if (!lista.length && !ms.length) {
       $("lista").innerHTML = `
         <div class="vazio-galeria">
           <div class="grande">Who do you want to write with?</div>
@@ -849,13 +973,22 @@ one funny or teasing, and one about the relationship between you two (getting cl
             <button class="exemplo" data-nome="Geralt of Rivia" data-obra="The Witcher">Geralt of Rivia</button>
           </div>
           <button class="botao" id="criar-primeira">Create character</button>
+          <button class="ligacao" id="criar-primeiro-mundo">or create a universe first</button>
         </div>`;
       $("criar-primeira").onclick = () => abrirCriar();
+      $("criar-primeiro-mundo").onclick = () => abrirEditarMundo(null);
       document.querySelectorAll(".exemplo").forEach(b => b.onclick = () => abrirCriar(b.dataset.nome, b.dataset.obra));
       return;
     }
-    const hs = historias();
-    $("lista").innerHTML = `<button class="criar-carta" id="criar-nova">+ Create character</button>` +
+    // Fila dos universos (desliza para o lado) e depois as personagens
+    const filaMundos = `<span class="rotulo">Universes</span><div class="mundos">` + ms.map(m => {
+        const n = hs.filter(h => h.mundo === m.id).length, np = membros(m).length;
+        return `<button class="mundo-carta" data-mundo="${m.id}">
+          <div class="mundo-capa${m.avatar ? " com-foto" : ""}" style="background:${capa(m)}">${m.avatar ? "" : escapar(m.emoji)}</div>
+          <div class="mundo-corpo"><b>${escapar(m.nome)}</b><span>${formatar(m.frase || m.genero || "")}</span>
+          <small>${np} ${np === 1 ? "character" : "characters"}${n ? " · " + n + " " + (n === 1 ? "story" : "stories") : ""}</small></div></button>`;
+      }).join("") + `<button class="criar-mundo" id="criar-mundo">+ New universe</button></div><span class="rotulo">Characters</span>`;
+    $("lista").innerHTML = filaMundos + `<button class="criar-carta" id="criar-nova">+ Create character</button>` +
       lista.map(p => {
         const n = hs.filter(h => h.personagem === p.id).length;
         return `<button class="carta" data-id="${p.id}">
@@ -867,6 +1000,8 @@ one funny or teasing, and one about the relationship between you two (getting cl
           </div></button>`;
       }).join("");
     $("criar-nova").onclick = () => abrirCriar();
+    $("criar-mundo").onclick = () => abrirEditarMundo(null);
+    document.querySelectorAll(".mundo-carta").forEach(b => b.onclick = () => abrirMundo(b.dataset.mundo));
     document.querySelectorAll(".carta").forEach(b => b.onclick = () => abrirPersonagem(b.dataset.id));
   }
 
@@ -874,7 +1009,7 @@ one funny or teasing, and one about the relationship between you two (getting cl
   $("exportar").onclick = () => {
     const conteudos = {};
     historias().forEach(h => conteudos[h.id] = conteudoDe(h.id));
-    const blob = new Blob([JSON.stringify({ app: "sussurros", versao: 2, personagens: personagens(), historias: historias(), conteudos }, null, 1)],
+    const blob = new Blob([JSON.stringify({ app: "sussurros", versao: 2, personagens: personagens(), historias: historias(), universos: mundos(), conteudos }, null, 1)],
                           { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -908,7 +1043,12 @@ one funny or teasing, and one about the relationship between you two (getting cl
         const i = hs.findIndex(x => x.id === h.id); if (i >= 0) hs[i] = h; else hs.push(h);
         if (d.conteudos && d.conteudos[h.id]) gravarConteudo(h.id, d.conteudos[h.id]);
       }
-      gravarPersonagens(ps); gravarHistorias(hs);
+      const us = mundos();
+      for (const m of d.universos || []) {
+        if (!m || !/^[a-f0-9]{12}$/.test(m.id || "")) continue;
+        const i = us.findIndex(x => x.id === m.id); if (i >= 0) us[i] = m; else us.push(m);
+      }
+      gravarPersonagens(ps); gravarHistorias(hs); gravarMundos(us);
       mostrarGaleria();
     } catch (err) {
       $("lista").insertAdjacentHTML("afterbegin", `<p class="erro">That file isn't a Whispers backup.</p>`);
@@ -923,7 +1063,7 @@ one funny or teasing, and one about the relationship between you two (getting cl
     $("criar-passo").textContent = modo === "mao" ? "Create by hand" : "Step 1 of 2";
   }
   function abrirCriar(nome = "", obra = "") {
-    rascunho = null; fotoNova = null;
+    rascunho = null; fotoNova = null; mundoAlvo = null;
     $("passo1").reset(); $("c-nome").value = nome; $("c-obra").value = obra;
     $("modos").hidden = false;
     escolherModo("ia");
@@ -977,7 +1117,15 @@ one funny or teasing, and one about the relationship between you two (getting cl
     });
     const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
     rascunho = null;
-    abrirPersonagem(p.id);
+    depoisDeGuardar(p);
+  }
+  function depoisDeGuardar(p) {
+    if (!mundoAlvo) return abrirPersonagem(p.id);
+    const m = mundoDe(mundoAlvo); mundoAlvo = null;
+    if (!m) return abrirPersonagem(p.id);
+    if (!(m.personagens || []).includes(p.id)) m.personagens = (m.personagens || []).concat(p.id);
+    atualizarMundo(m); abrirMundo(m.id);
+    return true;
   }
   // ---------- Avatar: reduz a imagem para 320x320 (fica pequena para guardar no browser) ----------
   let fotoNova = null;   // null = não mudou; "" = sem foto; "data:..." = foto nova
@@ -993,11 +1141,11 @@ one funny or teasing, and one about the relationship between you two (getting cl
     caixa.style.backgroundImage = url ? `url(${url})` : "";
     caixa.classList.toggle("com-foto", !!url);
   }
-  for (const id of ["m-foto", "r-foto"]) $(id).onchange = async e => {
+  for (const id of ["m-foto", "r-foto", "mw-foto"]) $(id).onchange = async e => {
     const f = e.target.files[0]; e.target.value = "";
     if (!f) return;
     try { fotoNova = await reduzirFoto(f); mostrarFoto($(id), fotoNova); }
-    catch (err) { $(id === "m-foto" ? "mao-estado" : "aviso-ficha").innerHTML = `<p class="erro">I couldn't open that image. Try another one (JPG or PNG).</p>`; }
+    catch (err) { $(id === "m-foto" ? "mao-estado" : id === "mw-foto" ? "mundo-estado" : "aviso-ficha").innerHTML = `<p class="erro">I couldn't open that image. Try another one (JPG or PNG).</p>`; }
   };
 
   // ---------- Criar à mão ----------
@@ -1112,7 +1260,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     });
     const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
     editarId = null;
-    abrirPersonagem(p.id);
+    if (depoisDeGuardar(p) === true) return;
     if (menor && idade >= 18) $("historias").insertAdjacentHTML("afterbegin",
       `<p class="aviso">${escapar(p.nome)} is a minor in the original work, so stories with this character don't have romance.</p>`);
   };
@@ -1123,6 +1271,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
   $("regerar").onclick = gerarFicha;
   $("passo2").onsubmit = e => { e.preventDefault(); guardarFicha(); };
   $("criar-voltar").onclick = () => {
+    if (mundoAlvo) { const m = mundoAlvo; mundoAlvo = null; rascunho = null; editarId = null; return abrirMundo(m); }
     const id = editarId || (rascunho && rascunho.id); rascunho = null; editarId = null;
     id && personagens().some(x => x.id === id) ? abrirPersonagem(id) : mostrarGaleria();
   };
@@ -1134,54 +1283,92 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     pintarAvatar($("pers-avatar"), pers);
     $("pers-nome").textContent = pers.nome; $("pers-obra").textContent = pers.obra;
     $("pers-frase").innerHTML = formatar(pers.frase);
-    const hs = historias().filter(h => h.personagem === pers.id);
-    $("historias").innerHTML = hs.length
+    origem = { tipo: "pers" };
+    listaHistorias($("historias"), historias().filter(h => h.personagem === pers.id),
+      `No stories with ${escapar(pers.nome)} yet. Tap <b>New story</b> to begin.`,
+      h => h.mundo && mundoDe(h.mundo) ? "🌌 " + mundoDe(h.mundo).nome + " · " : "", () => abrirPersonagem(pers.id));
+    mostrar("ecra-personagem");
+  }
+  // A lista de histórias, com apagar (o 1.º toque pede confirmação, o 2.º apaga; sem confirmar em 3 s volta ao normal).
+  //   etiqueta(h) -> texto extra antes da data; redesenhar() -> volta a desenhar a página depois de apagar
+  function listaHistorias(caixa, hs, vazio, etiqueta, redesenhar) {
+    caixa.innerHTML = hs.length
       ? `<span class="rotulo">Your stories</span>` + hs.map(h => `<div class="historia-linha">
           <button class="historia" data-id="${h.id}">
           <b>${escapar(h.titulo || "Untitled")}</b>
           <span>${escapar(h.premissa || "Free story")}</span>
-          <small>${h.tons.length ? escapar(h.tons.join(" · ")) + " · " : ""}${quando(h.atualizada || Date.now())}</small></button>
+          <small>${escapar(etiqueta(h))}${h.tons.length ? escapar(h.tons.join(" · ")) + " · " : ""}${quando(h.atualizada || Date.now())}</small></button>
           <button class="apagar-h" data-id="${h.id}" aria-label="Delete this story">🗑</button></div>`).join("")
-        + (hs.length > 1 ? `<button class="ligacao apagar-todas" id="apagar-todas">Delete all stories with ${escapar(pers.nome)}</button>` : "")
-      : `<p class="dica">No stories with ${escapar(pers.nome)} yet. Tap <b>New story</b> to begin.</p>`;
-    document.querySelectorAll(".historia").forEach(b => b.onclick = () => abrirHistoria(b.dataset.id));
-    // Apagar: o 1.º toque pede confirmação ("Delete?"), o 2.º apaga. Se não confirmares em 3 s, volta ao normal.
-    document.querySelectorAll(".apagar-h").forEach(b => b.onclick = () => {
+        + (hs.length > 1 ? `<button class="ligacao apagar-todas">Delete all ${hs.length} stories</button>` : "")
+      : `<p class="dica">${vazio}</p>`;
+    caixa.querySelectorAll(".historia").forEach(b => b.onclick = () => abrirHistoria(b.dataset.id));
+    caixa.querySelectorAll(".apagar-h").forEach(b => b.onclick = () => {
       if (!b.classList.contains("confirmar")) {
         b.classList.add("confirmar"); b.textContent = "Delete?";
         setTimeout(() => { b.classList.remove("confirmar"); b.textContent = "🗑"; }, 3000);
         return;
       }
-      apagarHistorias([b.dataset.id]);
+      apagarHistorias([b.dataset.id]); redesenhar();
     });
-    if ($("apagar-todas")) $("apagar-todas").onclick = () => {
-      const b = $("apagar-todas");
-      if (!b.dataset.confirmar) { b.dataset.confirmar = "1"; b.textContent = `Delete all ${hs.length} stories forever? Tap again.`; return; }
-      apagarHistorias(hs.map(h => h.id));
+    const todas = caixa.querySelector(".apagar-todas");
+    if (todas) todas.onclick = () => {
+      if (!todas.dataset.confirmar) { todas.dataset.confirmar = "1"; todas.textContent = `Delete all ${hs.length} stories forever? Tap again.`; return; }
+      apagarHistorias(hs.map(h => h.id)); redesenhar();
     };
-    mostrar("ecra-personagem");
   }
   function apagarHistorias(ids) {
     ids.forEach(id => apagarChave("sussurros-h-" + id));
     gravarHistorias(historias().filter(h => !ids.includes(h.id)));
-    abrirPersonagem(pers.id);
   }
+  // Volta para onde se estava antes (a página do universo ou a da personagem).
+  const voltar = () => origem.tipo === "mundo" && mundoDe(origem.id) ? abrirMundo(origem.id) : abrirPersonagem(pers.id);
   $("pers-voltar").onclick = mostrarGaleria;
-  $("pers-editar").onclick = () => pers.campos ? abrirMao(pers) : mostrarRevisao(Object.assign({}, pers), true);
-  $("nova-historia").onclick = abrirNova;
+  $("pers-editar").onclick = () => (mundoAlvo = null, pers.campos) ? abrirMao(pers) : mostrarRevisao(Object.assign({}, pers), true);
+  $("nova-historia").onclick = () => abrirNova(null);
 
   // ---------- Nova história ----------
-  function abrirNova() {
+  let outrosEscolhidos = new Set();   // ids das outras personagens na história
+  function abrirNova(m) {
+    novaMundo = m ? m.id : null;
+    outrosEscolhidos = new Set();
     $("form-nova").reset();
-    $("nova-com").textContent = "with " + pers.nome;
     $("nova-estado").innerHTML = "";
+    $("h-elenco-bloco").hidden = !m;
+    $("h-universo-rotulo").textContent = m ? "Where in the universe" : "World and setting";
+    $("h-universo").placeholder = m ? "e.g. the capital, during the winter festival" : "e.g. alternate universe, modern-day London, winter.";
+    if (m) { const ms = membros(m); pers = ms.find(x => pers && x.id === pers.id) || ms[0]; desenharElenco(ms); }
     desenharTons($("h-tons"), [], pers.menor);
     desenharRelacao($("h-relacao"), "Open");
-    $("atalho-slow").hidden = !!pers.menor;
+    atualizarNovaCom();
     mostrar("ecra-nova");
   }
+  function atualizarNovaCom() {
+    $("nova-com").textContent = "with " + pers.nome + (novaMundo && mundoDe(novaMundo) ? " · " + mundoDe(novaMundo).nome : "");
+    $("atalho-slow").hidden = !!pers.menor;
+  }
+  // Escolher a personagem principal (uma) e quem mais entra (até 3).
+  function desenharElenco(ms) {
+    outrosEscolhidos.delete(pers.id);
+    $("h-principal").innerHTML = ms.map(x => `<button type="button" class="tom" data-id="${x.id}" aria-pressed="${x.id === pers.id}">${escapar(x.nome)}</button>`).join("");
+    $("h-principal").querySelectorAll(".tom").forEach(b => b.onclick = () => {
+      pers = ms.find(x => x.id === b.dataset.id);
+      const tons = tonsDe($("h-tons"));
+      desenharElenco(ms); desenharTons($("h-tons"), tons, pers.menor); atualizarNovaCom();
+    });
+    const outros = ms.filter(x => x.id !== pers.id);
+    $("h-outros").innerHTML = outros.length
+      ? outros.map(x => `<button type="button" class="tom" data-id="${x.id}" aria-pressed="${outrosEscolhidos.has(x.id)}">${escapar(x.nome)}</button>`).join("")
+      : `<p class="dica">Only one character lives here for now. The narrator can still invent side characters.</p>`;
+    $("h-outros").querySelectorAll(".tom").forEach(b => b.onclick = () => {
+      const id = b.dataset.id;
+      if (outrosEscolhidos.has(id)) outrosEscolhidos.delete(id);
+      else if (outrosEscolhidos.size < 3) outrosEscolhidos.add(id);
+      b.setAttribute("aria-pressed", String(outrosEscolhidos.has(id)));
+    });
+  }
   const lerNova = () => ({ premissa: $("h-premissa").value.trim(), universo: $("h-universo").value.trim(),
-                           papel: $("h-papel").value.trim(), relacao: relacaoDe($("h-relacao")), tons: tonsDe($("h-tons")) });
+                           papel: $("h-papel").value.trim(), relacao: relacaoDe($("h-relacao")), tons: tonsDe($("h-tons")),
+                           mundo: novaMundo, elenco: novaMundo ? [...outrosEscolhidos] : [] });
   function limparTons(tons) {
     return (Array.isArray(tons) ? tons : []).map(String).filter(t => TONS.includes(t) && !(pers.menor && TONS_ROMANTICOS.includes(t))).slice(0, 3);
   }
@@ -1194,6 +1381,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
       papel: h.papel || String(d.papel || "").slice(0, 800),
       tons: h.tons.length ? h.tons : limparTons(d.tons),
       relacao: h.relacao && h.relacao !== "Open" ? h.relacao : (RELACOES.includes(d.relacao) ? d.relacao : "Open"),
+      mundo: h.mundo || null, elenco: h.elenco || [],
     };
   }
   function ocupado(sim, texto) {
@@ -1203,7 +1391,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
   $("surpreende").onclick = async () => {
     ocupado(true, "Dreaming up a story…");
     try {
-      const h = await pedirIdeia({ premissa: "", universo: "", papel: "", relacao: relacaoDe($("h-relacao")), tons: tonsDe($("h-tons")) });
+      const h = await pedirIdeia(Object.assign(lerNova(), { premissa: "", universo: "", papel: "" }));
       $("h-premissa").value = h.premissa; $("h-universo").value = h.universo; $("h-papel").value = h.papel;
       desenharTons($("h-tons"), h.tons, pers.menor);
       desenharRelacao($("h-relacao"), h.relacao);
@@ -1217,6 +1405,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     try {
       const base = await pedirIdeia(lerNova());   // completa o que faltar e dá um título
       const h = Object.assign({ id: novoId(), personagem: pers.id, atualizada: Date.now() }, base);
+      if (!h.mundo) { delete h.mundo; delete h.elenco; }
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
                             { role: "user", content: "[AUTHOR'S NOTE] Write the opening scene of the story, introducing the setting and the first encounter." }],
@@ -1234,7 +1423,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     desenharRelacao($("h-relacao"), ["Best friends", "Rivals"].includes(r) ? r : "Best friends");
     $("nova-estado").innerHTML = `<p class="dica">I've ticked <b>Romance</b> and <b>Slow burn</b>. Choose whether you're <b>Best friends</b> or <b>Rivals</b> and write your role (your name and who you are). The rest can stay empty.</p>`;
   };
-  $("nova-voltar").onclick = () => abrirPersonagem(pers.id);
+  $("nova-voltar").onclick = voltar;
 
   // ---------- A história ----------
   function aplicarCena(c, d) {
@@ -1265,9 +1454,11 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     if (!hist) return pers ? abrirPersonagem(pers.id) : mostrarGaleria();
     pers = personagens().find(p => p.id === hist.personagem) || pers;
     cont = conteudoDe(hist.id);
+    const m = hist.mundo && mundoDe(hist.mundo);
+    elencoVisivel = m ? membros(m) : [];
     pintarAvatar($("hist-avatar"), pers);
     $("hist-titulo").textContent = hist.titulo || "Untitled";
-    $("hist-com").textContent = "with " + pers.nome + (hist.relacao && hist.relacao !== "Open" ? " · " + hist.relacao : "") + (hist.tons.length ? " · " + hist.tons.join(" · ") : "");
+    $("hist-com").textContent = "with " + pers.nome + (hist.relacao && hist.relacao !== "Open" ? " · " + hist.relacao : "") + (hist.tons.length ? " · " + hist.tons.join(" · ") : "") + (m ? " · 🌌 " + m.nome : "");
     definirNota(false);
     mostrar("ecra-historia");
     desenhar();
@@ -1343,7 +1534,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     temporizador = setTimeout(() => $("toast").classList.remove("ver"), 4000);
   }
   $("lampada").onclick = () => { verSugestoes = !verSugestoes; gravar("sussurros-sugestoes", verSugestoes); desenhar(); };
-  $("hist-voltar").onclick = () => abrirPersonagem(pers.id);
+  $("hist-voltar").onclick = voltar;
   // Enviar com a caixa vazia não faz nada (para não avançar sem querer); para isso há o "Continuar ▸".
   $("form").onsubmit = e => { e.preventDefault(); if ($("texto").value.trim()) enviar($("texto").value, modoNota); };
   $("texto").addEventListener("keydown", e => {
@@ -1356,8 +1547,18 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     $("e-universo").value = hist.universo || ""; $("e-papel").value = hist.papel || "";
     desenharTons($("e-tons"), hist.tons, pers.menor);
     desenharRelacao($("e-relacao"), hist.relacao);
-    $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map(f => `<li>${formatar(f)}</li>`).join("")
+    const mw = hist.mundo && mundoDe(hist.mundo);
+    const jaCanon = mw ? linhas(mw.canon).map(x => x.toLowerCase()) : [];
+    $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map((f, i) => `<li>${formatar(f)}${mw
+        ? (jaCanon.includes(f.toLowerCase()) ? ` <small class="vazio">· canon</small>` : ` <button type="button" class="ligacao canonizar" data-i="${i}">make canon</button>`) : ""}</li>`).join("")
+        + (mw ? `<p class="dica">Canon facts stay true in every story in ${escapar(mw.nome)}.</p>` : "")
       : `<p class="vazio">Nothing yet.</p>`;
+    $("mem-factos").querySelectorAll(".canonizar").forEach(b => b.onclick = () => {
+      const m2 = mundoDe(hist.mundo), f = cont.memoria[b.dataset.i];
+      m2.canon = (m2.canon ? m2.canon.trimEnd() + "\n" : "") + f;
+      atualizarMundo(m2);
+      b.outerHTML = `<small class="vazio">· canon</small>`;
+    });
     $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">The summary appears once the story gets longer.</span>`;
     for (const id of ["recomecar", "apagar-historia"]) $(id).dataset.confirmar = "";
     $("recomecar").textContent = "Restart this story";
@@ -1401,7 +1602,122 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     apagarChave("sussurros-h-" + hist.id);
     gravarHistorias(historias().filter(h => h.id !== hist.id));
     $("painel-contexto").hidden = true;
-    abrirPersonagem(pers.id);
+    voltar();
+  };
+
+  // ---------- Universo ----------
+  function abrirMundo(id) {
+    mundo = mundoDe(id);
+    if (!mundo) return mostrarGaleria();
+    origem = { tipo: "mundo", id };
+    pintarAvatar($("mundo-avatar"), mundo);
+    $("mundo-nome").textContent = mundo.nome;
+    $("mundo-sub").textContent = [mundo.genero, mundo.obra && "based on " + mundo.obra].filter(Boolean).join(" · ") || "Universe";
+    $("mundo-frase").innerHTML = formatar(mundo.frase || "");
+    $("mundo-descricao").textContent = mundo.descricao || "";
+    $("mundo-estado-p").innerHTML = "";
+    // Quem vive aqui: botões com todas as personagens da galeria (as do universo primeiro e marcadas)
+    const ids = mundo.personagens || [];
+    const todos = personagens().sort((a, b) => ids.includes(b.id) - ids.includes(a.id));
+    $("mundo-elenco").innerHTML = todos.length
+      ? todos.map(p => `<button type="button" class="tom" data-id="${p.id}" aria-pressed="${ids.includes(p.id)}">${escapar(p.nome)}</button>`).join("")
+      : `<p class="dica">Your gallery has no characters yet.</p>`;
+    $("mundo-elenco").querySelectorAll(".tom").forEach(b => b.onclick = () => {
+      const m = mundoDe(mundo.id), l = m.personagens || [], id = b.dataset.id;
+      m.personagens = l.includes(id) ? l.filter(x => x !== id) : l.concat(id);
+      atualizarMundo(m); mundo = m;
+      b.setAttribute("aria-pressed", String(m.personagens.includes(id)));
+    });
+    // Canon: factos verdadeiros em todas as histórias deste universo (× tira um)
+    const canon = linhas(mundo.canon);
+    $("mundo-canon").innerHTML = canon.length
+      ? canon.map((f, i) => `<li><span>${formatar(f)}</span><button type="button" class="icone tirar-canon" data-i="${i}" aria-label="Remove">×</button></li>`).join("")
+      : `<p class="dica">Nothing yet. Add facts when you edit the universe, or tap <b>make canon</b> on a memory in a story's 📖 panel. The narrator keeps them true in every story here.</p>`;
+    $("mundo-canon").querySelectorAll(".tirar-canon").forEach(b => b.onclick = () => {
+      const m = mundoDe(mundo.id), l = linhas(m.canon); l.splice(+b.dataset.i, 1);
+      m.canon = l.join("\n"); atualizarMundo(m); abrirMundo(m.id);
+    });
+    const hs = historias().filter(h => h.mundo === mundo.id);
+    listaHistorias($("mundo-historias"), hs, "No stories in this universe yet.",
+      h => "with " + ((personagens().find(p => p.id === h.personagem) || {}).nome || "?") + " · ", () => abrirMundo(id));
+    mostrar("ecra-mundo");
+  }
+  $("mundo-voltar").onclick = mostrarGaleria;
+  $("mundo-editar").onclick = () => abrirEditarMundo(mundo);
+  $("mundo-nova-pers").onclick = () => { const id = mundo.id; abrirCriar(); mundoAlvo = id; };
+  $("mundo-nova-historia").onclick = () => {
+    if (!membros(mundo).length) {
+      $("mundo-estado-p").innerHTML = `<p class="aviso">Add at least one character to this universe first (below).</p>`;
+      return;
+    }
+    abrirNova(mundo);
+  };
+
+  const CAMPOS_MUNDO = ["nome", "obra", "genero", "descricao", "lugares", "grupos", "regras", "canon", "frase"];
+  let mundoEditar = null;   // id do universo a editar (null = novo)
+  let visualMundo = null;   // emoji e cores sugeridos pela IA
+  function abrirEditarMundo(m) {
+    mundoEditar = m ? m.id : null; fotoNova = null; visualMundo = null;
+    $("form-mundo").reset();
+    for (const k of CAMPOS_MUNDO) $("mw-" + k).value = (m && m[k]) || "";
+    mostrarFoto($("mw-foto"), m ? m.avatar : "");
+    $("mw-titulo").textContent = m ? "Edit universe" : "New universe";
+    $("guardar-mundo").textContent = m ? "Save changes" : "Create universe";
+    $("mw-perigos").hidden = !m;
+    $("apagar-mundo").dataset.confirmar = ""; $("apagar-mundo").textContent = "Delete this universe";
+    $("mundo-estado").innerHTML = "";
+    mostrar("ecra-mundo-editar");
+    $("mw-nome").focus();
+  }
+  const lerMundo = () => Object.fromEntries(CAMPOS_MUNDO.map(k => [k, $("mw-" + k).value.trim()]));
+  function mundoOcupado(sim, texto) {
+    $("completar-mundo").disabled = $("guardar-mundo").disabled = sim;
+    $("mundo-estado").innerHTML = sim ? `<div class="carregar"><span class="grande">${texto}</span></div>` : "";
+  }
+  // "Fill in with AI": preenche só os campos vazios.
+  const ESQUEMA_MUNDO = obj({ genero: S, descricao: S, lugares: S, grupos: S, regras: S, canon: S, frase: S, emoji: S, cor1: S, cor2: S });
+  $("completar-mundo").onclick = async () => {
+    const c = lerMundo();
+    if (!c.nome) { $("mundo-estado").innerHTML = `<p class="erro">Write at least the name.</p>`; return; }
+    mundoOcupado(true, "Building the world…");
+    try {
+      const d = await groq([{ role: "user", content: `You are helping to create a universe (a shared world) for interactive fanfics.
+What the user already wrote (DON'T change any of it; fill in the empty fields, consistent with the rest):
+${JSON.stringify(c, null, 1)}
+${c.obra ? "It's based on \"" + c.obra + "\": stay true to that world's canon (places, factions, rules), without inventing facts you're not sure of." : "It's an original world: make it vivid and specific, with hooks for stories."}
+Return ALL the fields. For fields that are already filled in, return exactly the same text.
+- genero: the kind of world, a few words. descricao: 3 to 5 sentences (how it works, the era, the atmosphere, what's happening now).
+- lugares: 3 to 5 places, one per line, "Name: short description". grupos: 2 to 4 groups or factions, one per line, same format.
+- regras: 2 to 4 rules of this world, one per line. canon: 2 to 4 facts that are true in every story, one per line.
+- frase: a tagline of up to 12 words. emoji: one fitting emoji. cor1 and cor2: two dark, saturated hex colors (e.g. "#3a2f5c").
+Everything in English.` }], { esquema: ESQUEMA_MUNDO, nome: "universo", esforco: "medium", max: 2500 });
+      for (const k of CAMPOS_MUNDO)
+        if (k in d && !$("mw-" + k).value.trim() && d[k]) $("mw-" + k).value = String(d[k]).slice(0, +$("mw-" + k).maxLength || 1500);
+      visualMundo = { emoji: String(d.emoji || "🌌").slice(0, 8), cores: [cor(d.cor1, "#22304a"), cor(d.cor2, "#5a4a7a")] };
+      mundoOcupado(false);
+      $("mundo-estado").innerHTML = `<p class="dica">I filled in the empty fields. Change anything you like and tap ${escapar($("guardar-mundo").textContent)}.</p>`;
+    } catch (e) { mundoOcupado(false); $("mundo-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
+  };
+  $("form-mundo").onsubmit = e => {
+    e.preventDefault();
+    const c = lerMundo();
+    if (!c.nome) return;
+    const antigo = mundoEditar ? mundoDe(mundoEditar) : null;
+    const m = Object.assign({}, antigo || { id: novoId(), personagens: [], emoji: "🌌", cores: PALETAS[Math.floor(Math.random() * PALETAS.length)] },
+      visualMundo || {}, c, { avatar: fotoNova !== null ? fotoNova : (antigo ? antigo.avatar || "" : "") });
+    atualizarMundo(m);
+    visualMundo = null; mundoEditar = null;
+    abrirMundo(m.id);
+  };
+  $("mw-voltar").onclick = () => mundoEditar ? abrirMundo(mundoEditar) : mostrarGaleria();
+  // Apagar o universo apaga as histórias dele; as personagens ficam na galeria.
+  $("apagar-mundo").onclick = () => {
+    const b = $("apagar-mundo");
+    if (!b.dataset.confirmar) { b.dataset.confirmar = "1"; b.textContent = "Delete this universe and its stories? Your characters stay. Tap again."; return; }
+    apagarHistorias(historias().filter(h => h.mundo === mundoEditar).map(h => h.id));
+    gravarMundos(mundos().filter(x => x.id !== mundoEditar));
+    mundoEditar = null;
+    mostrarGaleria();
   };
 
   // ---------- Painel: chave do Groq ----------
