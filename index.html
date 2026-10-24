@@ -307,6 +307,15 @@
   .menu { display: grid; gap: 6px; }
   .menu-item { text-align: left; background: var(--fundo); border: 1px solid var(--linha); border-radius: 12px; padding: 12px 14px; font-size: 15px; }
   .menu-item:hover { border-color: var(--acento2); }
+  /* As 3 histórias à escolha */
+  .opcoes { display: grid; gap: 10px; }
+  .opcao { text-align: left; background: var(--cartao); border: 1px solid var(--linha); border-radius: 18px; padding: 14px 16px; display: grid; gap: 6px; }
+  .opcao:hover { border-color: var(--acento2); }
+  .opcao:disabled { opacity: .5; }
+  .opcao b { font-family: var(--f-titulo); font-size: 21px; font-weight: 600; line-height: 1.2; }
+  .opcao span { color: var(--italico); font-size: 14px; line-height: 1.45; }
+  .opcao small { color: var(--acento); font-size: 12px; font-weight: 600; }
+  .opcao.carregando { min-height: 96px; animation: pulsar 1.6s infinite; }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
@@ -363,7 +372,7 @@
   <section class="ecra" id="ecra-criar">
     <div class="barra gutter">
       <button class="icone" id="criar-voltar" aria-label="Back">←</button>
-      <div class="barra-nome"><b>New character</b><small id="criar-passo"></small></div>
+      <div class="barra-nome"><b>New character</b><small id="criar-passo">Then pick a story</small></div>
     </div>
     <div class="rolar">
       <form class="formulario gutter" id="passo1">
@@ -385,7 +394,7 @@
         <label>Personality and way of speaking<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
         <div class="acoes">
           <button type="button" class="botao secundario" id="regerar">Generate again</button>
-          <button class="botao" id="guardar">Save character</button>
+          <button class="botao" id="guardar">Save and pick a story</button>
         </div>
       </form>
 
@@ -469,23 +478,15 @@
   <section class="ecra" id="ecra-nova">
     <div class="barra gutter">
       <button class="icone" id="nova-voltar" aria-label="Back">←</button>
-      <div class="barra-nome"><b>New story</b><small id="nova-com"></small></div>
+      <div class="barra-nome"><b>Pick a story</b><small id="nova-com"></small></div>
     </div>
     <div class="rolar">
       <form class="formulario gutter" id="form-nova">
-        <label><span id="h-premissa-rotulo">What happens?</span><textarea id="h-premissa" rows="4" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
-        <p class="dica">Optional. Leave it empty and the AI comes up with something.</p>
-        <details class="mais" id="h-mais"><summary>More options</summary><div class="dentro">
-          <div class="elenco-bloco" id="h-elenco-bloco" hidden>
-            <span class="rotulo">Main character</span><div class="tons" id="h-principal"></div>
-            <span class="rotulo" style="margin-top:10px">Also in the scene (up to 4)</span><div class="tons" id="h-outros"></div>
-          </div>
-          <div><span class="rotulo">You are</span><div class="tons" id="h-persona"></div></div>
-          <label>Your role in this story<textarea id="h-papel" rows="2" maxlength="800" placeholder="e.g. Cat, 24, a hacker who works at a café by day."></textarea></label>
-          <div><span class="rotulo">Your relationship</span><div class="tons" id="h-relacao"></div></div>
-          <div><span class="rotulo">Tone</span><div class="tons" id="h-tons"></div></div>
-        </div></details>
-        <button class="botao" id="comecar">Start story</button>
+        <div id="h-persona-linha"><span class="rotulo">You are</span><div class="tons" id="h-persona"></div></div>
+        <div class="opcoes" id="opcoes"></div>
+        <button type="button" class="ligacao" id="outras-opcoes">↻ Show 3 other ideas</button>
+        <label>Or write your own idea<textarea id="h-premissa" rows="2" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
+        <button class="botao secundario" id="comecar">Start with my idea</button>
         <div id="nova-estado"></div>
       </form>
     </div>
@@ -759,6 +760,22 @@ Return:
 - relacao: the relationship between them at the start, one of: ${RELACOES.join(", ")}
 - tons: 1 to 3 tones, chosen from this list: ${TONS.filter(t => !(p.menor || eMenor(personaDe(h.persona))) || !TONS_ROMANTICOS.includes(t)).join(", ")}`;
 
+  // 3 pontos de partida diferentes, para escolher com um toque.
+  const PEDIDO_OPCOES = (p, h) => `Suggest 3 DIFFERENT starting points for an interactive fanfic, in English.
+
+Main character: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
+${String(p.ficha).slice(0, 1800)}${h.mundo ? blocoMundo(mundoDe(h.mundo)) + "\nAlso in the group: " + elencoCena(h).filter(x => x.id !== p.id).map(x => x.nome + (historicoDe(mundoDe(h.mundo), x.id) ? " (with you: " + historicoDe(mundoDe(h.mundo), x.id).slice(0, 120) + ")" : "")).join("; ") + (historicoDe(mundoDe(h.mundo), p.id) ? "\nHistory with the user: " + historicoDe(mundoDe(h.mundo), p.id).slice(0, 400) : "") : ""}
+${personaDe(h.persona) ? "Who the user is: " + textoPersona(personaDe(h.persona)) : ""}
+${p.menor || eMenor(personaDe(h.persona)) ? "IMPORTANT: someone is a minor, so NONE of the stories can have romance (friendship, adventure, mystery, comedy, drama…)." : "Make one of them romantic (romance or slow burn), one more adventurous or dramatic (mystery, action, angst…), and one light and fun (comedy, fluff)."}
+The three must feel clearly different from each other: different situations, places and moods. Each one with a hook.
+For each, return:
+- titulo: a short, beautiful title (up to 6 words)
+- premissa: the situation in 1 or 2 sentences, addressed to the user as "you"
+- universo: where and when, a few words
+- papel: who the user is in it, a few words (no feelings decided for them)
+- relacao: one of: ${RELACOES.join(", ")}
+- tons: 1 to 3 from: ${TONS.filter(t => !(p.menor || eMenor(personaDe(h.persona))) || !TONS_ROMANTICOS.includes(t)).join(", ")}`;
+
   // As instruções do narrador. Vão em TODOS os pedidos, por isso são curtas.
   // As regras fixas vêm primeiro (iguais em todos os pedidos: o Groq reaproveita-as
   // em cache); depois o que muda: personagem, história, memória e resumo.
@@ -968,6 +985,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   const obj = (props, req) => ({ type: "object", additionalProperties: false, required: req || Object.keys(props), properties: props });
   const S = { type: "string" }, B = { type: "boolean" }, LS = { type: "array", items: { type: "string" } };
   const ESQUEMA_FICHA = obj({ conhecida: B, nome: S, obra: S, frase: S, ficha: S, menor_na_obra: B, emoji: S, cor1: S, cor2: S });
+  const ESQUEMA_OPCOES = obj({ opcoes: { type: "array", items: obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS }) } });
   const ESQUEMA_IDEIA = obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS });
   const ESQUEMA_PARTE = obj({ tipo: { type: "string", enum: ["narracao", "fala"] }, quem: S, texto: S });
   // Num grupo, o narrador dá um passo de proximidade para CADA membro cujos sentimentos mudaram.
@@ -1280,18 +1298,20 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     $("passo1").reset(); $("c-nome").value = nome; $("c-obra").value = obra;
     $("passo1").hidden = false; $("passo2").hidden = true; $("pagina").hidden = true;
     $("passo1-estado").innerHTML = "";
-    $("criar-passo").textContent = "";
+    $("criar-passo").textContent = "Then pick a story";
     mostrar("ecra-criar");
     $("c-nome").focus();
   }
+  let aEditarFicha = false;   // true = estamos a editar uma personagem que já existia
   function mostrarRevisao(p, editar) {
-    rascunho = p;
+    rascunho = p; aEditarFicha = !!editar;
     $("r-nome").value = p.nome; $("r-obra").value = p.obra; $("r-frase").value = p.frase; $("r-ficha").value = p.ficha;
     $("aviso-ficha").innerHTML = p.conhecida ? "" :
       `<div class="aviso">I don't know this character well, so this profile is generic. You can write more about them below, or go back and paste some information.</div>`;
     $("passo1").hidden = true; $("passo2").hidden = false; $("pagina").hidden = true;
     fotoNova = null; mostrarFoto($("r-foto"), p.avatar);
     $("regerar").hidden = !!editar;
+    $("guardar").textContent = editar ? "Save changes" : "Save and pick a story";
     $("criar-passo").textContent = editar ? "Edit profile" : "Review the profile";
     mostrar("ecra-criar");
   }
@@ -1332,7 +1352,8 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     depoisDeGuardar(p);
   }
   function depoisDeGuardar(p) {
-    if (!mundoAlvo) return abrirPersonagem(p.id);
+    // personagem nova (fora de um grupo): passa logo para as 3 histórias à escolha
+    if (!mundoAlvo) { abrirPersonagem(p.id); if (!aEditarFicha) abrirNova(null); return; }
     const m = mundoDe(mundoAlvo); mundoAlvo = null;
     if (!m) return abrirPersonagem(p.id);
     if (!(m.personagens || []).includes(p.id)) m.personagens = (m.personagens || []).concat(p.id);
@@ -1495,7 +1516,8 @@ ${texto}`;
       const m = { id: novoId(), nome: grupo || "New group", descricao: "", personagens: novos.map(x => x.id), emoji: novos[0].emoji, cores: novos[0].cores };
       atualizarMundo(m); return abrirMundo(m.id);
     }
-    novos.length === 1 ? abrirPersonagem(novos[0].id) : mostrarGaleria();
+    if (novos.length === 1) { abrirPersonagem(novos[0].id); return abrirNova(null); }
+    mostrarGaleria();
   };
 
   // ---------- Página da personagem ----------
@@ -1670,56 +1692,58 @@ ${texto}`;
       aoMudar(b.dataset.id);
     });
   }
+  let opcoesAtuais = [];
+  // Abre "Pick a story": a IA propõe 3 histórias; num grupo entram todos (até 5) e a principal é a que estava aberta.
   function abrirNova(m) {
     novaMundo = m ? m.id : null;
     outrosEscolhidos = new Set();
-    $("form-nova").reset();
-    $("nova-estado").innerHTML = "";
-    $("h-elenco-bloco").hidden = !m;
-    $("h-mais").open = false;
-    $("h-premissa").placeholder = m ? "e.g. the night before the comeback, the power goes out in the dorm and everyone ends up in the living room."
-                                    : "e.g. L needs someone to go undercover at a party and picks you.";
     if (m) {
       const ms = membros(m); pers = ms.find(x => pers && x.id === pers.id) || ms[0];
-      outrosEscolhidos = new Set(ms.filter(x => x.id !== pers.id).slice(0, 4).map(x => x.id));   // por defeito, estão todos
-      desenharElenco(ms);
+      outrosEscolhidos = new Set(ms.filter(x => x.id !== pers.id).slice(0, 4).map(x => x.id));
     }
-    personaNova = personaDe(ler("sussurros-persona-ultima", "")) ? ler("sussurros-persona-ultima", "") : "";
-    desenharPersonas($("h-persona"), personaNova, id => {
-      personaNova = id;
-      desenharTons($("h-tons"), tonsDe($("h-tons")), semRomanceNova()); atualizarNovaCom();
-    });
-    desenharTons($("h-tons"), [], semRomanceNova());
-    desenharRelacao($("h-relacao"), "Open");
+    $("form-nova").reset();
+    $("nova-estado").innerHTML = "";
+    $("h-premissa").placeholder = m ? "e.g. the night before the comeback, the power goes out in the dorm."
+                                    : "e.g. " + pers.nome + " needs someone to go undercover at a party and picks you.";
+    // a persona: a última usada (ou a única que existe); só aparece a escolha se houver personas
+    const ps = personas(), ultima = ler("sussurros-persona-ultima", "");
+    personaNova = personaDe(ultima) ? ultima : ps.length === 1 ? ps[0].id : "";
+    $("h-persona-linha").hidden = !ps.length;
+    if (ps.length) desenharPersonas($("h-persona"), personaNova, id => { personaNova = id; pedirOpcoes(); });
     atualizarNovaCom();
     mostrar("ecra-nova");
+    pedirOpcoes();
   }
   function atualizarNovaCom() {
     $("nova-com").textContent = "with " + pers.nome + (novaMundo && mundoDe(novaMundo) ? " · " + mundoDe(novaMundo).nome : "");
   }
-  // Escolher a personagem principal (uma) e quem mais entra (até 3).
-  function desenharElenco(ms) {
-    outrosEscolhidos.delete(pers.id);
-    $("h-principal").innerHTML = ms.map(x => `<button type="button" class="tom" data-id="${x.id}" aria-pressed="${x.id === pers.id}">${escapar(x.nome)}</button>`).join("");
-    $("h-principal").querySelectorAll(".tom").forEach(b => b.onclick = () => {
-      pers = ms.find(x => x.id === b.dataset.id);
-      const tons = tonsDe($("h-tons"));
-      desenharElenco(ms); desenharTons($("h-tons"), tons, semRomanceNova()); atualizarNovaCom();
-    });
-    const outros = ms.filter(x => x.id !== pers.id);
-    $("h-outros").innerHTML = outros.length
-      ? outros.map(x => `<button type="button" class="tom" data-id="${x.id}" aria-pressed="${outrosEscolhidos.has(x.id)}">${escapar(x.nome)}</button>`).join("")
-      : `<p class="dica">Only one character lives here for now. The narrator can still invent side characters.</p>`;
-    $("h-outros").querySelectorAll(".tom").forEach(b => b.onclick = () => {
-      const id = b.dataset.id;
-      if (outrosEscolhidos.has(id)) outrosEscolhidos.delete(id);
-      else if (outrosEscolhidos.size < 4) outrosEscolhidos.add(id);
-      b.setAttribute("aria-pressed", String(outrosEscolhidos.has(id)));
-    });
+  const baseNova = () => ({ premissa: "", universo: "", papel: "", relacao: "Open", tons: [],
+                            mundo: novaMundo, elenco: novaMundo ? [...outrosEscolhidos] : [], persona: personaNova || null });
+  // Pede as 3 ideias e mostra-as em cartões (enquanto espera, aparecem 3 cartões vazios a pulsar).
+  let pedidoOpcoes = 0;
+  async function pedirOpcoes() {
+    const este = ++pedidoOpcoes, h = baseNova(), p = pers;
+    $("opcoes").innerHTML = `<div class="opcao carregando"></div>`.repeat(3);
+    $("outras-opcoes").hidden = true;
+    try {
+      const d = await groq([{ role: "user", content: PEDIDO_OPCOES(p, h) }], { esquema: ESQUEMA_OPCOES, nome: "opcoes", esforco: "medium", max: 2500 });
+      if (este !== pedidoOpcoes) return;   // entretanto pediu-se outra vez
+      opcoesAtuais = (Array.isArray(d.opcoes) ? d.opcoes : []).slice(0, 3).map(x => ({
+        titulo: String(x.titulo || "").slice(0, 120), premissa: String(x.premissa || "").slice(0, 1500),
+        universo: String(x.universo || "").slice(0, 800), papel: String(x.papel || "").slice(0, 800),
+        relacao: RELACOES.includes(x.relacao) ? x.relacao : "Open", tons: limparTons(x.tons, h) }));
+      $("opcoes").innerHTML = opcoesAtuais.map((x, i) => `<button type="button" class="opcao" data-i="${i}">
+          <b>${escapar(x.titulo)}</b><span>${formatar(x.premissa)}</span>
+          <small>${escapar(x.tons.concat(x.relacao !== "Open" ? [x.relacao] : []).join(" · "))}</small></button>`).join("")
+        || `<p class="dica">No ideas came back. Tap "Show 3 other ideas" or write your own.</p>`;
+      $("opcoes").querySelectorAll(".opcao").forEach(b => b.onclick = () => comecarHistoria(Object.assign(baseNova(), opcoesAtuais[b.dataset.i])));
+    } catch (e) {
+      if (este !== pedidoOpcoes) return;
+      $("opcoes").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`;
+    }
+    $("outras-opcoes").hidden = false;
   }
-  const lerNova = () => ({ premissa: $("h-premissa").value.trim(), universo: "",
-                           papel: $("h-papel").value.trim(), relacao: relacaoDe($("h-relacao")), tons: tonsDe($("h-tons")),
-                           mundo: novaMundo, elenco: novaMundo ? [...outrosEscolhidos] : [], persona: personaNova || null });
+  $("outras-opcoes").onclick = pedirOpcoes;
   function limparTons(tons, h) {
     const sem = pers.menor || eMenor(personaDe(h && h.persona));
     return (Array.isArray(tons) ? tons : []).map(String).filter(t => TONS.includes(t) && !(sem && TONS_ROMANTICOS.includes(t))).slice(0, 3);
@@ -1738,13 +1762,23 @@ ${texto}`;
   }
   function ocupado(sim, texto) {
     $("comecar").disabled = sim;
+    $("opcoes").querySelectorAll(".opcao").forEach(b => { b.disabled = sim; });
     $("nova-estado").innerHTML = sim ? `<div class="carregar"><span class="grande">${texto}</span></div>` : "";
   }
+  // "Start with my idea": a IA completa a tua ideia (título, cenário, tom) e começa.
   $("form-nova").onsubmit = async e => {
     e.preventDefault();
-    ocupado(true, "Writing the first scene…");
+    const ideia = $("h-premissa").value.trim();
+    if (!ideia) { $("nova-estado").innerHTML = `<p class="erro">Write your idea, or tap one of the three above.</p>`; return; }
+    ocupado(true, "Getting your story ready…");
+    try { await comecarHistoria(await pedirIdeia(Object.assign(baseNova(), { premissa: ideia })), true); }
+    catch (err) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; }
+  };
+  // Cria a história a partir de uma ideia já completa e escreve a abertura.
+  async function comecarHistoria(base, jaOcupado) {
+    if (!jaOcupado) ocupado(true, "Writing the first scene…");
+    $("nova-estado").innerHTML = `<div class="carregar"><span class="grande">Writing the first scene…</span></div>`;
     try {
-      const base = await pedirIdeia(lerNova());   // completa o que faltar e dá um título
       const h = Object.assign({ id: novoId(), personagem: pers.id, atualizada: Date.now() }, base);
       if (!h.mundo) { delete h.mundo; delete h.elenco; }
       if (!h.persona) delete h.persona; else gravar("sussurros-persona-ultima", h.persona);   // da próxima vez vem já escolhida
@@ -1757,7 +1791,7 @@ ${texto}`;
       ocupado(false);
       abrirHistoria(h.id);
     } catch (err) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; }
-  };
+  }
   $("nova-voltar").onclick = voltar;
 
   // ---------- A história ----------
