@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="pt">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sussurros</title>
+<title>Whispers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Figtree:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap" rel="stylesheet">
 <!--
@@ -225,12 +225,12 @@
   <!-- ECRÃ 1: galeria de personagens -->
   <section class="ecra ativo" id="ecra-galeria">
     <div class="topo-galeria gutter">
-      <h1 class="marca">Sussur<span>ros</span></h1>
-      <p class="sub">Fanfics interativas com as tuas personagens.</p>
-      <p class="copia">Guardado neste browser
-        <button type="button" class="ligacao" id="exportar">Exportar cópia</button>
-        <button type="button" class="ligacao" id="importar">Importar</button>
-        <button type="button" class="ligacao" id="abrir-chave">Chave do Groq</button>
+      <h1 class="marca">Whis<span>pers</span></h1>
+      <p class="sub">Interactive fanfics with your characters.</p>
+      <p class="copia">Saved in this browser
+        <button type="button" class="ligacao" id="exportar">Export backup</button>
+        <button type="button" class="ligacao" id="importar">Import</button>
+        <button type="button" class="ligacao" id="abrir-chave">Groq key</button>
         <input type="file" id="ficheiro-copia" accept=".json,application/json" hidden></p>
       <p class="uso" id="uso" hidden></p>
       <div id="aviso-chave-topo"></div>
@@ -241,72 +241,72 @@
   <!-- ECRÃ 2: criar personagem -->
   <section class="ecra" id="ecra-criar">
     <div class="barra gutter">
-      <button class="icone" id="criar-voltar" aria-label="Voltar">←</button>
-      <div class="barra-nome"><b>Nova personagem</b><small id="criar-passo">Passo 1 de 2</small></div>
+      <button class="icone" id="criar-voltar" aria-label="Back">←</button>
+      <div class="barra-nome"><b>New character</b><small id="criar-passo">Step 1 of 2</small></div>
     </div>
     <div class="rolar">
       <div class="gutter modos" id="modos" role="tablist">
-        <button type="button" class="modo" id="modo-ia" role="tab">A IA conhece</button>
-        <button type="button" class="modo" id="modo-mao" role="tab">Criar à mão</button>
+        <button type="button" class="modo" id="modo-ia" role="tab">The AI knows them</button>
+        <button type="button" class="modo" id="modo-mao" role="tab">Create by hand</button>
       </div>
       <form class="formulario gutter" id="passo1">
-        <p class="dica">Escreve quem queres. A IA usa o que sabe da obra para criar a personalidade e a forma de falar. Depois podes rever tudo.</p>
-        <label>Nome<input id="c-nome" maxlength="80" placeholder="Ex: L" required></label>
-        <label>Obra<input id="c-obra" maxlength="120" placeholder="Ex: Death Note"></label>
-        <label>Informação sobre a personagem (opcional)<textarea id="c-extra" rows="5" maxlength="4000"
-          placeholder="Cola aqui texto da wiki/Fandom ou escreve o que sabes. A IA usa isto em vez de adivinhar."></textarea></label>
-        <p class="dica">Se a IA não conhecer bem a personagem, usa <b>Criar à mão</b>.</p>
-        <button class="botao" id="gerar">Criar ficha</button>
+        <p class="dica">Type who you want. The AI uses what it knows about the story to write their personality and the way they talk. You can review everything afterwards.</p>
+        <label>Name<input id="c-nome" maxlength="80" placeholder="e.g. L" required></label>
+        <label>From<input id="c-obra" maxlength="120" placeholder="e.g. Death Note"></label>
+        <label>About the character (optional)<textarea id="c-extra" rows="5" maxlength="4000"
+          placeholder="Paste text from the wiki/Fandom or write what you know. The AI uses this instead of guessing."></textarea></label>
+        <p class="dica">If the AI doesn't know the character well, use <b>Create by hand</b>.</p>
+        <button class="botao" id="gerar">Create profile</button>
         <div id="passo1-estado"></div>
       </form>
       <form class="formulario gutter" id="passo2" hidden>
         <div id="aviso-ficha"></div>
         <div class="avatar-linha"><label class="carregar-avatar" for="r-foto"><span id="r-foto-ver">+<small>Avatar</small></span></label>
-          <input type="file" id="r-foto" accept="image/*" hidden><p class="dica">Toca para pôr uma imagem (opcional).</p></div>
-        <label>Nome<input id="r-nome" maxlength="80"></label>
-        <label>Obra<input id="r-obra" maxlength="120"></label>
-        <label>Frase do cartão<input id="r-frase" maxlength="200"></label>
-        <label>Personalidade e forma de falar<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
+          <input type="file" id="r-foto" accept="image/*" hidden><p class="dica">Tap to add a picture (optional).</p></div>
+        <label>Name<input id="r-nome" maxlength="80"></label>
+        <label>From<input id="r-obra" maxlength="120"></label>
+        <label>Card tagline<input id="r-frase" maxlength="200"></label>
+        <label>Personality and way of speaking<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
         <div class="acoes">
-          <button type="button" class="botao secundario" id="regerar">Gerar outra vez</button>
-          <button class="botao" id="guardar">Guardar personagem</button>
+          <button type="button" class="botao secundario" id="regerar">Generate again</button>
+          <button class="botao" id="guardar">Save character</button>
         </div>
       </form>
 
       <!-- Criar à mão -->
       <form class="formulario gutter" id="mao" hidden>
         <div class="seccao">
-          <h3>Informações básicas</h3>
-          <p class="dica">Identidade e aparência da personagem. Os campos com * são obrigatórios.</p>
+          <h3>Basic info</h3>
+          <p class="dica">Who they are and what they look like. Fields with * are required.</p>
           <div class="avatar-linha"><label class="carregar-avatar" for="m-foto"><span id="m-foto-ver">+<small>Avatar</small></span></label>
-            <input type="file" id="m-foto" accept="image/*" hidden><p class="dica">Toca para escolher uma imagem da galeria.</p></div>
-          <label>Nome *<input id="m-nome" maxlength="40" required></label>
+            <input type="file" id="m-foto" accept="image/*" hidden><p class="dica">Tap to pick a picture from your gallery.</p></div>
+          <label>Name *<input id="m-nome" maxlength="40" required></label>
           <div class="duas">
-            <label>Idade *<input id="m-idade" inputmode="numeric" maxlength="4" placeholder="ex.: 22" required></label>
-            <label>Altura<input id="m-altura" maxlength="10" placeholder="ex.: 1,88 m"></label>
+            <label>Age *<input id="m-idade" inputmode="numeric" maxlength="4" placeholder="e.g. 22" required></label>
+            <label>Height<input id="m-altura" maxlength="10" placeholder="e.g. 6'2&quot;"></label>
           </div>
-          <div><span class="rotulo">Género</span><div class="tons" id="m-genero"></div></div>
-          <label>Ocupação<input id="m-ocupacao" maxlength="60" placeholder="ex.: capitão do esquadrão, barista, CEO"></label>
-          <label>De que obra é (opcional)<input id="m-obra" maxlength="120" placeholder="Deixa vazio se a personagem é tua"></label>
-          <label>Aparência<textarea id="m-aparencia" rows="2" maxlength="600" placeholder="Cabelo, olhos, roupa, o que se nota nela à primeira vista."></textarea></label>
+          <div><span class="rotulo">Gender</span><div class="tons" id="m-genero"></div></div>
+          <label>Occupation<input id="m-ocupacao" maxlength="60" placeholder="e.g. squad captain, barista, CEO"></label>
+          <label>Where they're from (optional)<input id="m-obra" maxlength="120" placeholder="Leave empty if the character is yours"></label>
+          <label>Appearance<textarea id="m-aparencia" rows="2" maxlength="600" placeholder="Hair, eyes, clothes, what you notice at first glance."></textarea></label>
         </div>
         <div class="seccao">
-          <h3>Personalidade</h3>
-          <p class="dica">Escolhe até 4 tipos. A IA adapta a forma de agir a cada um.</p>
+          <h3>Personality</h3>
+          <p class="dica">Pick up to 4 types. The AI adapts how they act to each one.</p>
           <div class="tons" id="m-tipos"></div>
-          <label>Descreve à tua maneira<textarea id="m-personalidade" rows="3" maxlength="1000" placeholder="Ex: parece frio e mandão, mas repara em tudo e protege quem gosta sem o admitir."></textarea></label>
-          <label>Forma de falar<textarea id="m-fala" rows="2" maxlength="400" placeholder="Ex: frases curtas e secas, sarcasmo, chama-te 'miúda' quando quer irritar-te."></textarea></label>
-          <label>Exemplos de falas<textarea id="m-exemplos" rows="3" maxlength="600" placeholder="Uma por linha. Ex: — Outra vez atrasada? Típico."></textarea></label>
+          <label>Describe it your way<textarea id="m-personalidade" rows="3" maxlength="1000" placeholder="e.g. seems cold and bossy, but notices everything and protects the people he cares about without admitting it."></textarea></label>
+          <label>Way of speaking<textarea id="m-fala" rows="2" maxlength="400" placeholder="e.g. short, blunt sentences, sarcasm, calls you 'brat' when he wants to annoy you."></textarea></label>
+          <label>Example lines<textarea id="m-exemplos" rows="3" maxlength="600" placeholder="One per line. e.g. Late again? Typical."></textarea></label>
         </div>
         <div class="seccao">
-          <h3>Perfil</h3>
-          <label>Relação contigo, motivações e objetivos<textarea id="m-perfil" rows="3" maxlength="1000" placeholder="Ex: é o teu rival no treino desde a academia; quer ser o melhor e odeia perder para ti."></textarea></label>
-          <label>Histórico (passado, família, gostos e manias)<textarea id="m-historico" rows="4" maxlength="2000" placeholder="Ex: cresceu na rua, é obcecado por limpeza e bebe chá preto."></textarea></label>
-          <label>Frase do cartão (opcional)<input id="m-frase" maxlength="120" placeholder="Aparece na galeria"></label>
+          <h3>Profile</h3>
+          <label>Relationship with you, motivations and goals<textarea id="m-perfil" rows="3" maxlength="1000" placeholder="e.g. your training rival since the academy; wants to be the best and hates losing to you."></textarea></label>
+          <label>Background (past, family, likes and quirks)<textarea id="m-historico" rows="4" maxlength="2000" placeholder="e.g. grew up on the streets, obsessed with cleaning, drinks black tea."></textarea></label>
+          <label>Card tagline (optional)<input id="m-frase" maxlength="120" placeholder="Shown in the gallery"></label>
         </div>
         <div class="acoes">
-          <button type="button" class="botao secundario" id="completar">Completar com IA</button>
-          <button class="botao" id="guardar-mao">Criar personagem</button>
+          <button type="button" class="botao secundario" id="completar">Fill in with AI</button>
+          <button class="botao" id="guardar-mao">Create character</button>
         </div>
         <div id="mao-estado"></div>
       </form>
@@ -316,15 +316,15 @@
   <!-- ECRÃ 3: página da personagem (as histórias dela) -->
   <section class="ecra" id="ecra-personagem">
     <div class="barra gutter">
-      <button class="icone" id="pers-voltar" aria-label="Voltar">←</button>
+      <button class="icone" id="pers-voltar" aria-label="Back">←</button>
       <div class="avatar" id="pers-avatar"></div>
       <div class="barra-nome"><b id="pers-nome"></b><small id="pers-obra"></small></div>
-      <button class="icone" id="pers-editar" aria-label="Editar personagem">✎</button>
+      <button class="icone" id="pers-editar" aria-label="Edit character">✎</button>
     </div>
     <div class="rolar">
       <div class="perfil gutter">
         <p class="perfil-frase" id="pers-frase"></p>
-        <button class="botao" id="nova-historia">Nova história</button>
+        <button class="botao" id="nova-historia">New story</button>
       </div>
       <div class="historias gutter" id="historias"></div>
     </div>
@@ -333,21 +333,21 @@
   <!-- ECRÃ 4: nova história -->
   <section class="ecra" id="ecra-nova">
     <div class="barra gutter">
-      <button class="icone" id="nova-voltar" aria-label="Voltar">←</button>
-      <div class="barra-nome"><b>Nova história</b><small id="nova-com"></small></div>
+      <button class="icone" id="nova-voltar" aria-label="Back">←</button>
+      <div class="barra-nome"><b>New story</b><small id="nova-com"></small></div>
     </div>
     <div class="rolar">
       <form class="formulario gutter" id="form-nova">
-        <p class="dica">Escreve o que quiseres, tudo é opcional. Se não tiveres ideias, carrega em <b>Surpreende-me</b>.</p>
-        <button type="button" class="atalho" id="atalho-slow">✦ Slow burn entre amigos ou rivais</button>
-        <label>A ideia<textarea id="h-premissa" rows="3" maxlength="1500" placeholder="Ex: o L precisa de alguém para se infiltrar numa festa e escolhe-te a ti."></textarea></label>
-        <label>Universo e cenário<textarea id="h-universo" rows="2" maxlength="800" placeholder="Ex: universo alternativo, Lisboa nos dias de hoje, inverno."></textarea></label>
-        <label>O teu papel<textarea id="h-papel" rows="2" maxlength="800" placeholder="Ex: Mariana, 24 anos, hacker que trabalha num café de dia."></textarea></label>
-        <div><span class="rotulo">Relação entre vocês</span><div class="tons" id="h-relacao"></div></div>
-        <div><span class="rotulo">Tom</span><div class="tons" id="h-tons"></div></div>
+        <p class="dica">Write whatever you like, it's all optional. Out of ideas? Tap <b>Surprise me</b>.</p>
+        <button type="button" class="atalho" id="atalho-slow">✦ Slow burn between friends or rivals</button>
+        <label>The idea<textarea id="h-premissa" rows="3" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
+        <label>World and setting<textarea id="h-universo" rows="2" maxlength="800" placeholder="e.g. alternate universe, modern-day London, winter."></textarea></label>
+        <label>Your role<textarea id="h-papel" rows="2" maxlength="800" placeholder="e.g. Cat, 24, a hacker who works at a café by day."></textarea></label>
+        <div><span class="rotulo">Your relationship</span><div class="tons" id="h-relacao"></div></div>
+        <div><span class="rotulo">Tone</span><div class="tons" id="h-tons"></div></div>
         <div class="acoes">
-          <button type="button" class="botao secundario" id="surpreende">Surpreende-me</button>
-          <button class="botao" id="comecar">Começar história</button>
+          <button type="button" class="botao secundario" id="surpreende">Surprise me</button>
+          <button class="botao" id="comecar">Start story</button>
         </div>
         <div id="nova-estado"></div>
       </form>
@@ -357,19 +357,19 @@
   <!-- ECRÃ 5: a história -->
   <section class="ecra" id="ecra-historia">
     <div class="barra gutter">
-      <button class="icone" id="hist-voltar" aria-label="Voltar">←</button>
+      <button class="icone" id="hist-voltar" aria-label="Back">←</button>
       <div class="avatar" id="hist-avatar"></div>
       <div class="barra-nome"><b id="hist-titulo"></b><small id="hist-com"></small></div>
-      <button class="icone memoria-btn" id="abrir-contexto" aria-label="Contexto e memória">📖<span class="contador" id="contador">0</span></button>
+      <button class="icone memoria-btn" id="abrir-contexto" aria-label="Context and memory">📖<span class="contador" id="contador">0</span></button>
     </div>
     <div class="rolar" id="rolar-historia"><div class="texto-historia gutter" id="texto-historia"></div></div>
     <div class="escolhas gutter" id="escolhas"></div>
-    <div class="modo-nota gutter" id="modo-nota" hidden>✎ Nota de autor: diz ao narrador o que mudar (não é uma ação tua).</div>
+    <div class="modo-nota gutter" id="modo-nota" hidden>✎ Author's note: tell the narrator what to change (it isn't something you do).</div>
     <form class="caixa gutter" id="form">
-      <button type="button" class="icone lampada" id="lampada" aria-label="Mostrar sugestões">💡</button>
-      <button type="button" class="icone" id="botao-nota" aria-label="Nota de autor" aria-pressed="false">✎</button>
-      <textarea id="texto" rows="1" placeholder="O que dizes ou fazes…"></textarea>
-      <button class="enviar" id="enviar">Enviar</button>
+      <button type="button" class="icone lampada" id="lampada" aria-label="Show suggestions">💡</button>
+      <button type="button" class="icone" id="botao-nota" aria-label="Author's note" aria-pressed="false">✎</button>
+      <textarea id="texto" rows="1" placeholder="What do you say or do…"></textarea>
+      <button class="enviar" id="enviar">Send</button>
     </form>
     <div class="toast" id="toast" role="status"></div>
   </section>
@@ -377,17 +377,17 @@
   <!-- Painel: chave do Groq -->
   <div class="painel" id="painel-chave" hidden>
     <form class="gaveta gutter" id="form-chave">
-      <h3>Chave do Groq</h3>
-      <p class="dica">A app usa a IA do Groq, que é grátis. A chave fica guardada só neste browser.</p>
+      <h3>Groq key</h3>
+      <p class="dica">The app uses Groq's AI, which is free. Your key is only saved in this browser.</p>
       <ol class="passos">
-        <li>Cria uma conta em <a href="https://console.groq.com" target="_blank" rel="noopener">console.groq.com</a> (podes entrar com a conta Google).</li>
-        <li>Vai a <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> e carrega em <b>Create API Key</b>.</li>
-        <li>Copia a chave (começa por <code>gsk_</code>) e cola-a aqui.</li>
+        <li>Create an account at <a href="https://console.groq.com" target="_blank" rel="noopener">console.groq.com</a> (you can sign in with Google).</li>
+        <li>Go to <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> and tap <b>Create API Key</b>.</li>
+        <li>Copy the key (it starts with <code>gsk_</code>) and paste it here.</li>
       </ol>
-      <input id="chave" class="campo-chave" type="password" autocomplete="off" placeholder="gsk_..." aria-label="Chave do Groq">
+      <input id="chave" class="campo-chave" type="password" autocomplete="off" placeholder="gsk_..." aria-label="Groq key">
       <div class="acoes">
-        <button type="button" class="botao secundario" id="fechar-chave">Cancelar</button>
-        <button class="botao" id="guardar-chave">Guardar chave</button>
+        <button type="button" class="botao secundario" id="fechar-chave">Cancel</button>
+        <button class="botao" id="guardar-chave">Save key</button>
       </div>
       <p class="erro" id="chave-estado"></p>
     </form>
@@ -396,24 +396,24 @@
   <!-- Painel: contexto e memória da história -->
   <div class="painel" id="painel-contexto" hidden>
     <div class="gaveta gutter">
-      <h3>Contexto da história</h3>
+      <h3>Story context</h3>
       <form class="formulario" id="form-contexto">
-        <label>Título<input id="e-titulo" maxlength="120"></label>
-        <label>A ideia<textarea id="e-premissa" rows="3" maxlength="1500"></textarea></label>
-        <label>Universo e cenário<textarea id="e-universo" rows="2" maxlength="800"></textarea></label>
-        <label>O teu papel<textarea id="e-papel" rows="2" maxlength="800"></textarea></label>
-        <div><span class="rotulo">Relação entre vocês</span><div class="tons" id="e-relacao"></div></div>
-        <div><span class="rotulo">Tom</span><div class="tons" id="e-tons"></div></div>
-        <button class="botao" id="guardar-contexto">Guardar alterações</button>
+        <label>Title<input id="e-titulo" maxlength="120"></label>
+        <label>The idea<textarea id="e-premissa" rows="3" maxlength="1500"></textarea></label>
+        <label>World and setting<textarea id="e-universo" rows="2" maxlength="800"></textarea></label>
+        <label>Your role<textarea id="e-papel" rows="2" maxlength="800"></textarea></label>
+        <div><span class="rotulo">Your relationship</span><div class="tons" id="e-relacao"></div></div>
+        <div><span class="rotulo">Tone</span><div class="tons" id="e-tons"></div></div>
+        <button class="botao" id="guardar-contexto">Save changes</button>
       </form>
       <p class="uso" id="uso-painel"></p>
-      <h4>O que o narrador se lembra</h4>
+      <h4>What the narrator remembers</h4>
       <ul id="mem-factos"></ul>
-      <h4>A história até agora</h4>
+      <h4>The story so far</h4>
       <p class="resumo" id="mem-resumo"></p>
       <div class="perigos">
-        <button class="perigo" id="recomecar">Recomeçar esta história</button>
-        <button class="perigo" id="apagar-historia">Apagar esta história</button>
+        <button class="perigo" id="recomecar">Restart this story</button>
+        <button class="perigo" id="apagar-historia">Delete this story</button>
       </div>
     </div>
   </div>
@@ -423,129 +423,140 @@
   // =====================================================================
   //  1. TEXTOS PARA A IA
   // =====================================================================
-  const TONS = ["Romance", "Slow burn", "Mistério", "Aventura", "Comédia", "Drama", "Fluff", "Angst", "Ação", "Sobrenatural"];
+  const TONS = ["Romance", "Slow burn", "Mystery", "Adventure", "Comedy", "Drama", "Fluff", "Angst", "Action", "Supernatural"];
   const TONS_ROMANTICOS = ["Romance", "Slow burn"];
-  const RELACOES = ["Livre", "Melhores amigos", "Rivais", "Colegas", "Desconhecidos"];
-  const GENEROS = ["Masculino", "Feminino", "Não binário"];
+  const RELACOES = ["Open", "Best friends", "Rivals", "Colleagues", "Strangers"];
+  const GENEROS = ["Male", "Female", "Non-binary"];
   // Tipos de personalidade: o texto explica à IA como a personagem age.
   const PERSONALIDADES = {
-    "Tsundere": "tsundere: brusco ou irritadiço por fora, carinhoso por dentro; nega o que sente e fica embaraçado quando é apanhado",
-    "Kuudere": "kuudere: calmo, frio e de poucas palavras; o carinho aparece em pequenos gestos raros",
-    "Dandere": "dandere: tímido e calado com quem não conhece; abre-se aos poucos com quem confia",
-    "Frio por fora, doce por dentro": "parece distante e duro, mas é atento e terno quando ninguém está a ver",
-    "Protetor": "protetor: preocupa-se com a segurança dos outros e mete-se à frente quando há perigo",
-    "Sarcástico": "sarcástico: humor seco e respostas afiadas, usa a ironia para esconder o que sente",
-    "Brincalhão": "brincalhão: provoca, faz piadas e não leva nada a sério à primeira",
-    "Confiante": "confiante: seguro de si, direto, gosta de desafios",
-    "Tímido": "tímido: hesita, cora com facilidade e fala baixo quando está nervoso",
-    "Misterioso": "misterioso: fala pouco de si, tem segredos e responde a perguntas com perguntas",
-    "Rebelde": "rebelde: desafia regras e autoridade, faz as coisas à sua maneira",
-    "Charmoso": "charmoso: galanteador e carismático, sabe exatamente o que dizer",
-    "Teimoso": "teimoso: nunca dá o braço a torcer e odeia admitir que errou",
-    "Competitivo": "competitivo: transforma tudo numa competição e detesta perder",
-    "Leal": "leal: fiel aos seus até ao fim, mesmo quando não o diz",
-    "Carinhoso": "carinhoso: afetuoso e atencioso, demonstra o que sente sem medo",
+    "Tsundere": "tsundere: harsh or prickly on the outside, caring inside; denies their feelings and gets flustered when caught",
+    "Kuudere": "kuudere: calm, cold and of few words; affection shows only in small, rare gestures",
+    "Dandere": "dandere: shy and quiet with strangers; slowly opens up to people they trust",
+    "Cold outside, sweet inside": "seems distant and tough, but is attentive and tender when nobody is looking",
+    "Protective": "protective: worries about other people's safety and steps in front when there's danger",
+    "Sarcastic": "sarcastic: dry humor and sharp comebacks, uses irony to hide what they feel",
+    "Playful": "playful: teases, jokes and doesn't take anything seriously at first",
+    "Confident": "confident: self-assured, direct, loves a challenge",
+    "Shy": "shy: hesitates, blushes easily and speaks softly when nervous",
+    "Mysterious": "mysterious: says little about themselves, keeps secrets and answers questions with questions",
+    "Rebellious": "rebellious: defies rules and authority, does things their own way",
+    "Charming": "charming: flirtatious and charismatic, always knows exactly what to say",
+    "Stubborn": "stubborn: never backs down and hates admitting they were wrong",
+    "Competitive": "competitive: turns everything into a contest and hates losing",
+    "Loyal": "loyal: faithful to their people to the end, even if they never say it",
+    "Affectionate": "affectionate: warm and attentive, shows their feelings without fear",
   };
+  // Versões antigas guardavam estes valores em português: traduz ao ler.
+  const DE_PT = {
+    "Mistério": "Mystery", "Aventura": "Adventure", "Comédia": "Comedy", "Ação": "Action", "Sobrenatural": "Supernatural",
+    "Livre": "Open", "Melhores amigos": "Best friends", "Rivais": "Rivals", "Colegas": "Colleagues", "Desconhecidos": "Strangers",
+    "Masculino": "Male", "Feminino": "Female", "Não binário": "Non-binary",
+    "Frio por fora, doce por dentro": "Cold outside, sweet inside", "Protetor": "Protective", "Sarcástico": "Sarcastic",
+    "Brincalhão": "Playful", "Confiante": "Confident", "Tímido": "Shy", "Misterioso": "Mysterious", "Rebelde": "Rebellious",
+    "Charmoso": "Charming", "Teimoso": "Stubborn", "Competitivo": "Competitive", "Leal": "Loyal", "Carinhoso": "Affectionate",
+  };
+  const emIngles = v => DE_PT[v] || v;
   const PALETAS = [["#3d2c5c", "#c76b4a"], ["#22304a", "#5a4a7a"], ["#2b2b2b", "#b08d57"], ["#1f2f5c", "#8f6fd1"],
                    ["#4a1f2e", "#c9809a"], ["#1e3b34", "#6fa38a"], ["#3a2a1a", "#c4874e"], ["#2a1f45", "#d17fa6"]];
 
-  const PEDIDO_FICHA = (nome, obra, extra) => `O utilizador quer escrever fanfics interativas com esta personagem:
+  const PEDIDO_FICHA = (nome, obra, extra) => `The user wants to write interactive fanfics with this character:
 
-Nome: ${nome}
-Obra: ${obra || "(não indicada)"}
-Informação dada pelo utilizador (tem prioridade sobre o que sabes): ${extra || "(nenhuma)"}
+Name: ${nome}
+From: ${obra || "(not given)"}
+Information from the user (takes priority over what you know): ${extra || "(none)"}
 
-Usa o que sabes sobre a personagem na obra original para criar a ficha.
-- ficha: 120 a 220 palavras, escrita na 3.ª pessoa ("O L é..."). Inclui quem é, aparência, personalidade,
-  forma de falar (expressões, tiques, tom), manias, relações e o contexto da obra que importa para uma história.
-  Sê fiel à obra. Junta as notas do utilizador. Se não tens a certeza de um detalhe, não o inventes.
-  Termina com uma linha "Exemplos de falas:" e 4 falas curtas, uma por linha, começadas por "- ": falas reais da obra
-  ou muito fiéis ao vocabulário e ao humor da personagem, em situações diferentes. Nada de frases genéricas.
-- frase: descrição curta (até 15 palavras) para o cartão da galeria.
-- menor_na_obra: true se a personagem tem menos de 18 anos em toda ou na maior parte da obra original. Na dúvida, true.
-- conhecida: false se não conheces esta personagem (nesse caso cria a ficha a partir das notas).
-- emoji: um emoji que combine; cor1 e cor2: duas cores hex escuras e saturadas (ex: "#3a2f5c").
-Tudo em português de Portugal.`;
+Use what you know about the character in the original work to write the profile.
+- ficha: 120 to 220 words, in the third person ("L is..."). Include who they are, appearance, personality,
+  way of speaking (expressions, tics, tone), quirks, relationships and the context from the work that matters for a story.
+  Stay true to the source. Include the user's notes. If you're not sure about a detail, don't make it up.
+  End with a line "Example lines:" and 4 short lines, one per line, starting with "- ": real lines from the work
+  or very faithful to the character's vocabulary and humor, in different situations. No generic lines.
+- frase: a short description (up to 15 words) for the gallery card.
+- menor_na_obra: true if the character is under 18 for all or most of the original work. If in doubt, true.
+- conhecida: false if you don't know this character (in that case build the profile from the notes).
+- emoji: a fitting emoji; cor1 and cor2: two dark, saturated hex colors (e.g. "#3a2f5c").
+Everything in English.`;
 
-  const PEDIDO_IDEIA = (p, h) => `Vais propor o ponto de partida de uma fanfic interativa em português de Portugal.
+  const PEDIDO_IDEIA = (p, h) => `Suggest the starting point of an interactive fanfic, in English.
 
-Personagem principal: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
+Main character: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
 ${p.ficha}
 
-O que o utilizador já escreveu (respeita e completa; o que estiver vazio, inventa tu):
-- Ideia: ${h.premissa || "(vazio)"}
-- Universo e cenário: ${h.universo || "(vazio)"}
-- O papel do utilizador: ${h.papel || "(vazio)"}
-- Relação entre os dois: ${h.relacao && h.relacao !== "Livre" ? h.relacao : "(vazio)"}
-- Tom: ${h.tons.length ? h.tons.join(", ") : "(vazio)"}
-${p.menor ? "\nIMPORTANTE: esta personagem é menor na obra original, por isso a história NÃO pode ter romance (só amizade, aventura, mistério, etc.).\n" : ""}
-Devolve:
-- titulo: um título curto e bonito (até 6 palavras)
-- premissa: a ideia da história em 2 ou 3 frases, com um gancho
-- universo: onde e quando se passa (canónico ou universo alternativo), 1 ou 2 frases
-- papel: quem é o utilizador na história, 1 ou 2 frases (sem decidir sentimentos dele)
-- relacao: a relação entre os dois no início, uma destas: ${RELACOES.join(", ")}
-- tons: 1 a 3 tons, escolhidos desta lista: ${TONS.filter(t => !p.menor || !TONS_ROMANTICOS.includes(t)).join(", ")}`;
+What the user already wrote (respect it and build on it; invent whatever is empty):
+- Idea: ${h.premissa || "(empty)"}
+- World and setting: ${h.universo || "(empty)"}
+- The user's role: ${h.papel || "(empty)"}
+- Relationship between them: ${h.relacao && h.relacao !== "Open" ? h.relacao : "(empty)"}
+- Tone: ${h.tons.length ? h.tons.join(", ") : "(empty)"}
+${p.menor ? "\nIMPORTANT: this character is a minor in the original work, so the story must NOT have romance (only friendship, adventure, mystery, etc.).\n" : ""}
+Return:
+- titulo: a short, beautiful title (up to 6 words)
+- premissa: the idea of the story in 2 or 3 sentences, with a hook
+- universo: where and when it takes place (canon or alternate universe), 1 or 2 sentences
+- papel: who the user is in the story, 1 or 2 sentences (without deciding their feelings)
+- relacao: the relationship between them at the start, one of: ${RELACOES.join(", ")}
+- tons: 1 to 3 tones, chosen from this list: ${TONS.filter(t => !p.menor || !TONS_ROMANTICOS.includes(t)).join(", ")}`;
 
   // As instruções do narrador. Vão em TODOS os pedidos, por isso são curtas.
   // As regras fixas vêm primeiro (iguais em todos os pedidos: o Groq reaproveita-as
   // em cache); depois o que muda: personagem, história, memória e resumo.
-  const REGRAS_NARRADOR = `És o narrador de uma fanfic interativa. Escreve em português de Portugal (ecrã, câmara, fato, portátil,
-"estás a fazer", subtil, tarte; nunca formas do Brasil como tela, câmera, terno, sutil, torta, "está fazendo", "se levanta").
-- 3.ª pessoa, presente. O utilizador é "tu". Interpretas todas as outras personagens e o ambiente, mas NUNCA decides
-  o que "tu" dizes, fazes, pensas ou sentes, nem reações tuas (corar, coração acelerado). Reages ao que ele escreve.
-- Curto: no máximo ~150 palavras no total, entre narração e falas.
-- TU CONDUZES A HISTÓRIA: em cada cena traz algo novo pela mão das personagens ou do mundo (um convite, uma
-  provocação, um segredo, um problema, alguém que chega). O utilizador só reage; não esperes que ele invente o rumo.
-- Acaba SEMPRE com uma personagem a falar diretamente com "tu" (pergunta, desafio, convite) ou numa situação que
-  exige uma resposta dele já. Nunca acabes numa descrição parada.
-- VARIA: alterna cenas de ação ou enredo, provocação e humor, e momentos calmos, a sós ou vulneráveis. Não faças
-  o mesmo tipo de pergunta duas cenas seguidas; muitas vezes a pergunta deve ser pessoal ou provocadora, não sobre o enredo.
-- Personagens fiéis à ficha; usa os exemplos de falas só como estilo, nunca os repitas. Faz a história avançar.
-- [NOTA DE AUTOR] é uma instrução para ti (saltar tempo, mudar cenário, trazer alguém): aplica-a sem a mencionar.
-- Sem conteúdo sexual explícito (a cena corta com elegância). Violência sem pormenores gráficos.
-- Se o utilizador mostrar sofrimento real fora da história, sai da narração com cuidado e sugere ajuda.
-Responde só com JSON. A cena vai em "partes", por ordem: cada parte é narração (descrição, ações, gestos) ou uma fala
-(só as palavras ditas, sem travessão nem "diz ele"; o gesto vai numa narração antes ou depois). Nunca há falas de "tu".
-{"partes": [{"tipo": "narracao", "quem": "", "texto": "..."}, {"tipo": "fala", "quem": "nome de quem fala", "texto": "..."}],
-"escolhas": [3 respostas curtas, 1.ª pessoa, em bom português: uma sobre o que está a acontecer,
-uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, picar ou mostrar algo vulnerável)],
-"novos_factos": [factos novos e duradouros, frases curtas; [] se nada]}`;
+  const REGRAS_NARRADOR = `You are the narrator of an interactive fanfic. Write in natural, vivid English.
+- Present tense. The user is "you" (second person); everyone else in the third person. You play every other character
+  and the world, but you NEVER decide what "you" say, do, think or feel, nor "your" reactions (blushing, heart racing).
+  You react to what the user writes.
+- Short: about 150 words at most in total, narration and dialogue together.
+- YOU DRIVE THE STORY: every scene brings something new through the characters or the world (an invitation, a
+  provocation, a secret, a problem, someone arriving). The user only reacts; don't wait for them to invent the plot.
+- ALWAYS end with a character speaking directly to "you" (a question, a challenge, an invitation) or in a situation that
+  demands an answer right now. Never end on a still description.
+- VARY: alternate action or plot scenes, teasing and humor, and quiet, private or vulnerable moments. Don't ask the
+  same kind of question two scenes in a row; often the question should be personal or teasing, not about the plot.
+- Characters true to their profile; use the example lines only as a style guide, never repeat them. Keep the story moving.
+- [AUTHOR'S NOTE] is an instruction for you (skip time, change the setting, bring someone in): apply it without mentioning it.
+- No explicit sexual content (the scene cuts away gracefully). Violence without graphic detail.
+- If the user shows real distress outside the story, gently step out of the narration and suggest getting help.
+Reply only with JSON. The scene goes in "partes", in order: each part is narration (description, actions, gestures) or a line
+of dialogue (only the spoken words, no quotation marks and no "he says"; the gesture goes in a narration part before or after).
+There are never lines for "you".
+{"partes": [{"tipo": "narracao", "quem": "", "texto": "..."}, {"tipo": "fala", "quem": "name of the speaker", "texto": "..."}],
+"escolhas": [3 short replies, first person: one about what is happening,
+one funny or teasing, and one about the relationship between you two (getting closer, teasing or showing something vulnerable)],
+"novos_factos": [new, lasting facts, short sentences; [] if none]}`;
 
   // Regras extra quando a história é slow burn (e a personagem é adulta na obra).
   // "nCena" é o número da cena: dá ritmo à relação para nada acontecer cedo demais.
   function regrasSlowBurn(p, h, nCena) {
     const fase = nCena < 10
-      ? "início: cumplicidade, provocações e piadas; a atração só aparece em sinais mínimos. Nada de confissões nem beijos."
+      ? "beginning: banter, teasing and inside jokes; attraction only shows in the tiniest signs. No confessions, no kisses."
       : nCena < 25
-      ? "a tensão cresce: momentos a sós, quase-momentos interrompidos, ciúmes que escapam e são logo disfarçados. Ainda sem confissão."
-      : `as defesas estão a cair: ${p.nome} já mal consegue esconder. Uma confissão ou um primeiro beijo podem acontecer se o utilizador os construir, mas nunca de repente.`;
-    const rel = h.relacao === "Rivais" ? `\n- São rivais: competem e picam-se mesmo quando se aproximam; a provocação é a forma de ${p.nome} mostrar interesse.`
-      : h.relacao === "Melhores amigos" ? `\n- São melhores amigos: à-vontade, piadas internas e medo de estragar a amizade, por isso ${p.nome} recua quando fica sério.`
+      ? "the tension grows: moments alone, almost-moments that get interrupted, jealousy that slips out and is quickly hidden. Still no confession."
+      : `the walls are coming down: ${p.nome} can barely hide it anymore. A confession or a first kiss can happen if the user builds up to it, but never out of nowhere.`;
+    const rel = h.relacao === "Rivals" ? `\n- They are rivals: they compete and needle each other even as they get closer; teasing is how ${p.nome} shows interest.`
+      : h.relacao === "Best friends" ? `\n- They are best friends: easy comfort, inside jokes and fear of ruining the friendship, so ${p.nome} pulls back when things get serious.`
       : "";
-    return `\n\nSLOW BURN (o mais importante nesta história):
-- Os sentimentos de ${p.nome} nunca são ditos pelo narrador nem pensados em voz alta. Mostram-se só por ações e subtexto:
-  olhares que se desviam, cuidado disfarçado, provocações que amolecem, ciúmes discretos, desculpas para ficar perto.
-  O utilizador tem de os descobrir pela forma como ${p.nome} age.
-- ${p.nome} nega o que sente: muda de assunto, provoca, faz uma piada ou afasta-se quando fica sério demais.
-- Mistura momentos divertidos, vulneráveis e ternos; nem todas as cenas são românticas. Cada passo tem de ser merecido.${rel}
-- Fase atual (cena ${nCena + 1}): ${fase}`;
+    return `\n\nSLOW BURN (the most important thing in this story):
+- ${p.nome}'s feelings are never stated by the narrator or thought out loud. They only show through actions and subtext:
+  glances that look away, disguised care, teasing that softens, quiet jealousy, excuses to stay close.
+  The user has to discover them from the way ${p.nome} acts.
+- ${p.nome} denies what they feel: changes the subject, teases, cracks a joke or pulls away when things get too serious.
+- Mix fun, vulnerable and tender moments; not every scene is romantic. Every step has to be earned.${rel}
+- Current phase (scene ${nCena + 1}): ${fase}`;
   }
 
   function instrucoes(p, h, memoria, resumo, nCena = 0) {
     const slow = !p.menor && h.tons.includes("Slow burn");
     return REGRAS_NARRADOR + (slow ? regrasSlowBurn(p, h, nCena) : "")
-      + (p.menor ? `\nSEM ROMANCE: ${p.nome} é menor na obra original. Só amizade, aventura, mistério ou rivalidade; nunca romance, flirt ou tensão romântica com ${p.nome}, mesmo que o utilizador peça ou diga que é adulto.` : "")
+      + (p.menor ? `\nNO ROMANCE: ${p.nome} is a minor in the original work. Only friendship, adventure, mystery or rivalry; never romance, flirting or romantic tension with ${p.nome}, even if the user asks or says they're an adult.` : "")
       + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 2200)}`
-      + `\n\n## História: ${h.titulo || "sem título"}`
-      + (h.premissa ? `\nIdeia: ${h.premissa}` : "")
-      + `\nCenário: ${h.universo || "o da obra"}`
-      + (h.relacao && h.relacao !== "Livre" ? `\nRelação entre os dois: ${h.relacao}` : "")
-      + (h.tons.length ? `\nTom: ${h.tons.join(", ")}` : "")
-      + `\nO utilizador é: ${h.papel || "alguém novo na vida de " + p.nome}. Na narração é SEMPRE "tu", nunca pelo nome; `
-      + `não escrevas o que "tu" fazes, dizes, a tua expressão ou roupa se ele não o escreveu (narras só o resto do mundo).`
-      + (memoria.length ? `\n\n## Lembra-te\n${memoria.map(f => "- " + f).join("\n")}` : "")
-      + (resumo ? `\n\n## Até agora\n${resumo}` : "");
+      + `\n\n## Story: ${h.titulo || "untitled"}`
+      + (h.premissa ? `\nIdea: ${h.premissa}` : "")
+      + `\nSetting: ${h.universo || "the original work's"}`
+      + (h.relacao && h.relacao !== "Open" ? `\nRelationship between them: ${h.relacao}` : "")
+      + (h.tons.length ? `\nTone: ${h.tons.join(", ")}` : "")
+      + `\nThe user is: ${h.papel || "someone new in " + p.nome + "'s life"}. In the narration they are ALWAYS "you", never their name; `
+      + `don't write what "you" do, say, your expression or clothes unless the user wrote it (you only narrate the rest of the world).`
+      + (memoria.length ? `\n\n## Remember\n${memoria.map(f => "- " + f).join("\n")}` : "")
+      + (resumo ? `\n\n## So far\n${resumo}` : "");
   }
 
   // Orçamento de cada pedido. O plano grátis do Groq dá 200 000 tokens por dia e 8000 por
@@ -595,7 +606,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       const antiga = ler("sussurros-conversa-" + p.id, null);
       if (!antiga || l.some(h => h.personagem === p.id)) continue;
       const id = novoId();
-      l.push({ id, personagem: p.id, titulo: "A primeira conversa", premissa: "", universo: "", papel: "", tons: [], atualizada: Date.now() });
+      l.push({ id, personagem: p.id, titulo: "The first conversation", premissa: "", universo: "", papel: "", tons: [], atualizada: Date.now() });
       gravarConteudo(id, {
         mensagens: antiga.mensagens.map(m => ({ tipo: m.papel === "utilizador" ? "acao" : "cena", texto: m.texto })),
         memoria: antiga.memoria || [], resumo: antiga.resumo || "", resumidas_ate: antiga.resumidas_ate || 0, escolhas: []
@@ -603,6 +614,12 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       apagarChave("sussurros-conversa-" + p.id);
     }
     gravarHistorias(l);
+  })();
+  // Versão em português: tons, relação, género e tipos passam para os nomes em inglês.
+  (function traduzirValores() {
+    gravarHistorias(historias().map(h => Object.assign({}, h, { tons: (h.tons || []).map(emIngles), relacao: h.relacao && emIngles(h.relacao) })));
+    gravarPersonagens(personagens().map(p => p.campos ? Object.assign({}, p, { campos: Object.assign({}, p.campos,
+      { genero: emIngles(p.campos.genero || ""), tipos: (p.campos.tipos || []).map(emIngles) }) }) : p));
   })();
 
   // =====================================================================
@@ -612,7 +629,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   // Dois modelos da mesma conta do Groq, cada um com o seu limite diário (200 000 tokens).
   // Usa-se o grande; quando o limite dele acaba, a app passa sozinha para o pequeno.
   const MODELOS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
-  const NOME_MODELO = { "openai/gpt-oss-120b": "modelo grande", "openai/gpt-oss-20b": "modelo pequeno" };
+  const NOME_MODELO = { "openai/gpt-oss-120b": "big model", "openai/gpt-oss-20b": "small model" };
   // Que modelos já chegaram ao limite hoje (guardado por dia).
   function esgotados() { const e = ler("sussurros-esgotados", {}); return e.dia === hoje() ? e.modelos : []; }
   function marcarEsgotado(m) { gravar("sussurros-esgotados", { dia: hoje(), modelos: [...new Set(esgotados().concat(m))] }); mostrarUso(); }
@@ -640,8 +657,8 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   function mostrarUso() {
     const t = usoHoje(), el = document.getElementById("uso");
     if (!el) return;
-    const esg = esgotados().filter(m => m === MODELOS[0]).length ? " · a usar o modelo pequeno" : "";
-    el.textContent = `Hoje: ${(t / 1000).toLocaleString("pt-PT", { maximumFractionDigits: 1 })} mil de 400 mil tokens (${Math.min(100, Math.round(t / LIMITE_DIA * 100))}%)${esg}`;
+    const esg = esgotados().filter(m => m === MODELOS[0]).length ? " · using the small model" : "";
+    el.textContent = `Today: ${(t / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })}k of 400k tokens (${Math.min(100, Math.round(t / LIMITE_DIA * 100))}%)${esg}`;
     el.hidden = !chave();
   }
   function segundosDeEspera(msg) {
@@ -695,20 +712,20 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       }
       if (d.error && d.error.code === "json_validate_failed" && ++falhasJson < 2) continue;
       if (r.status === 413 || /too large|context length|maximum context/i.test(msg)) throw { code: "demasiado_grande" };
-      throw { code: "erro", detalhe: msg || ("Erro " + r.status) };
+      throw { code: "erro", detalhe: msg || ("Error " + r.status) };
     }
   }
 
   function mensagemDeErro(e) {
     switch (e && e.code) {
-      case "sem_chave": return "Falta a chave do Groq. Carrega em \"Chave do Groq\" no topo da galeria.";
-      case "chave_errada": return "A chave do Groq não é válida. Confirma-a em \"Chave do Groq\" no topo da galeria.";
-      case "rate_limited": return "Muitos pedidos seguidos ao Groq. Espera um minuto e tenta outra vez.";
-      case "limite_dia": return "Chegaste ao limite de hoje do plano grátis do Groq (nos dois modelos). Volta a funcionar amanhã.";
-      case "demasiado_grande": return "Este pedido ficou grande demais para o plano grátis. Tenta uma mensagem mais curta.";
-      case "invalid_json": return "A resposta veio estragada. Tenta outra vez.";
-      case "sem_rede": return "Sem ligação à internet (ou o Groq está em baixo). Tenta outra vez.";
-      default: return "A IA não respondeu" + (e && e.detalhe ? ": " + e.detalhe : ".");
+      case "sem_chave": return "The Groq key is missing. Tap \"Groq key\" at the top of the gallery.";
+      case "chave_errada": return "The Groq key isn't valid. Check it in \"Groq key\" at the top of the gallery.";
+      case "rate_limited": return "Too many requests to Groq in a row. Wait a minute and try again.";
+      case "limite_dia": return "You've reached today's limit on Groq's free plan (on both models). It works again tomorrow.";
+      case "demasiado_grande": return "This request got too big for the free plan. Try a shorter message.";
+      case "invalid_json": return "The reply came back broken. Try again.";
+      case "sem_rede": return "No internet connection (or Groq is down). Try again.";
+      default: return "The AI didn't reply" + (e && e.detalhe ? ": " + e.detalhe : ".");
     }
   }
 
@@ -717,8 +734,8 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     return mensagens.map(m => m.tipo === "cena"
       ? { role: "assistant", content: m.texto }
       : m.tipo === "continuar"
-      ? { role: "user", content: "[NOTA DE AUTOR] Continua tu: faz acontecer algo novo (alguém interrompe, um salto no tempo, um problema, um momento a sós ou uma revelação) e leva a história até à próxima situação que peça uma resposta minha, sem decidir nada por mim." }
-      : { role: "user", content: m.tipo === "nota" ? "[NOTA DE AUTOR] " + m.texto : m.texto });
+      ? { role: "user", content: "[AUTHOR'S NOTE] You continue: make something new happen (someone interrupts, a time skip, a problem, a moment alone or a revelation) and take the story to the next situation that needs an answer from me, without deciding anything for me." }
+      : { role: "user", content: m.tipo === "nota" ? "[AUTHOR'S NOTE] " + m.texto : m.texto });
   }
 
   // Onde começam as mensagens recentes: andamos de trás para a frente até encher o
@@ -740,12 +757,12 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     const fim = inicioJanela(c);
     if (fim - c.resumidas_ate < LOTE_RESUMO) return;   // ainda não compensa gastar um pedido
     const texto = c.mensagens.slice(c.resumidas_ate, fim).map(m =>
-      (m.tipo === "cena" ? "Narrador: " : m.tipo === "nota" ? "Nota de autor: " : m.tipo === "continuar" ? "(o utilizador deixou a história avançar)" : "Utilizador: ") + (m.tipo === "continuar" ? "" : m.texto)).join("\n").slice(-12000);
+      (m.tipo === "cena" ? "Narrator: " : m.tipo === "nota" ? "Author's note: " : m.tipo === "continuar" ? "(the user let the story move on)" : "User: ") + (m.tipo === "continuar" ? "" : m.texto)).join("\n").slice(-12000);
     try {
       const novo = await groq([{ role: "user", content:
-        `Resumo atual de uma fanfic interativa com ${p.nome}:\n${c.resumo || "(vazio)"}\n\nNovas partes:\n${texto}\n\n`
-        + "Escreve um novo resumo completo em português de Portugal, no máximo 150 palavras, com os acontecimentos, "
-        + "as personagens que apareceram e a evolução da relação. Responde só com o resumo." }], { max: 450, preferir: 1 });
+        `Current summary of an interactive fanfic with ${p.nome}:\n${c.resumo || "(empty)"}\n\nNew parts:\n${texto}\n\n`
+        + "Write a new complete summary in English, 150 words at most, with the events, "
+        + "the characters who appeared and how the relationship has evolved. Reply only with the summary." }], { max: 450, preferir: 1 });
       if (novo) { c.resumo = novo.slice(0, 1400); c.resumidas_ate = fim; }
     } catch (e) { /* tenta-se outra vez na próxima jogada */ }
   }
@@ -783,7 +800,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   const mostrar = ecra => document.querySelectorAll(".ecra").forEach(e => e.classList.toggle("ativo", e.id === ecra));
   const quando = ms => {
     const d = Math.round((Date.now() - ms) / 60000);
-    return d < 1 ? "agora mesmo" : d < 60 ? `há ${d} min` : d < 1440 ? `há ${Math.round(d / 60)} h` : `há ${Math.round(d / 1440)} dias`;
+    return d < 1 ? "just now" : d < 60 ? `${d} min ago` : d < 1440 ? `${Math.round(d / 60)} h ago` : `${Math.round(d / 1440)} days ago`;
   };
 
   let pers = null;       // personagem aberta
@@ -800,39 +817,39 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   }
   // Relação: só se escolhe uma (como botões de rádio).
   function desenharRelacao(caixa, escolhida) {
-    caixa.innerHTML = RELACOES.map(r => `<button type="button" class="tom" aria-pressed="${(escolhida || "Livre") === r}">${r}</button>`).join("");
+    caixa.innerHTML = RELACOES.map(r => `<button type="button" class="tom" aria-pressed="${(escolhida || "Open") === r}">${r}</button>`).join("");
     caixa.querySelectorAll(".tom").forEach(b => b.onclick = () =>
       caixa.querySelectorAll(".tom").forEach(x => x.setAttribute("aria-pressed", String(x === b))));
   }
-  const relacaoDe = caixa => (caixa.querySelector('.tom[aria-pressed="true"]') || {}).textContent || "Livre";
+  const relacaoDe = caixa => (caixa.querySelector('.tom[aria-pressed="true"]') || {}).textContent || "Open";
   const tonsDe = caixa => [...caixa.querySelectorAll('.tom[aria-pressed="true"]')].map(b => b.textContent);
 
   // ---------- Galeria ----------
   function mostrarGaleria() {
     mostrar("ecra-galeria");
     $("aviso-chave-topo").innerHTML = chave() ? "" :
-      `<div class="aviso-topo">Para começar, põe a tua chave grátis do Groq. <button type="button" class="ligacao" id="aviso-chave">Configurar agora</button></div>`;
+      `<div class="aviso-topo">To get started, add your free Groq key. <button type="button" class="ligacao" id="aviso-chave">Set it up now</button></div>`;
     if (!chave()) $("aviso-chave").onclick = abrirChave;
     mostrarUso();
     const lista = personagens();
     if (!lista.length) {
       $("lista").innerHTML = `
         <div class="vazio-galeria">
-          <div class="grande">Com quem queres escrever?</div>
-          <p>Escolhe alguém de um anime, série, livro ou jogo, ou inventa uma personagem tua.</p>
+          <div class="grande">Who do you want to write with?</div>
+          <p>Pick someone from an anime, show, book or game, or make up a character of your own.</p>
           <div class="exemplos">
             <button class="exemplo" data-nome="L" data-obra="Death Note">L · Death Note</button>
             <button class="exemplo" data-nome="Sherlock Holmes" data-obra="Sherlock (BBC)">Sherlock Holmes</button>
-            <button class="exemplo" data-nome="Geralt de Rívia" data-obra="The Witcher">Geralt de Rívia</button>
+            <button class="exemplo" data-nome="Geralt of Rivia" data-obra="The Witcher">Geralt of Rivia</button>
           </div>
-          <button class="botao" id="criar-primeira">Criar personagem</button>
+          <button class="botao" id="criar-primeira">Create character</button>
         </div>`;
       $("criar-primeira").onclick = () => abrirCriar();
       document.querySelectorAll(".exemplo").forEach(b => b.onclick = () => abrirCriar(b.dataset.nome, b.dataset.obra));
       return;
     }
     const hs = historias();
-    $("lista").innerHTML = `<button class="criar-carta" id="criar-nova">+ Criar personagem</button>` +
+    $("lista").innerHTML = `<button class="criar-carta" id="criar-nova">+ Create character</button>` +
       lista.map(p => {
         const n = hs.filter(h => h.personagem === p.id).length;
         return `<button class="carta" data-id="${p.id}">
@@ -840,7 +857,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
           <div class="carta-corpo">
             <p class="carta-nome">${escapar(p.nome)}</p>
             <p class="carta-frase">${formatar(p.frase)}</p>
-            ${n ? `<div class="continuar">${n} ${n === 1 ? "história" : "histórias"}</div>` : ""}
+            ${n ? `<div class="continuar">${n} ${n === 1 ? "story" : "stories"}</div>` : ""}
           </div></button>`;
       }).join("");
     $("criar-nova").onclick = () => abrirCriar();
@@ -855,7 +872,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
                           { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `sussurros-copia-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `whispers-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
@@ -874,7 +891,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
         // cópias da versão 1 (conversas simples) viram uma história
         if (d.conversas && d.conversas[p.id] && !(d.historias || []).some(h => h.personagem === p.id)) {
           const id = novoId();
-          hs.push({ id, personagem: p.id, titulo: "A primeira conversa", premissa: "", universo: "", papel: "", tons: [], atualizada: Date.now() });
+          hs.push({ id, personagem: p.id, titulo: "The first conversation", premissa: "", universo: "", papel: "", tons: [], atualizada: Date.now() });
           const c = d.conversas[p.id];
           gravarConteudo(id, { mensagens: c.mensagens.map(m => ({ tipo: m.papel === "utilizador" ? "acao" : "cena", texto: m.texto })),
             memoria: c.memoria || [], resumo: c.resumo || "", resumidas_ate: c.resumidas_ate || 0, escolhas: [] });
@@ -888,7 +905,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       gravarPersonagens(ps); gravarHistorias(hs);
       mostrarGaleria();
     } catch (err) {
-      $("lista").insertAdjacentHTML("afterbegin", `<p class="erro">Esse ficheiro não é uma cópia do Sussurros.</p>`);
+      $("lista").insertAdjacentHTML("afterbegin", `<p class="erro">That file isn't a Whispers backup.</p>`);
     }
   };
 
@@ -897,7 +914,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     $("modo-ia").setAttribute("aria-selected", String(modo === "ia"));
     $("modo-mao").setAttribute("aria-selected", String(modo === "mao"));
     $("passo1").hidden = modo !== "ia"; $("passo2").hidden = true; $("mao").hidden = modo !== "mao";
-    $("criar-passo").textContent = modo === "mao" ? "Criar à mão" : "Passo 1 de 2";
+    $("criar-passo").textContent = modo === "mao" ? "Create by hand" : "Step 1 of 2";
   }
   function abrirCriar(nome = "", obra = "") {
     rascunho = null; fotoNova = null;
@@ -905,7 +922,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     $("modos").hidden = false;
     escolherModo("ia");
     $("passo1-estado").innerHTML = "";
-    $("criar-passo").textContent = "Passo 1 de 2";
+    $("criar-passo").textContent = "Step 1 of 2";
     mostrar("ecra-criar");
     $("c-nome").focus();
   }
@@ -913,12 +930,12 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     rascunho = p;
     $("r-nome").value = p.nome; $("r-obra").value = p.obra; $("r-frase").value = p.frase; $("r-ficha").value = p.ficha;
     $("aviso-ficha").innerHTML = p.conhecida ? "" :
-      `<div class="aviso">Não conheço bem esta personagem, por isso esta ficha é genérica. Cola informação sobre ela e gera outra vez, ou <button type="button" class="ligacao" id="ir-mao">cria-a à mão</button>.</div>`;
+      `<div class="aviso">I don't know this character well, so this profile is generic. Paste some information about them and generate again, or <button type="button" class="ligacao" id="ir-mao">create them by hand</button>.</div>`;
     if (!p.conhecida) $("ir-mao").onclick = () => abrirMao(null, { nome: p.nome, obra: p.obra });
     $("passo1").hidden = true; $("passo2").hidden = false; $("mao").hidden = true; $("modos").hidden = true;
     fotoNova = null; mostrarFoto($("r-foto"), p.avatar);
     $("regerar").hidden = !!editar;
-    $("criar-passo").textContent = editar ? "Editar ficha" : "Passo 2 de 2 · revê a ficha";
+    $("criar-passo").textContent = editar ? "Edit profile" : "Step 2 of 2 · review the profile";
     mostrar("ecra-criar");
   }
   async function gerarFicha() {
@@ -926,7 +943,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     if (!nome) return;
     $("gerar").disabled = $("regerar").disabled = true;
     $("passo1").hidden = false; $("passo2").hidden = true;
-    $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">A conhecer ${escapar(nome)}…</span>Isto demora uns segundos.</div>`;
+    $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">Getting to know ${escapar(nome)}…</span>This takes a few seconds.</div>`;
     try {
       const d = await groq([{ role: "user", content: PEDIDO_FICHA(nome, $("c-obra").value.trim(), $("c-extra").value.trim()) }],
         { esquema: ESQUEMA_FICHA, nome: "ficha", esforco: "medium", max: 3000 });
@@ -974,7 +991,7 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     const f = e.target.files[0]; e.target.value = "";
     if (!f) return;
     try { fotoNova = await reduzirFoto(f); mostrarFoto($(id), fotoNova); }
-    catch (err) { $(id === "m-foto" ? "mao-estado" : "aviso-ficha").innerHTML = `<p class="erro">Não consegui abrir essa imagem. Experimenta outra (JPG ou PNG).</p>`; }
+    catch (err) { $(id === "m-foto" ? "mao-estado" : "aviso-ficha").innerHTML = `<p class="erro">I couldn't open that image. Try another one (JPG or PNG).</p>`; }
   };
 
   // ---------- Criar à mão ----------
@@ -1007,10 +1024,10 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
     desenharTipos(c.tipos || []);
     mostrarFoto($("m-foto"), p ? p.avatar : "");
     $("mao-estado").innerHTML = "";
-    $("guardar-mao").textContent = p ? "Guardar alterações" : "Criar personagem";
+    $("guardar-mao").textContent = p ? "Save changes" : "Create character";
     $("modos").hidden = !!p;
     escolherModo("mao");
-    if (p) $("criar-passo").textContent = "Editar personagem";
+    if (p) $("criar-passo").textContent = "Edit character";
     mostrar("ecra-criar");
   }
   function lerMao() {
@@ -1023,15 +1040,15 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   // Junta os campos numa ficha de texto para o narrador.
   function montarFicha(c) {
     const linhas = [];
-    const id = [c.idade && c.idade + " anos", c.genero && c.genero.toLowerCase(), c.altura, c.ocupacao].filter(Boolean).join(", ");
+    const id = [c.idade && c.idade + " years old", c.genero && c.genero.toLowerCase(), c.altura, c.ocupacao].filter(Boolean).join(", ");
     linhas.push(`${c.nome}${id ? " — " + id : ""}.`);
-    if (c.aparencia) linhas.push("Aparência: " + c.aparencia);
-    if (c.tipos.length) linhas.push("Tipo de personalidade: " + c.tipos.map(t => PERSONALIDADES[t]).join("; ") + ".");
-    if (c.personalidade) linhas.push("Personalidade: " + c.personalidade);
-    if (c.fala) linhas.push("Forma de falar: " + c.fala);
-    if (c.perfil) linhas.push("Relação com o utilizador e objetivos: " + c.perfil);
-    if (c.historico) linhas.push("Histórico: " + c.historico);
-    if (c.exemplos) linhas.push("Exemplos de falas:\n" + c.exemplos.split("\n").map(l => l.trim()).filter(Boolean).map(l => "- " + l.replace(/^[-–—]\s*/, "")).join("\n"));
+    if (c.aparencia) linhas.push("Appearance: " + c.aparencia);
+    if (c.tipos.length) linhas.push("Personality type: " + c.tipos.map(t => PERSONALIDADES[t]).join("; ") + ".");
+    if (c.personalidade) linhas.push("Personality: " + c.personalidade);
+    if (c.fala) linhas.push("Way of speaking: " + c.fala);
+    if (c.perfil) linhas.push("Relationship with the user and goals: " + c.perfil);
+    if (c.historico) linhas.push("Background: " + c.historico);
+    if (c.exemplos) linhas.push("Example lines:\n" + c.exemplos.split("\n").map(l => l.trim()).filter(Boolean).map(l => "- " + l.replace(/^[-–—]\s*/, "")).join("\n"));
     return linhas.join("\n");
   }
   function maoOcupado(sim, texto) {
@@ -1043,22 +1060,22 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
   const ESQUEMA_COMPLETAR = obj({ aparencia: S, personalidade: S, fala: S, exemplos: S, perfil: S, historico: S, frase: S });
   $("completar").onclick = async () => {
     const c = lerMao();
-    if (!c.nome) { $("mao-estado").innerHTML = `<p class="erro">Escreve pelo menos o nome.</p>`; return; }
-    maoOcupado(true, "A completar a personagem…");
+    if (!c.nome) { $("mao-estado").innerHTML = `<p class="erro">Write at least the name.</p>`; return; }
+    maoOcupado(true, "Filling in the character…");
     try {
-      const d = await groq([{ role: "user", content: `Estás a ajudar a criar uma personagem para fanfics interativas.
-O que o utilizador já escreveu (NÃO mudes nada disto; os campos vazios és tu que preenches, coerentes com o resto):
+      const d = await groq([{ role: "user", content: `You are helping to create a character for interactive fanfics.
+What the user already wrote (DON'T change any of it; you fill in the empty fields, consistent with the rest):
 ${JSON.stringify(Object.assign({}, c, { tipos: c.tipos.map(t => PERSONALIDADES[t]) }), null, 1)}
-${c.obra ? "A personagem é da obra \"" + c.obra + "\": usa o que sabes dela, sem inventar factos que não tenhas a certeza." : "A personagem é original do utilizador."}
-Devolve TODOS os campos pedidos. Para os campos que já estão preenchidos, devolve exatamente o mesmo texto.
-- aparencia: 1 ou 2 frases. personalidade: 2 ou 3 frases. fala: 1 frase sobre o tom e expressões.
-- exemplos: 4 falas curtas e típicas, uma por linha, começadas por "— ".
-- perfil: relação com o utilizador e objetivos, 1 ou 2 frases. historico: 2 ou 3 frases. frase: descrição de até 12 palavras.
-Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esforco: "medium", max: 2500 });
+${c.obra ? "The character is from \"" + c.obra + "\": use what you know about them, without inventing facts you're not sure of." : "The character is the user's own original creation."}
+Return ALL the requested fields. For fields that are already filled in, return exactly the same text.
+- aparencia: 1 or 2 sentences. personalidade: 2 or 3 sentences. fala: 1 sentence about their tone and expressions.
+- exemplos: 4 short, typical lines, one per line, starting with "- ".
+- perfil: relationship with the user and goals, 1 or 2 sentences. historico: 2 or 3 sentences. frase: a description of up to 12 words.
+Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esforco: "medium", max: 2500 });
       for (const k of Object.keys(ESQUEMA_COMPLETAR.properties))
         if (!$("m-" + k).value.trim() && d[k]) $("m-" + k).value = String(d[k]).slice(0, +$("m-" + k).maxLength || 2000);
       maoOcupado(false);
-      $("mao-estado").innerHTML = `<p class="dica">Preenchi os campos que estavam vazios. Muda o que quiseres e carrega em ${escapar($("guardar-mao").textContent)}.</p>`;
+      $("mao-estado").innerHTML = `<p class="dica">I filled in the empty fields. Change anything you like and tap ${escapar($("guardar-mao").textContent)}.</p>`;
     } catch (e) { maoOcupado(false); $("mao-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
   };
 
@@ -1067,14 +1084,14 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     e.preventDefault();
     const c = lerMao();
     const idade = parseInt(c.idade, 10);
-    if (!c.nome) { $("mao-estado").innerHTML = `<p class="erro">Falta o nome.</p>`; return; }
-    if (!Number.isFinite(idade) || idade < 1) { $("mao-estado").innerHTML = `<p class="erro">Escreve a idade em números (ex.: 22).</p>`; $("m-idade").focus(); return; }
+    if (!c.nome) { $("mao-estado").innerHTML = `<p class="erro">The name is missing.</p>`; return; }
+    if (!Number.isFinite(idade) || idade < 1) { $("mao-estado").innerHTML = `<p class="erro">Write the age as a number (e.g. 22).</p>`; $("m-idade").focus(); return; }
     let menor = idade < 18;
     const antiga = editarId ? personagens().find(x => x.id === editarId) : null;
     if (!menor && c.obra && !(antiga && antiga.campos && antiga.campos.obra === c.obra && antiga.campos.nome === c.nome)) {
-      maoOcupado(true, "A confirmar a personagem…");
+      maoOcupado(true, "Checking the character…");
       try {
-        const d = await groq([{ role: "user", content: `A personagem "${c.nome}" da obra "${c.obra}": na obra original, tem menos de 18 anos em toda ou na maior parte da história? Na dúvida, responde true.` }],
+        const d = await groq([{ role: "user", content: `The character "${c.nome}" from "${c.obra}": in the original work, are they under 18 for all or most of the story? If in doubt, answer true.` }],
           { esquema: obj({ menor_na_obra: B }), nome: "idade", max: 400 });
         menor = d.menor_na_obra !== false;
       } catch (err) { maoOcupado(false); $("mao-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; return; }
@@ -1082,7 +1099,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     } else if (!menor && antiga) menor = !!antiga.menor;
     const p = Object.assign({}, antiga || { id: novoId(), emoji: "✨", cores: PALETAS[Math.floor(Math.random() * PALETAS.length)] }, {
       nome: c.nome, obra: c.obra,
-      frase: c.frase || [c.ocupacao, c.tipos.slice(0, 2).join(", ").toLowerCase()].filter(Boolean).join(" · ") || "Personagem original",
+      frase: c.frase || [c.ocupacao, c.tipos.slice(0, 2).join(", ").toLowerCase()].filter(Boolean).join(" · ") || "Original character",
       ficha: montarFicha(c).slice(0, 4000),
       campos: c, conhecida: true, menor,
       avatar: fotoNova !== null ? fotoNova : (antiga ? antiga.avatar : ""),
@@ -1091,7 +1108,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     editarId = null;
     abrirPersonagem(p.id);
     if (menor && idade >= 18) $("historias").insertAdjacentHTML("afterbegin",
-      `<p class="aviso">${escapar(p.nome)} é menor na obra original, por isso as histórias com esta personagem não têm romance.</p>`);
+      `<p class="aviso">${escapar(p.nome)} is a minor in the original work, so stories with this character don't have romance.</p>`);
   };
   $("modo-ia").onclick = () => escolherModo("ia");
   $("modo-mao").onclick = () => abrirMao(null, { nome: $("c-nome").value.trim(), obra: $("c-obra").value.trim() });
@@ -1113,11 +1130,11 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     $("pers-frase").innerHTML = formatar(pers.frase);
     const hs = historias().filter(h => h.personagem === pers.id);
     $("historias").innerHTML = hs.length
-      ? `<span class="rotulo">As tuas histórias</span>` + hs.map(h => `<button class="historia" data-id="${h.id}">
-          <b>${escapar(h.titulo || "Sem título")}</b>
-          <span>${escapar(h.premissa || "História livre")}</span>
+      ? `<span class="rotulo">Your stories</span>` + hs.map(h => `<button class="historia" data-id="${h.id}">
+          <b>${escapar(h.titulo || "Untitled")}</b>
+          <span>${escapar(h.premissa || "Free story")}</span>
           <small>${h.tons.length ? escapar(h.tons.join(" · ")) + " · " : ""}${quando(h.atualizada || Date.now())}</small></button>`).join("")
-      : `<p class="dica">Ainda não há histórias com ${escapar(pers.nome)}. Carrega em <b>Nova história</b> para começar.</p>`;
+      : `<p class="dica">No stories with ${escapar(pers.nome)} yet. Tap <b>New story</b> to begin.</p>`;
     document.querySelectorAll(".historia").forEach(b => b.onclick = () => abrirHistoria(b.dataset.id));
     mostrar("ecra-personagem");
   }
@@ -1128,10 +1145,10 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
   // ---------- Nova história ----------
   function abrirNova() {
     $("form-nova").reset();
-    $("nova-com").textContent = "com " + pers.nome;
+    $("nova-com").textContent = "with " + pers.nome;
     $("nova-estado").innerHTML = "";
     desenharTons($("h-tons"), [], pers.menor);
-    desenharRelacao($("h-relacao"), "Livre");
+    desenharRelacao($("h-relacao"), "Open");
     $("atalho-slow").hidden = !!pers.menor;
     mostrar("ecra-nova");
   }
@@ -1148,7 +1165,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
       universo: h.universo || String(d.universo || "").slice(0, 800),
       papel: h.papel || String(d.papel || "").slice(0, 800),
       tons: h.tons.length ? h.tons : limparTons(d.tons),
-      relacao: h.relacao && h.relacao !== "Livre" ? h.relacao : (RELACOES.includes(d.relacao) ? d.relacao : "Livre"),
+      relacao: h.relacao && h.relacao !== "Open" ? h.relacao : (RELACOES.includes(d.relacao) ? d.relacao : "Open"),
     };
   }
   function ocupado(sim, texto) {
@@ -1156,25 +1173,25 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     $("nova-estado").innerHTML = sim ? `<div class="carregar"><span class="grande">${texto}</span></div>` : "";
   }
   $("surpreende").onclick = async () => {
-    ocupado(true, "A imaginar uma história…");
+    ocupado(true, "Dreaming up a story…");
     try {
       const h = await pedirIdeia({ premissa: "", universo: "", papel: "", relacao: relacaoDe($("h-relacao")), tons: tonsDe($("h-tons")) });
       $("h-premissa").value = h.premissa; $("h-universo").value = h.universo; $("h-papel").value = h.papel;
       desenharTons($("h-tons"), h.tons, pers.menor);
       desenharRelacao($("h-relacao"), h.relacao);
       ocupado(false);
-      $("nova-estado").innerHTML = `<p class="dica">Ideia: <b>${escapar(h.titulo)}</b>. Muda o que quiseres e carrega em Começar história.</p>`;
+      $("nova-estado").innerHTML = `<p class="dica">Idea: <b>${escapar(h.titulo)}</b>. Change anything you like and tap Start story.</p>`;
     } catch (e) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
   };
   $("form-nova").onsubmit = async e => {
     e.preventDefault();
-    ocupado(true, "A escrever a primeira cena…");
+    ocupado(true, "Writing the first scene…");
     try {
       const base = await pedirIdeia(lerNova());   // completa o que faltar e dá um título
       const h = Object.assign({ id: novoId(), personagem: pers.id, atualizada: Date.now() }, base);
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
-                            { role: "user", content: "[NOTA DE AUTOR] Escreve a cena de abertura da história, apresentando o cenário e o primeiro encontro." }],
+                            { role: "user", content: "[AUTHOR'S NOTE] Write the opening scene of the story, introducing the setting and the first encounter." }],
                            { esquema: ESQUEMA_CENA, nome: "cena", max: 700 });
       aplicarCena(c, d);
       atualizarHistoria(h); gravarConteudo(h.id, c);
@@ -1186,8 +1203,8 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
   $("atalho-slow").onclick = () => {
     desenharTons($("h-tons"), ["Romance", "Slow burn"], pers.menor);
     const r = relacaoDe($("h-relacao"));
-    desenharRelacao($("h-relacao"), ["Melhores amigos", "Rivais"].includes(r) ? r : "Melhores amigos");
-    $("nova-estado").innerHTML = `<p class="dica">Marquei <b>Romance</b> e <b>Slow burn</b>. Escolhe se são <b>Melhores amigos</b> ou <b>Rivais</b> e escreve o teu papel (o teu nome e quem és). O resto pode ficar vazio.</p>`;
+    desenharRelacao($("h-relacao"), ["Best friends", "Rivals"].includes(r) ? r : "Best friends");
+    $("nova-estado").innerHTML = `<p class="dica">I've ticked <b>Romance</b> and <b>Slow burn</b>. Choose whether you're <b>Best friends</b> or <b>Rivals</b> and write your role (your name and who you are). The rest can stay empty.</p>`;
   };
   $("nova-voltar").onclick = () => abrirPersonagem(pers.id);
 
@@ -1201,12 +1218,12 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     partes.forEach(x => { if (x.tipo === "fala" && !x.quem) x.quem = pers.nome; });
     // Proteção: a IA nunca fala pela personagem do utilizador. Se o fizer, essa fala é deitada fora.
     const papel = (hist && hist.papel) || "";
-    const meuNome = papel.match(/\bsou (?:a |o )?([A-ZÀ-Ý][A-Za-zÀ-ÿ'-]+)/i) || papel.match(/^\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'-]+)/);
-    const proibidos = ["tu", "eu", "utilizador", "você"].concat(meuNome ? [meuNome[1].toLowerCase()] : []);
+    const meuNome = papel.match(/\b(?:sou (?:a |o )?|i'?m (?:an? |the )?|i am (?:an? |the )?|my name is |name:\s*)([A-ZÀ-Ý][A-Za-zÀ-ÿ'-]+)/i) || papel.match(/^\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'-]+)/);
+    const proibidos = ["you", "i", "me", "user", "tu", "eu", "utilizador", "você"].concat(meuNome ? [meuNome[1].toLowerCase()] : []);
     partes = partes.filter(x => x.tipo !== "fala" || !proibidos.includes(x.quem.toLowerCase()));
     if (!partes.length && d && d.texto) partes = [{ tipo: "narracao", quem: "", texto: String(d.texto).trim() }];
-    if (!partes.length) partes = [{ tipo: "narracao", quem: "", texto: "*O silêncio prolonga-se por um momento.*" }];
-    const texto = partes.map(x => x.tipo === "fala" ? `${x.quem}: — ${x.texto}` : x.texto).join("\n\n");
+    if (!partes.length) partes = [{ tipo: "narracao", quem: "", texto: "*The silence stretches on for a moment.*" }];
+    const texto = partes.map(x => x.tipo === "fala" ? `${x.quem}: "${x.texto}"` : x.texto).join("\n\n");
     const ja = new Set(c.memoria.map(f => f.toLowerCase()));
     const novos = (Array.isArray(d && d.novos_factos) ? d.novos_factos : []).map(f => String(f).trim().slice(0, 300))
       .filter(f => f && !ja.has(f.toLowerCase()));
@@ -1221,15 +1238,15 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     pers = personagens().find(p => p.id === hist.personagem) || pers;
     cont = conteudoDe(hist.id);
     pintarAvatar($("hist-avatar"), pers);
-    $("hist-titulo").textContent = hist.titulo || "Sem título";
-    $("hist-com").textContent = "com " + pers.nome + (hist.relacao && hist.relacao !== "Livre" ? " · " + hist.relacao : "") + (hist.tons.length ? " · " + hist.tons.join(" · ") : "");
+    $("hist-titulo").textContent = hist.titulo || "Untitled";
+    $("hist-com").textContent = "with " + pers.nome + (hist.relacao && hist.relacao !== "Open" ? " · " + hist.relacao : "") + (hist.tons.length ? " · " + hist.tons.join(" · ") : "");
     definirNota(false);
     mostrar("ecra-historia");
     desenhar();
     $("texto").focus();
   }
   function desenhar(extra = "") {
-    $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Sem título")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
+    $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Untitled")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
       cont.mensagens.map(m => m.tipo === "cena" ? desenharCena(m)
         : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
         : m.tipo === "continuar" ? `<div class="continuou" aria-hidden="true">· · ·</div>`
@@ -1239,7 +1256,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     $("lampada").classList.toggle("ligada", verSugestoes);
     $("escolhas").innerHTML = (aEspera || modoNota) ? "" :
       (verSugestoes ? (cont.escolhas || []).map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("") : "")
-      + (cont.mensagens.length ? `<button class="continuar-btn" id="continuar">Continuar ▸ <small>deixa a história avançar</small></button>` : "");
+      + (cont.mensagens.length ? `<button class="continuar-btn" id="continuar">Continue ▸ <small>let the story move on</small></button>` : "");
     $("escolhas").hidden = !$("escolhas").innerHTML;
     if ($("continuar")) $("continuar").onclick = () => enviar("", false);
     document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(cont.escolhas[b.dataset.i], false));
@@ -1251,7 +1268,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     $("botao-nota").classList.toggle("ligado", sim);
     $("modo-nota").hidden = !sim;
     $("form").classList.toggle("nota-ligada", sim);
-    $("texto").placeholder = sim ? "Ex: salta 3 dias para a frente / aparece o Light" : "O que dizes ou fazes…";
+    $("texto").placeholder = sim ? "e.g. skip 3 days ahead / Light shows up" : "What do you say or do…";
   }
   $("botao-nota").onclick = () => { definirNota(!modoNota); desenhar(); $("texto").focus(); };
 
@@ -1270,11 +1287,11 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     cont = c;
     $("texto").value = "";
     definirNota(false);
-    desenhar(`<div class="a-escrever">O narrador está a escrever <i>•</i><i>•</i><i>•</i></div>`);
+    desenhar(`<div class="a-escrever">The narrator is writing <i>•</i><i>•</i><i>•</i></div>`);
     try {
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + c.mensagens.filter(m => m.tipo === "cena").length) }]
         .concat(paraTurnos(recentes(c))), { esquema: ESQUEMA_CENA, nome: "cena", max: 700,
-          onEspera: seg => desenhar(`<div class="a-escrever">Muitos pedidos seguidos. A tentar outra vez daqui a ${seg} s…</div>`) });
+          onEspera: seg => desenhar(`<div class="a-escrever">Too many requests in a row. Trying again in ${seg} s…</div>`) });
       const novos = aplicarCena(c, d);
       gravarConteudo(hist.id, c); atualizarHistoria(hist);
       if (novos.length) avisarMemoria(novos);
@@ -1292,7 +1309,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
   }
   let temporizador;
   function avisarMemoria(factos) {
-    $("toast").innerHTML = `<b>✦ O narrador vai lembrar-se:</b><br>${factos.map(formatar).join("<br>")}`;
+    $("toast").innerHTML = `<b>✦ The narrator will remember:</b><br>${factos.map(formatar).join("<br>")}`;
     $("toast").classList.add("ver");
     clearTimeout(temporizador);
     temporizador = setTimeout(() => $("toast").classList.remove("ver"), 4000);
@@ -1312,11 +1329,11 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     desenharTons($("e-tons"), hist.tons, pers.menor);
     desenharRelacao($("e-relacao"), hist.relacao);
     $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map(f => `<li>${formatar(f)}</li>`).join("")
-      : `<p class="vazio">Ainda nada.</p>`;
-    $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">O resumo aparece quando a história fica mais longa.</span>`;
+      : `<p class="vazio">Nothing yet.</p>`;
+    $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">The summary appears once the story gets longer.</span>`;
     for (const id of ["recomecar", "apagar-historia"]) $(id).dataset.confirmar = "";
-    $("recomecar").textContent = "Recomeçar esta história";
-    $("apagar-historia").textContent = "Apagar esta história";
+    $("recomecar").textContent = "Restart this story";
+    $("apagar-historia").textContent = "Delete this story";
     $("uso-painel").textContent = (document.getElementById("uso") || {}).textContent || "";
     $("painel-contexto").hidden = false;
   };
@@ -1334,25 +1351,25 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     botao.dataset.confirmar = "1"; botao.textContent = texto; return false;
   }
   $("recomecar").onclick = async () => {
-    if (!confirmar($("recomecar"), "Tens a certeza? Apaga o texto e a memória desta história. Clica outra vez.")) return;
+    if (!confirmar($("recomecar"), "Are you sure? This erases the text and memory of this story. Tap again.")) return;
     $("painel-contexto").hidden = true;
     cont = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
     aEspera = true;
-    desenhar(`<div class="a-escrever">O narrador está a escrever <i>•</i><i>•</i><i>•</i></div>`);
+    desenhar(`<div class="a-escrever">The narrator is writing <i>•</i><i>•</i><i>•</i></div>`);
     try {
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, [], "") },
-                            { role: "user", content: "[NOTA DE AUTOR] Escreve a cena de abertura da história, apresentando o cenário e o primeiro encontro." }],
+                            { role: "user", content: "[AUTHOR'S NOTE] Write the opening scene of the story, introducing the setting and the first encounter." }],
                            { esquema: ESQUEMA_CENA, nome: "cena", max: 700 });
       aplicarCena(cont, d);
       gravarConteudo(hist.id, cont); atualizarHistoria(hist);
       aEspera = false; desenhar();
     } catch (e) {
       aEspera = false; gravarConteudo(hist.id, cont);
-      desenhar(`<p class="erro">${escapar(mensagemDeErro(e))} Escreve qualquer coisa para começar.</p>`);
+      desenhar(`<p class="erro">${escapar(mensagemDeErro(e))} Write something to begin.</p>`);
     }
   };
   $("apagar-historia").onclick = () => {
-    if (!confirmar($("apagar-historia"), "Apagar esta história para sempre? Clica outra vez.")) return;
+    if (!confirmar($("apagar-historia"), "Delete this story forever? Tap again.")) return;
     apagarChave("sussurros-h-" + hist.id);
     gravarHistorias(historias().filter(h => h.id !== hist.id));
     $("painel-contexto").hidden = true;
@@ -1368,7 +1385,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
     e.preventDefault();
     const nova = $("chave").value.trim();
     if (!nova) return;
-    $("guardar-chave").disabled = true; $("chave-estado").textContent = "A testar a chave…";
+    $("guardar-chave").disabled = true; $("chave-estado").textContent = "Testing the key…";
     try {
       // Pede a lista de modelos: é grátis e diz-nos se a chave funciona.
       const r = await fetch("https://api.groq.com/openai/v1/models", { headers: { "Authorization": "Bearer " + nova } });
@@ -1377,7 +1394,7 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
       $("painel-chave").hidden = true;
       mostrarGaleria();
     } catch (err) {
-      $("chave-estado").textContent = "Essa chave não funciona. Confirma que a copiaste toda (começa por gsk_).";
+      $("chave-estado").textContent = "That key doesn't work. Make sure you copied all of it (it starts with gsk_).";
     }
     $("guardar-chave").disabled = false;
   };
