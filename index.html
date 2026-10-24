@@ -286,6 +286,16 @@
                      line-height: 1.45; resize: vertical; outline: none; }
   .membro textarea:focus { border-color: var(--acento2); }
   .membro small { color: var(--suave); font-size: 11px; min-height: 1em; }
+  .modo { font-size: 13px; padding: 10px 6px; }
+  .encontrado { background: var(--cartao); border-radius: 16px; padding: 12px; display: grid; gap: 8px; }
+  .encontrado.fora { opacity: .45; }
+  .encontrado-topo { display: flex; gap: 8px; align-items: center; }
+  .encontrado-topo .avatar { width: 34px; height: 34px; font-size: 17px; }
+  .encontrado-topo input[type=text] { flex: 1; min-width: 0; margin: 0; }
+  .encontrado-topo .idade { width: 70px; flex: none; margin: 0; }
+  .encontrado p { margin: 0; color: var(--suave); font-size: 13px; line-height: 1.4; }
+  .linha-check { display: flex; gap: 8px; align-items: center; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--texto); }
+  .linha-check input { width: auto; margin: 0; }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
@@ -359,8 +369,9 @@
     </div>
     <div class="rolar">
       <div class="gutter modos" id="modos" role="tablist">
-        <button type="button" class="modo" id="modo-ia" role="tab">The AI knows them</button>
-        <button type="button" class="modo" id="modo-mao" role="tab">Create by hand</button>
+        <button type="button" class="modo" id="modo-ia" role="tab">AI knows them</button>
+        <button type="button" class="modo" id="modo-pagina" role="tab">Import a page</button>
+        <button type="button" class="modo" id="modo-mao" role="tab">By hand</button>
       </div>
       <form class="formulario gutter" id="passo1">
         <p class="dica">Type who you want. The AI uses what it knows about the story to write their personality and the way they talk. You can review everything afterwards.</p>
@@ -383,6 +394,24 @@
         <div class="acoes">
           <button type="button" class="botao secundario" id="regerar">Generate again</button>
           <button class="botao" id="guardar">Save character</button>
+        </div>
+      </form>
+
+      <!-- Importar de uma página: várias personagens de uma vez -->
+      <form class="formulario gutter" id="pagina" hidden>
+        <p class="dica">Found a profile page about a group or a series (Kprofiles, Wikipedia, a fan wiki…)? Select all the text on the page, copy it and paste it here. The AI creates every character in it at once, using only what the page says.</p>
+        <label>Group or series (optional)<input id="pg-grupo" maxlength="80" placeholder="e.g. the group's name"></label>
+        <label>Page text<textarea id="pg-texto" rows="9" maxlength="60000" placeholder="Paste the page here."></textarea></label>
+        <p class="dica" id="pg-conta"></p>
+        <button class="botao" id="pg-ler">Find the characters</button>
+        <div id="pg-estado"></div>
+        <div id="pg-resultado" class="membros" hidden>
+          <span class="rotulo">Found</span>
+          <p class="dica">Check the names and ages. Anyone under 18 gets no romance in their stories.</p>
+          <div class="membros" id="pg-lista"></div>
+          <label class="linha-check" id="pg-grupo-opcao"><input type="checkbox" id="pg-criar-grupo" checked> Also create a group (universe) with them</label>
+          <button type="button" class="botao" id="pg-criar">Create characters</button>
+          <div id="pg-estado2"></div>
         </div>
       </form>
 
@@ -471,6 +500,7 @@
         <div class="membros" id="mundo-membros"></div>
         <span class="rotulo" style="margin-top:6px">Add from your gallery</span>
         <div class="tons" id="mundo-elenco"></div>
+        <button type="button" class="atalho" id="mundo-importar">📋 Import members from a page</button>
         <button type="button" class="atalho" id="mundo-nova-pers">+ Create a new character for this group</button>
       </div>
       <div class="mundo-bloco gutter">
@@ -1255,11 +1285,13 @@ one funny or teasing, and one about the relationship between you two (getting cl
   function escolherModo(modo) {
     $("modo-ia").setAttribute("aria-selected", String(modo === "ia"));
     $("modo-mao").setAttribute("aria-selected", String(modo === "mao"));
-    $("passo1").hidden = modo !== "ia"; $("passo2").hidden = true; $("mao").hidden = modo !== "mao";
-    $("criar-passo").textContent = modo === "mao" ? "Create by hand" : "Step 1 of 2";
+    $("modo-pagina").setAttribute("aria-selected", String(modo === "pagina"));
+    $("passo1").hidden = modo !== "ia"; $("passo2").hidden = true; $("mao").hidden = modo !== "mao"; $("pagina").hidden = modo !== "pagina";
+    $("criar-passo").textContent = modo === "mao" ? "Create by hand" : modo === "pagina" ? "Import from a page" : "Step 1 of 2";
   }
   function abrirCriar(nome = "", obra = "") {
-    rascunho = null; fotoNova = null; mundoAlvo = null;
+    rascunho = null; fotoNova = null; mundoAlvo = null; encontrados = [];
+    $("pagina").reset(); $("pg-resultado").hidden = true; $("pg-estado").innerHTML = ""; $("pg-conta").textContent = "";
     $("passo1").reset(); $("c-nome").value = nome; $("c-obra").value = obra;
     $("modos").hidden = false;
     escolherModo("ia");
@@ -1461,6 +1493,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
       `<p class="aviso">${escapar(p.nome)} is a minor in the original work, so stories with this character don't have romance.</p>`);
   };
   $("modo-ia").onclick = () => escolherModo("ia");
+  $("modo-pagina").onclick = () => abrirPagina();
   $("modo-mao").onclick = () => abrirMao(null, { nome: $("c-nome").value.trim(), obra: $("c-obra").value.trim() });
 
   $("passo1").onsubmit = e => { e.preventDefault(); gerarFicha(); };
@@ -1470,6 +1503,149 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     if (mundoAlvo) { const m = mundoAlvo; mundoAlvo = null; rascunho = null; editarId = null; return abrirMundo(m); }
     const id = editarId || (rascunho && rascunho.id); rascunho = null; editarId = null;
     id && personagens().some(x => x.id === id) ? abrirPersonagem(id) : mostrarGaleria();
+  };
+
+  // ---------- Importar personagens de uma página ----------
+  // O texto colado é limpo (linhas repetidas e vazias fora) e lido em partes de 10 000 letras,
+  // para cada pedido caber no limite por minuto do Groq grátis. Lê no máximo 4 partes.
+  const PARTE_PAGINA = 10000, MAX_PARTES = 4;
+  let encontrados = [];
+  function limparPagina(t) {
+    const vistas = new Set();
+    return String(t).split("\n").map(l => l.replace(/\s+/g, " ").trim())
+      .filter(l => l.length > 1 && !vistas.has(l) && vistas.add(l)).join("\n");
+  }
+  function abrirPagina() {
+    escolherModo("pagina");
+    encontrados = [];
+    $("pg-resultado").hidden = true; $("pg-estado").innerHTML = ""; $("pg-estado2").innerHTML = "";
+    if (mundoAlvo && mundoDe(mundoAlvo) && !$("pg-grupo").value) $("pg-grupo").value = mundoDe(mundoAlvo).nome;
+    contarPagina();
+  }
+  function contarPagina() {
+    const n = limparPagina($("pg-texto").value).length;
+    $("pg-conta").textContent = !n ? "" : n <= PARTE_PAGINA * MAX_PARTES
+      ? `${n.toLocaleString("en-US")} characters · ${Math.ceil(n / PARTE_PAGINA)} request${n > PARTE_PAGINA ? "s" : ""} to the AI`
+      : `${n.toLocaleString("en-US")} characters · only the first ${(PARTE_PAGINA * MAX_PARTES).toLocaleString("en-US")} are read. Paste just the members' part if someone is missing.`;
+  }
+  $("pg-texto").oninput = contarPagina;
+  const ESQUEMA_PAGINA = obj({ grupo: S, personagens: { type: "array", items: obj({
+    nome: S, nascimento: S, idade: { type: "integer" }, papel: S, frase: S, ficha: S, emoji: S, cor1: S, cor2: S }) } });
+  const PEDIDO_PAGINA = (grupo, texto) => `Below is text copied from a web page about a group or a series${grupo ? ` ("${grupo}")` : ""}.
+Find every person or character it profiles (for example the members of a group, or the main cast).
+For each one, using ONLY what the text says (no facts from memory, nothing invented):
+- nome: the name they're best known by (their stage name, if they have one)
+- nascimento: birth date as YYYY-MM-DD if the text gives it, otherwise ""
+- idade: age in years if the text gives an age but no birth date, otherwise -1
+- papel: their position or role, short (e.g. main dancer, rapper)
+- ficha: 80 to 150 words in English, third person: who they are, their role, appearance if mentioned, personality and traits,
+  likes, quirks and fun facts from the text. End with a line "Example lines:" and 3 short lines in their voice that fit
+  their personality (in character, not real quotes), one per line, starting with "- ".
+- frase: up to 12 words for a gallery card
+- emoji: one fitting emoji; cor1 and cor2: two dark, saturated hex colors (e.g. "#3a2f5c")
+grupo: the group or series name, if the text says it.
+If the text profiles nobody, return an empty list. Ignore ads, comments and navigation text.
+
+TEXT:
+${texto}`;
+  // Idade a partir da data de nascimento (feita aqui, não pela IA, para não haver erros de contas).
+  function idadeDe(x) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(x.nascimento || "");
+    if (m) {
+      const hojeD = new Date(), ano = +m[1], mes = +m[2], dia = +m[3];
+      if (ano > 1900 && ano <= hojeD.getFullYear() && mes >= 1 && mes <= 12) {
+        let a = hojeD.getFullYear() - ano;
+        if (hojeD.getMonth() + 1 < mes || (hojeD.getMonth() + 1 === mes && hojeD.getDate() < dia)) a--;
+        return a;
+      }
+    }
+    return Number.isInteger(x.idade) && x.idade > 0 && x.idade < 120 ? x.idade : null;
+  }
+  $("pagina").onsubmit = async e => {
+    e.preventDefault();
+    const texto = limparPagina($("pg-texto").value);
+    if (texto.length < 40) { $("pg-estado").innerHTML = `<p class="erro">Paste the text of the page first.</p>`; return; }
+    const partes = [];
+    for (let i = 0; i < texto.length && partes.length < MAX_PARTES; i += PARTE_PAGINA) partes.push(texto.slice(i, i + PARTE_PAGINA));
+    $("pg-ler").disabled = true; $("pg-resultado").hidden = true;
+    const porNome = new Map();
+    let grupo = $("pg-grupo").value.trim();
+    try {
+      for (let i = 0; i < partes.length; i++) {
+        $("pg-estado").innerHTML = `<div class="carregar"><span class="grande">Reading the page${partes.length > 1 ? ` (${i + 1} of ${partes.length})` : ""}…</span>This takes a few seconds.</div>`;
+        const d = await groq([{ role: "user", content: PEDIDO_PAGINA(grupo, partes[i]) }],
+          { esquema: ESQUEMA_PAGINA, nome: "pagina", esforco: "low", max: 4000,
+            onEspera: seg => { $("pg-estado").innerHTML = `<div class="carregar"><span class="grande">Waiting ${seg} s…</span>Groq's free plan allows a few requests per minute.</div>`; } });
+        if (!grupo && d.grupo) grupo = String(d.grupo).slice(0, 80);
+        // a mesma pessoa pode aparecer em duas partes: fica a ficha maior
+        for (const x of (Array.isArray(d.personagens) ? d.personagens : [])) {
+          const nome = String(x.nome || "").trim().slice(0, 60);
+          if (!nome) continue;
+          const k = nome.toLowerCase(), velho = porNome.get(k);
+          if (!velho || String(x.ficha || "").length > String(velho.ficha || "").length) porNome.set(k, Object.assign({}, x, { nome, idade: idadeDe(x) ?? (velho && velho.idade) ?? null }));
+        }
+      }
+    } catch (err) {
+      $("pg-ler").disabled = false;
+      $("pg-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`;
+      if (!porNome.size) return;
+    }
+    $("pg-ler").disabled = false;
+    if (grupo) $("pg-grupo").value = grupo;
+    // quem já está na galeria (mesmo nome) vem desmarcado, para não ficar repetido
+    const jaTenho = new Set(personagens().map(x => x.nome.trim().toLowerCase()));
+    encontrados = [...porNome.values()].map(x => Object.assign(x, { ja: jaTenho.has(x.nome.toLowerCase()), incluir: !jaTenho.has(x.nome.toLowerCase()) }));
+    if (!encontrados.length) { $("pg-estado").innerHTML = `<p class="erro">I couldn't find any characters in that text. Try copying the part of the page with the profiles.</p>`; return; }
+    $("pg-estado").innerHTML = "";
+    desenharEncontrados();
+  };
+  function desenharEncontrados() {
+    $("pg-lista").innerHTML = encontrados.map((x, i) => `<div class="encontrado${x.incluir ? "" : " fora"}" data-i="${i}">
+        <div class="encontrado-topo"><input type="checkbox" class="incluir" ${x.incluir ? "checked" : ""} aria-label="Include">
+          <div class="avatar" style="background:linear-gradient(135deg, ${cor(x.cor1, "#3d2c5c")}, ${cor(x.cor2, "#c76b4a")})">${escapar(String(x.emoji || "✨").slice(0, 8))}</div>
+          <input type="text" class="nome" maxlength="60" value="${escapar(x.nome)}" aria-label="Name">
+          <input type="text" class="idade" inputmode="numeric" maxlength="3" value="${x.idade ?? ""}" placeholder="age" aria-label="Age"></div>
+        <p>${x.ja ? "<b>Already in your gallery.</b> " : ""}${escapar([x.papel, x.frase].filter(Boolean).join(" · "))}</p></div>`).join("");
+    $("pg-lista").querySelectorAll(".encontrado").forEach(c => {
+      const x = encontrados[c.dataset.i];
+      c.querySelector(".incluir").onchange = e => {
+        x.incluir = e.target.checked; c.classList.toggle("fora", !x.incluir);
+        const n = encontrados.filter(y => y.incluir).length; $("pg-criar").textContent = `Create ${n} character${n === 1 ? "" : "s"}`;
+      };
+      c.querySelector(".nome").oninput = e => { x.nome = e.target.value; };
+      c.querySelector(".idade").oninput = e => { x.idade = /^\d+$/.test(e.target.value.trim()) ? +e.target.value.trim() : null; };
+    });
+    $("pg-grupo-opcao").hidden = !!mundoAlvo || encontrados.length < 2;
+    const n = encontrados.filter(x => x.incluir).length;
+    $("pg-criar").textContent = `Create ${n} character${n === 1 ? "" : "s"}`;
+    $("pg-resultado").hidden = false;
+    $("pg-estado2").innerHTML = "";
+  }
+  $("pg-criar").onclick = () => {
+    const escolhidos = encontrados.filter(x => x.incluir && String(x.nome).trim());
+    if (!escolhidos.length) { $("pg-estado2").innerHTML = `<p class="erro">Pick at least one character.</p>`; return; }
+    const semIdade = escolhidos.filter(x => !Number.isInteger(x.idade) || x.idade < 1);
+    if (semIdade.length) { $("pg-estado2").innerHTML = `<p class="erro">Write the age of ${escapar(semIdade.map(x => x.nome).join(", "))}. It decides whether romance is allowed.</p>`; return; }
+    const grupo = $("pg-grupo").value.trim();
+    const novos = escolhidos.map(x => ({
+      id: novoId(), nome: String(x.nome).trim().slice(0, 80), obra: grupo.slice(0, 120),
+      frase: String(x.frase || x.papel || "").slice(0, 200),
+      ficha: (`${String(x.nome).trim()} — ${x.idade} years old${x.papel ? ", " + x.papel : ""}.\n` + String(x.ficha || "")).slice(0, 4000),
+      emoji: String(x.emoji || "✨").slice(0, 8), cores: [cor(x.cor1, "#3d2c5c"), cor(x.cor2, "#c76b4a")],
+      conhecida: true, menor: x.idade < 18,
+    }));
+    if (!gravarPersonagens(novos.concat(personagens()))) { $("pg-estado2").innerHTML = `<p class="erro">Not enough space in this browser.</p>`; return; }
+    // Para onde vão: o grupo de onde vieste, um grupo novo com eles, ou a galeria
+    if (mundoAlvo && mundoDe(mundoAlvo)) {
+      const m = mundoDe(mundoAlvo); mundoAlvo = null;
+      m.personagens = (m.personagens || []).concat(novos.map(x => x.id));
+      atualizarMundo(m); return abrirMundo(m.id);
+    }
+    if (novos.length > 1 && $("pg-criar-grupo").checked) {
+      const m = { id: novoId(), nome: grupo || "New group", descricao: "", personagens: novos.map(x => x.id), emoji: novos[0].emoji, cores: novos[0].cores };
+      atualizarMundo(m); return abrirMundo(m.id);
+    }
+    novos.length === 1 ? abrirPersonagem(novos[0].id) : mostrarGaleria();
   };
 
   // ---------- Página da personagem ----------
@@ -2140,6 +2316,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
   }
   $("mundo-voltar").onclick = mostrarGaleria;
   $("mundo-editar").onclick = () => abrirEditarMundo(mundo);
+  $("mundo-importar").onclick = () => { const id = mundo.id; abrirCriar(); mundoAlvo = id; abrirPagina(); };
   $("mundo-nova-pers").onclick = () => { const id = mundo.id; abrirCriar(); mundoAlvo = id; };
   $("mundo-nova-historia").onclick = () => {
     if (!membros(mundo).length) {
