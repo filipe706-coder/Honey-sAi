@@ -302,6 +302,11 @@
   .rel-item .relacao-topo b { color: var(--texto); }
   .rel-item .relacao-topo span.fase { color: var(--acento); font-size: 13px; font-weight: 600; }
   .gerada { width: 100%; aspect-ratio: 3 / 4; border-radius: 16px; background: var(--fundo) center / cover no-repeat; display: grid; place-items: center; color: var(--suave); font-size: 13px; text-align: center; padding: 16px; }
+  /* Versão simples: menus com uma opção por linha */
+  .topo-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .menu { display: grid; gap: 6px; }
+  .menu-item { text-align: left; background: var(--fundo); border: 1px solid var(--linha); border-radius: 12px; padding: 12px 14px; font-size: 15px; }
+  .menu-item:hover { border-color: var(--acento2); }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
@@ -309,8 +314,6 @@
              border-radius: 16px; padding: 11px 14px; font-size: 15px; outline: none; }
   .caixa textarea:focus { border-color: var(--acento2); }
   .caixa.nota-ligada textarea { border-style: dashed; border-color: var(--acento); }
-  .lampada { opacity: .45; }
-  .lampada.ligada { opacity: 1; }
   .enviar { border: 0; border-radius: 16px; padding: 11px 16px; background: var(--acento); color: var(--sobre-acento); font-weight: 600; }
   .enviar:disabled { opacity: .4; cursor: default; }
   .memoria-btn { position: relative; }
@@ -349,19 +352,8 @@
   <!-- ECRÃ 1: galeria de personagens -->
   <section class="ecra ativo" id="ecra-galeria">
     <div class="topo-galeria gutter">
-      <h1 class="marca">Whis<span>pers</span></h1>
-      <p class="sub">Interactive fanfics with your characters.</p>
-      <p class="copia">Saved in this browser
-        <button type="button" class="ligacao" id="exportar">Export backup</button>
-        <button type="button" class="ligacao" id="importar">Import</button>
-        <button type="button" class="ligacao" id="abrir-chave">Groq key</button>
-        <input type="file" id="ficheiro-copia" accept=".json,application/json" hidden></p>
-      <p class="linha-links">
-        <button type="button" class="ligacao" id="abrir-personas">👤 Your personas</button>
-        <button type="button" class="ligacao" id="abrir-aspeto">Aa Display</button>
-        <button type="button" class="ligacao" id="instalar" hidden>⤓ Install app</button>
-      </p>
-      <p class="uso" id="uso" hidden></p>
+      <div class="topo-linha"><h1 class="marca">Whis<span>pers</span></h1>
+        <button class="icone" id="abrir-definicoes" aria-label="Settings">⚙</button></div>
       <div id="aviso-chave-topo"></div>
     </div>
     <div class="rolar"><div class="lista gutter" id="lista"></div></div>
@@ -371,22 +363,16 @@
   <section class="ecra" id="ecra-criar">
     <div class="barra gutter">
       <button class="icone" id="criar-voltar" aria-label="Back">←</button>
-      <div class="barra-nome"><b>New character</b><small id="criar-passo">Step 1 of 2</small></div>
+      <div class="barra-nome"><b>New character</b><small id="criar-passo"></small></div>
     </div>
     <div class="rolar">
-      <div class="gutter modos" id="modos" role="tablist">
-        <button type="button" class="modo" id="modo-ia" role="tab">AI knows them</button>
-        <button type="button" class="modo" id="modo-pagina" role="tab">Import a page</button>
-        <button type="button" class="modo" id="modo-mao" role="tab">By hand</button>
-      </div>
       <form class="formulario gutter" id="passo1">
-        <p class="dica">Type who you want. The AI uses what it knows about the story to write their personality and the way they talk. You can review everything afterwards.</p>
-        <label>Name<input id="c-nome" maxlength="80" placeholder="e.g. L" required></label>
-        <label>From<input id="c-obra" maxlength="120" placeholder="e.g. Death Note"></label>
-        <label>About the character (optional)<textarea id="c-extra" rows="5" maxlength="4000"
-          placeholder="Paste text from the wiki/Fandom or write what you know. The AI uses this instead of guessing."></textarea></label>
-        <p class="dica">If the AI doesn't know the character well, use <b>Create by hand</b>.</p>
-        <button class="botao" id="gerar">Create profile</button>
+        <p class="dica">Write who it is. The AI writes their personality and way of talking, and you can review it.</p>
+        <label>Name<input id="c-nome" maxlength="80" placeholder="e.g. L"></label>
+        <label>From (optional)<input id="c-obra" maxlength="120" placeholder="e.g. Death Note, or the name of a group"></label>
+        <label>Paste info or a profile page (optional)<textarea id="c-extra" rows="5" maxlength="60000"
+          placeholder="Text from a wiki or a profile page. If it's about a whole group, everyone in it is created at once."></textarea></label>
+        <button class="botao" id="gerar">Create</button>
         <div id="passo1-estado"></div>
       </form>
       <form class="formulario gutter" id="passo2" hidden>
@@ -403,61 +389,15 @@
         </div>
       </form>
 
-      <!-- Importar de uma página: várias personagens de uma vez -->
-      <form class="formulario gutter" id="pagina" hidden>
-        <p class="dica">Found a profile page about a group or a series (Kprofiles, Wikipedia, a fan wiki…)? Select all the text on the page, copy it and paste it here. The AI creates every character in it at once, using only what the page says.</p>
-        <label>Group or series (optional)<input id="pg-grupo" maxlength="80" placeholder="e.g. the group's name"></label>
-        <label>Page text<textarea id="pg-texto" rows="9" maxlength="60000" placeholder="Paste the page here."></textarea></label>
-        <p class="dica" id="pg-conta"></p>
-        <button class="botao" id="pg-ler">Find the characters</button>
-        <div id="pg-estado"></div>
-        <div id="pg-resultado" class="membros" hidden>
-          <span class="rotulo">Found</span>
-          <p class="dica">Check the names and ages. Anyone under 18 gets no romance in their stories.</p>
-          <div class="membros" id="pg-lista"></div>
-          <label class="linha-check" id="pg-grupo-opcao"><input type="checkbox" id="pg-criar-grupo" checked> Also create a group (universe) with them</label>
-          <button type="button" class="botao" id="pg-criar">Create characters</button>
-          <div id="pg-estado2"></div>
-        </div>
-      </form>
-
-      <!-- Criar à mão -->
-      <form class="formulario gutter" id="mao" hidden>
-        <div class="seccao">
-          <h3>Basic info</h3>
-          <p class="dica">Who they are and what they look like. Fields with * are required.</p>
-          <div class="avatar-linha"><label class="carregar-avatar" for="m-foto"><span id="m-foto-ver">+<small>Avatar</small></span></label>
-            <input type="file" id="m-foto" accept="image/*" hidden><p class="dica">Tap to pick a picture from your gallery.</p></div>
-          <label>Name *<input id="m-nome" maxlength="40" required></label>
-          <div class="duas">
-            <label>Age *<input id="m-idade" inputmode="numeric" maxlength="4" placeholder="e.g. 22" required></label>
-            <label>Height<input id="m-altura" maxlength="10" placeholder="e.g. 6'2&quot;"></label>
-          </div>
-          <div><span class="rotulo">Gender</span><div class="tons" id="m-genero"></div></div>
-          <label>Occupation<input id="m-ocupacao" maxlength="60" placeholder="e.g. squad captain, barista, CEO"></label>
-          <label>Where they're from (optional)<input id="m-obra" maxlength="120" placeholder="Leave empty if the character is yours"></label>
-          <label>Appearance<textarea id="m-aparencia" rows="2" maxlength="600" placeholder="Hair, eyes, clothes, what you notice at first glance."></textarea></label>
-        </div>
-        <div class="seccao">
-          <h3>Personality</h3>
-          <p class="dica">Pick up to 4 types. The AI adapts how they act to each one.</p>
-          <div class="tons" id="m-tipos"></div>
-          <label>Describe it your way<textarea id="m-personalidade" rows="3" maxlength="1000" placeholder="e.g. seems cold and bossy, but notices everything and protects the people he cares about without admitting it."></textarea></label>
-          <label>Way of speaking<textarea id="m-fala" rows="2" maxlength="400" placeholder="e.g. short, blunt sentences, sarcasm, calls you 'brat' when he wants to annoy you."></textarea></label>
-          <label>Example lines<textarea id="m-exemplos" rows="3" maxlength="600" placeholder="One per line. e.g. Late again? Typical."></textarea></label>
-        </div>
-        <div class="seccao">
-          <h3>Profile</h3>
-          <label>Relationship with you, motivations and goals<textarea id="m-perfil" rows="3" maxlength="1000" placeholder="e.g. your training rival since the academy; wants to be the best and hates losing to you."></textarea></label>
-          <label>Background (past, family, likes and quirks)<textarea id="m-historico" rows="4" maxlength="2000" placeholder="e.g. grew up on the streets, obsessed with cleaning, drinks black tea."></textarea></label>
-          <label>Card tagline (optional)<input id="m-frase" maxlength="120" placeholder="Shown in the gallery"></label>
-        </div>
-        <div class="acoes">
-          <button type="button" class="botao secundario" id="completar">Fill in with AI</button>
-          <button class="botao" id="guardar-mao">Create character</button>
-        </div>
-        <div id="mao-estado"></div>
-      </form>
+      <!-- O que se encontrou numa página colada -->
+      <div class="formulario gutter" id="pagina" hidden>
+        <span class="rotulo">Found</span>
+        <p class="dica">Check the names and ages. Anyone under 18 gets no romance in their stories.</p>
+        <div class="membros" id="pg-lista"></div>
+        <label class="linha-check" id="pg-grupo-opcao"><input type="checkbox" id="pg-criar-grupo" checked> Also make a group with them</label>
+        <button type="button" class="botao" id="pg-criar">Create characters</button>
+        <div id="pg-estado2"></div>
+      </div>
     </div>
   </section>
 
@@ -473,16 +413,8 @@
       <div class="perfil gutter">
         <p class="perfil-frase" id="pers-frase"></p>
         <button class="botao" id="nova-historia">New story</button>
-        <div class="botoes-pers">
-          <button type="button" class="botao secundario" id="pers-fundo-btn">🖼 Story background</button>
-          <button type="button" class="ligacao" id="pers-fundo-tirar" hidden>use the avatar instead</button>
-          <input type="file" id="pers-fundo" accept="image/*" hidden>
-          <button type="button" class="botao secundario" id="pers-gerar">✨ Generate a picture</button>
-        </div>
-        <p class="dica" id="pers-fundo-estado"></p>
       </div>
       <div class="historias gutter" id="historias"></div>
-      <div class="perigos gutter" style="padding-bottom:28px"><button type="button" class="perigo" id="apagar-pers">Delete this character</button></div>
     </div>
   </section>
 
@@ -492,7 +424,7 @@
       <button class="icone" id="mundo-voltar" aria-label="Back">←</button>
       <div class="avatar" id="mundo-avatar"></div>
       <div class="barra-nome"><b id="mundo-nome"></b><small id="mundo-sub"></small></div>
-      <button class="icone" id="mundo-editar" aria-label="Edit universe">✎</button>
+      <button class="icone" id="mundo-editar" aria-label="Edit group">✎</button>
     </div>
     <div class="rolar">
       <div class="perfil gutter">
@@ -505,14 +437,9 @@
         <span class="rotulo">Members</span>
         <p class="dica">Write each one's history with you: how you met, what you are to each other, what happened. The narrator uses it in every story here.</p>
         <div class="membros" id="mundo-membros"></div>
-        <span class="rotulo" style="margin-top:6px">Add from your gallery</span>
+        <span class="rotulo" style="margin-top:6px">Add from your characters</span>
         <div class="tons" id="mundo-elenco"></div>
-        <button type="button" class="atalho" id="mundo-importar">📋 Import members from a page</button>
-        <button type="button" class="atalho" id="mundo-nova-pers">+ Create a new character for this group</button>
-      </div>
-      <div class="mundo-bloco gutter">
-        <span class="rotulo">Canon</span>
-        <ul class="canon" id="mundo-canon"></ul>
+        <button type="button" class="atalho" id="mundo-nova-pers">+ New member (or paste a page with the whole group)</button>
       </div>
       <div class="historias gutter" id="mundo-historias"></div>
     </div>
@@ -522,29 +449,18 @@
   <section class="ecra" id="ecra-mundo-editar">
     <div class="barra gutter">
       <button class="icone" id="mw-voltar" aria-label="Back">←</button>
-      <div class="barra-nome"><b id="mw-titulo">New universe</b><small>Only the name is required</small></div>
+      <div class="barra-nome"><b id="mw-titulo">New group</b><small>Only the name is required</small></div>
     </div>
     <div class="rolar">
       <form class="formulario gutter" id="form-mundo">
-        <p class="dica">A place to bring characters together: a K-pop group, a friend group, a team… You add the members and their history with you on the next page.</p>
+        <p class="dica">Put characters together: a K-pop group, a friend group, a team… You add the members and their history with you on the next page.</p>
         <div class="avatar-linha"><label class="carregar-avatar" for="mw-foto"><span>+<small>Cover</small></span></label>
           <input type="file" id="mw-foto" accept="image/*" hidden><p class="dica">Tap to add a cover picture (optional).</p></div>
         <label>Name *<input id="mw-nome" maxlength="60" placeholder="e.g. the group's name" required></label>
         <label>In a few words (optional)<textarea id="mw-descricao" rows="2" maxlength="1200" placeholder="e.g. a K-pop group that debuted this year; they live together in a dorm in Seoul."></textarea></label>
-        <details class="mais" id="mw-mais"><summary>More details (optional)</summary><div class="dentro">
-        <p class="dica">Only if you want a specific world. If you leave this empty, the narrator invents places and details as the story needs them, and remembers them.</p>
-        <label>Based on<input id="mw-obra" maxlength="120" placeholder="e.g. Attack on Titan · empty if it's original"></label>
-        <label>Kind of world<input id="mw-genero" maxlength="80" placeholder="e.g. idol life in Seoul, magic school, cyberpunk city"></label>
-        <label>Places<textarea id="mw-lugares" rows="3" maxlength="800" placeholder="One per line. e.g. The Glass Library: forbidden after midnight."></textarea></label>
-        <label>Groups and factions<textarea id="mw-grupos" rows="3" maxlength="800" placeholder="One per line. e.g. The Night Wardens: guard the city, trust nobody."></textarea></label>
-        <label>Rules<textarea id="mw-regras" rows="3" maxlength="800" placeholder="Magic, technology, laws, what's impossible here."></textarea></label>
-        <label>Canon facts<textarea id="mw-canon" rows="3" maxlength="1500" placeholder="One per line. Things that stay true in every story here."></textarea></label>
-        <label>Card tagline<input id="mw-frase" maxlength="120" placeholder="Shown in the gallery"></label>
-        <button type="button" class="botao secundario" id="completar-mundo">Fill in the empty details with AI</button>
-        </div></details>
-        <button class="botao" id="guardar-mundo">Create universe</button>
+        <button class="botao" id="guardar-mundo">Create group</button>
         <div id="mundo-estado"></div>
-        <div class="perigos" id="mw-perigos"><button type="button" class="perigo" id="apagar-mundo">Delete this universe</button></div>
+        <div class="perigos" id="mw-perigos"><button type="button" class="perigo" id="apagar-mundo">Delete this group</button></div>
       </form>
     </div>
   </section>
@@ -557,22 +473,19 @@
     </div>
     <div class="rolar">
       <form class="formulario gutter" id="form-nova">
-        <p class="dica">Write whatever you like, it's all optional. Out of ideas? Tap <b>Surprise me</b>.</p>
-        <div class="elenco-bloco" id="h-elenco-bloco" hidden>
-          <span class="rotulo">Main character</span><div class="tons" id="h-principal"></div>
-          <span class="rotulo" style="margin-top:10px">Also in the scene (up to 4)</span><div class="tons" id="h-outros"></div>
-        </div>
-        <button type="button" class="atalho" id="atalho-slow">✦ Slow burn between friends or rivals</button>
-        <label><span id="h-premissa-rotulo">The idea</span><textarea id="h-premissa" rows="3" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
-        <label id="h-universo-campo"><span id="h-universo-rotulo">World and setting</span><textarea id="h-universo" rows="2" maxlength="800" placeholder="e.g. alternate universe, modern-day London, winter."></textarea></label>
-        <div><span class="rotulo">You are</span><div class="tons" id="h-persona"></div></div>
-        <label>Your role in this story<textarea id="h-papel" rows="2" maxlength="800" placeholder="e.g. Cat, 24, a hacker who works at a café by day."></textarea></label>
-        <div><span class="rotulo">Your relationship</span><div class="tons" id="h-relacao"></div></div>
-        <div><span class="rotulo">Tone</span><div class="tons" id="h-tons"></div></div>
-        <div class="acoes">
-          <button type="button" class="botao secundario" id="surpreende">Surprise me</button>
-          <button class="botao" id="comecar">Start story</button>
-        </div>
+        <label><span id="h-premissa-rotulo">What happens?</span><textarea id="h-premissa" rows="4" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
+        <p class="dica">Optional. Leave it empty and the AI comes up with something.</p>
+        <details class="mais" id="h-mais"><summary>More options</summary><div class="dentro">
+          <div class="elenco-bloco" id="h-elenco-bloco" hidden>
+            <span class="rotulo">Main character</span><div class="tons" id="h-principal"></div>
+            <span class="rotulo" style="margin-top:10px">Also in the scene (up to 4)</span><div class="tons" id="h-outros"></div>
+          </div>
+          <div><span class="rotulo">You are</span><div class="tons" id="h-persona"></div></div>
+          <label>Your role in this story<textarea id="h-papel" rows="2" maxlength="800" placeholder="e.g. Cat, 24, a hacker who works at a café by day."></textarea></label>
+          <div><span class="rotulo">Your relationship</span><div class="tons" id="h-relacao"></div></div>
+          <div><span class="rotulo">Tone</span><div class="tons" id="h-tons"></div></div>
+        </div></details>
+        <button class="botao" id="comecar">Start story</button>
         <div id="nova-estado"></div>
       </form>
     </div>
@@ -585,8 +498,7 @@
       <button class="icone" id="hist-voltar" aria-label="Back">←</button>
       <div class="avatar" id="hist-avatar"></div>
       <div class="barra-nome"><b id="hist-titulo"></b><small id="hist-com"></small></div>
-      <button class="icone aa" id="abrir-aspeto-h" aria-label="Display">Aa</button>
-      <button class="icone memoria-btn" id="abrir-contexto" aria-label="Context and memory">📖<span class="contador" id="contador">0</span></button>
+      <button class="icone" id="abrir-contexto" aria-label="Story menu">⋯</button>
     </div>
     <div class="relacao-barra gutter" id="relacao-barra" hidden>
       <div class="relacao-topo"><span class="icone-rel" id="rel-icone"></span><b id="rel-nome"></b><small id="rel-dica"></small></div>
@@ -596,7 +508,6 @@
     <div class="escolhas gutter" id="escolhas"></div>
     <div class="modo-nota gutter" id="modo-nota" hidden>✎ Author's note: tell the narrator what to change (it isn't something you do).</div>
     <form class="caixa gutter" id="form">
-      <button type="button" class="icone lampada" id="lampada" aria-label="Show suggestions">💡</button>
       <button type="button" class="icone" id="botao-nota" aria-label="Author's note" aria-pressed="false">✎</button>
       <textarea id="texto" rows="1" placeholder="What do you say or do…"></textarea>
       <button class="enviar" id="enviar">Send</button>
@@ -604,6 +515,54 @@
     <div class="toast" id="toast" role="status"></div>
     <div class="recap" id="recap" role="status" hidden></div>
   </section>
+
+  <!-- Painel: definições (tudo o que não é do dia a dia) -->
+  <div class="painel" id="painel-definicoes" hidden>
+    <div class="gaveta gutter">
+      <h3>Settings</h3>
+      <p class="uso" id="uso" hidden></p>
+      <div class="menu">
+        <button type="button" class="menu-item" id="abrir-chave">🔑 Groq key</button>
+        <button type="button" class="menu-item" id="abrir-personas">👤 Your personas</button>
+        <button type="button" class="menu-item" id="abrir-aspeto">Aa  Display</button>
+        <button type="button" class="menu-item" id="instalar" hidden>⤓ Install on your phone</button>
+        <button type="button" class="menu-item" id="exportar">⬇ Export backup</button>
+        <button type="button" class="menu-item" id="importar">⬆ Import backup</button>
+        <input type="file" id="ficheiro-copia" accept=".json,application/json" hidden>
+      </div>
+      <p class="dica">Everything is saved only in this browser.</p>
+      <button type="button" class="botao secundario" id="fechar-definicoes">Close</button>
+    </div>
+  </div>
+
+  <!-- Painel: criar o quê? -->
+  <div class="painel" id="painel-novo" hidden>
+    <div class="gaveta gutter">
+      <h3>Create</h3>
+      <div class="menu">
+        <button type="button" class="menu-item" id="novo-pers">👤 A character</button>
+        <button type="button" class="menu-item" id="novo-grupo">👥 A group (several characters together)</button>
+      </div>
+      <button type="button" class="botao secundario" id="fechar-novo">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Painel: opções da personagem -->
+  <div class="painel" id="painel-pers" hidden>
+    <div class="gaveta gutter">
+      <h3 id="pm-titulo">Character</h3>
+      <div class="menu">
+        <button type="button" class="menu-item" id="pers-editar-ficha">✎ Edit profile and avatar</button>
+        <button type="button" class="menu-item" id="pers-gerar">✨ Generate a picture</button>
+        <button type="button" class="menu-item" id="pers-fundo-btn">🖼 Story background picture</button>
+        <button type="button" class="menu-item" id="pers-fundo-tirar" hidden>Use the avatar as background again</button>
+        <input type="file" id="pers-fundo" accept="image/*" hidden>
+      </div>
+      <p class="dica" id="pers-fundo-estado"></p>
+      <button type="button" class="perigo" id="apagar-pers">Delete this character</button>
+      <button type="button" class="botao secundario" id="fechar-pers">Close</button>
+    </div>
+  </div>
 
   <!-- Painel: chave do Groq -->
   <div class="painel" id="painel-chave" hidden>
@@ -656,9 +615,6 @@
       <div><span class="rotulo">Theme</span><div class="tons" id="a-tema"></div></div>
       <div><span class="rotulo">Story text size</span><div class="tons" id="a-letra"></div></div>
       <div><span class="rotulo">Story background</span><div class="tons" id="a-fundo"></div></div>
-      <div><span class="rotulo">Background dim</span><div class="tons" id="a-veu"></div></div>
-      <div><span class="rotulo">Relationship bar</span><div class="tons" id="a-barra"></div></div>
-      <p class="dica">Each character's page has <b>🖼 Story background</b> to pick a picture just for the stories (a tall one works best). Without it, the avatar is used.</p>
       <div class="cena amostra">The rain taps on the window. <em>He doesn't look up.</em></div>
       <button type="button" class="botao" id="fechar-aspeto">Done</button>
     </div>
@@ -699,11 +655,11 @@
   <!-- Painel: contexto e memória da história -->
   <div class="painel" id="painel-contexto" hidden>
     <div class="gaveta gutter">
-      <h3>Story context</h3>
+      <h3>This story</h3>
+      <button type="button" class="menu-item" id="abrir-aspeto-h">Aa  Display (theme, text size, background)</button>
       <form class="formulario" id="form-contexto">
         <label>Title<input id="e-titulo" maxlength="120"></label>
         <label>The idea<textarea id="e-premissa" rows="3" maxlength="1500"></textarea></label>
-        <label>World and setting<textarea id="e-universo" rows="2" maxlength="800"></textarea></label>
         <div><span class="rotulo">You are</span><div class="tons" id="e-persona"></div></div>
         <label>Your role in this story<textarea id="e-papel" rows="2" maxlength="800"></textarea></label>
         <div><span class="rotulo">Your relationship</span><div class="tons" id="e-relacao"></div></div>
@@ -865,14 +821,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   // Cada campo é cortado para o pedido não crescer demais (~700 tokens no máximo).
   function blocoMundo(m) {
     if (!m) return "";
-    const canon = linhas(m.canon).slice(-10);
-    return `\n\n## The universe: ${m.nome}${m.obra ? " (based on " + m.obra + ")" : ""}`
-      + (m.genero ? `\nKind of world: ${m.genero}` : "")
-      + (m.descricao ? `\n${m.descricao.slice(0, 900)}` : "")
-      + (m.lugares ? `\nPlaces:\n${m.lugares.slice(0, 400)}` : "")
-      + (m.grupos ? `\nGroups and factions:\n${m.grupos.slice(0, 400)}` : "")
-      + (m.regras ? `\nRules of this world (never break them):\n${m.regras.slice(0, 400)}` : "")
-      + (canon.length ? `\nCanon (true in every story in this universe):\n${canon.map(f => "- " + f).join("\n")}` : "")
+    return `\n\n## The group: ${m.nome}` + (m.descricao ? `\n${m.descricao.slice(0, 900)}` : "")
       + `\n(Anything not described here: invent it to fit, then keep it consistent.)`;
   }
   // Quem está na história recebe uma ficha média; quem só vive no universo recebe uma linha.
@@ -1224,35 +1173,27 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     $("aviso-chave-topo").innerHTML = chave() ? "" :
       `<div class="aviso-topo">To get started, add your free Groq key. <button type="button" class="ligacao" id="aviso-chave">Set it up now</button></div>`;
     if (!chave()) $("aviso-chave").onclick = abrirChave;
-    mostrarUso();
     const lista = personagens(), ms = mundos(), hs = historias();
     if (!lista.length && !ms.length) {
       $("lista").innerHTML = `
         <div class="vazio-galeria">
           <div class="grande">Who do you want to write with?</div>
-          <p>Pick someone from an anime, show, book or game, or make up a character of your own.</p>
-          <div class="exemplos">
-            <button class="exemplo" data-nome="L" data-obra="Death Note">L · Death Note</button>
-            <button class="exemplo" data-nome="Sherlock Holmes" data-obra="Sherlock (BBC)">Sherlock Holmes</button>
-            <button class="exemplo" data-nome="Geralt of Rivia" data-obra="The Witcher">Geralt of Rivia</button>
-          </div>
-          <button class="botao" id="criar-primeira">Create character</button>
-          <button class="ligacao" id="criar-primeiro-mundo">or create a universe first</button>
+          <p>Someone from an anime, a show, a book, a game or a group, or a character of your own.</p>
+          <button class="botao" id="criar-primeira">Create a character</button>
+          <button class="ligacao" id="criar-primeiro-mundo">or a group</button>
         </div>`;
       $("criar-primeira").onclick = () => abrirCriar();
       $("criar-primeiro-mundo").onclick = () => abrirEditarMundo(null);
-      document.querySelectorAll(".exemplo").forEach(b => b.onclick = () => abrirCriar(b.dataset.nome, b.dataset.obra));
       return;
     }
-    // Fila dos universos (desliza para o lado) e depois as personagens
-    const filaMundos = `<span class="rotulo">Universes</span><div class="mundos">` + ms.map(m => {
-        const n = hs.filter(h => h.mundo === m.id).length, np = membros(m).length;
+    const filaMundos = !ms.length ? "" : `<span class="rotulo">Groups</span><div class="mundos">` + ms.map(m => {
+        const np = membros(m).length;
         return `<button class="mundo-carta" data-mundo="${m.id}">
           <div class="mundo-capa${m.avatar ? " com-foto" : ""}" style="background:${capa(m)}">${m.avatar ? "" : escapar(m.emoji)}</div>
-          <div class="mundo-corpo"><b>${escapar(m.nome)}</b><span>${formatar(m.frase || m.genero || "")}</span>
-          <small>${np} ${np === 1 ? "character" : "characters"}${n ? " · " + n + " " + (n === 1 ? "story" : "stories") : ""}</small></div></button>`;
-      }).join("") + `<button class="criar-mundo" id="criar-mundo">+ New universe</button></div><span class="rotulo">Characters</span>`;
-    $("lista").innerHTML = filaMundos + `<button class="criar-carta" id="criar-nova">+ Create character</button>` +
+          <div class="mundo-corpo"><b>${escapar(m.nome)}</b><small>${np} ${np === 1 ? "member" : "members"}</small></div></button>`;
+      }).join("") + `</div>`;
+    $("lista").innerHTML = `<button class="criar-carta" id="criar-nova">+ New</button>` + filaMundos
+      + (lista.length ? `<span class="rotulo">Characters</span>` : "") +
       lista.map(p => {
         const n = hs.filter(h => h.personagem === p.id).length;
         return `<button class="carta" data-id="${p.id}">
@@ -1263,11 +1204,20 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
             ${n ? `<div class="continuar">${n} ${n === 1 ? "story" : "stories"}</div>` : ""}
           </div></button>`;
       }).join("");
-    $("criar-nova").onclick = () => abrirCriar();
-    $("criar-mundo").onclick = () => abrirEditarMundo(null);
+    $("criar-nova").onclick = () => { $("painel-novo").hidden = false; };
     document.querySelectorAll(".mundo-carta").forEach(b => b.onclick = () => abrirMundo(b.dataset.mundo));
     document.querySelectorAll(".carta").forEach(b => b.onclick = () => abrirPersonagem(b.dataset.id));
   }
+  // ---------- Painéis da galeria: ⚙ e "+ New" ----------
+  $("abrir-definicoes").onclick = () => { mostrarUso(); $("painel-definicoes").hidden = false; };
+  $("fechar-definicoes").onclick = () => { $("painel-definicoes").hidden = true; };
+  $("painel-definicoes").onclick = e => { if (e.target.id === "painel-definicoes") $("painel-definicoes").hidden = true; };
+  // cada opção das definições fecha este painel e abre a sua
+  document.querySelectorAll("#painel-definicoes .menu-item").forEach(b => b.addEventListener("click", () => { $("painel-definicoes").hidden = true; }));
+  $("novo-pers").onclick = () => { $("painel-novo").hidden = true; abrirCriar(); };
+  $("novo-grupo").onclick = () => { $("painel-novo").hidden = true; abrirEditarMundo(null); };
+  $("fechar-novo").onclick = () => { $("painel-novo").hidden = true; };
+  $("painel-novo").onclick = e => { if (e.target.id === "painel-novo") $("painel-novo").hidden = true; };
 
   // ---------- Cópia de segurança ----------
   $("exportar").onclick = () => {
@@ -1325,21 +1275,12 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   };
 
   // ---------- Criar / editar personagem ----------
-  function escolherModo(modo) {
-    $("modo-ia").setAttribute("aria-selected", String(modo === "ia"));
-    $("modo-mao").setAttribute("aria-selected", String(modo === "mao"));
-    $("modo-pagina").setAttribute("aria-selected", String(modo === "pagina"));
-    $("passo1").hidden = modo !== "ia"; $("passo2").hidden = true; $("mao").hidden = modo !== "mao"; $("pagina").hidden = modo !== "pagina";
-    $("criar-passo").textContent = modo === "mao" ? "Create by hand" : modo === "pagina" ? "Import from a page" : "Step 1 of 2";
-  }
   function abrirCriar(nome = "", obra = "") {
     rascunho = null; fotoNova = null; mundoAlvo = null; encontrados = [];
-    $("pagina").reset(); $("pg-resultado").hidden = true; $("pg-estado").innerHTML = ""; $("pg-conta").textContent = "";
     $("passo1").reset(); $("c-nome").value = nome; $("c-obra").value = obra;
-    $("modos").hidden = false;
-    escolherModo("ia");
+    $("passo1").hidden = false; $("passo2").hidden = true; $("pagina").hidden = true;
     $("passo1-estado").innerHTML = "";
-    $("criar-passo").textContent = "Step 1 of 2";
+    $("criar-passo").textContent = "";
     mostrar("ecra-criar");
     $("c-nome").focus();
   }
@@ -1347,17 +1288,17 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     rascunho = p;
     $("r-nome").value = p.nome; $("r-obra").value = p.obra; $("r-frase").value = p.frase; $("r-ficha").value = p.ficha;
     $("aviso-ficha").innerHTML = p.conhecida ? "" :
-      `<div class="aviso">I don't know this character well, so this profile is generic. Paste some information about them and generate again, or <button type="button" class="ligacao" id="ir-mao">create them by hand</button>.</div>`;
-    if (!p.conhecida) $("ir-mao").onclick = () => abrirMao(null, { nome: p.nome, obra: p.obra });
-    $("passo1").hidden = true; $("passo2").hidden = false; $("mao").hidden = true; $("modos").hidden = true;
+      `<div class="aviso">I don't know this character well, so this profile is generic. You can write more about them below, or go back and paste some information.</div>`;
+    $("passo1").hidden = true; $("passo2").hidden = false; $("pagina").hidden = true;
     fotoNova = null; mostrarFoto($("r-foto"), p.avatar);
     $("regerar").hidden = !!editar;
-    $("criar-passo").textContent = editar ? "Edit profile" : "Step 2 of 2 · review the profile";
+    $("criar-passo").textContent = editar ? "Edit profile" : "Review the profile";
     mostrar("ecra-criar");
   }
   async function gerarFicha() {
-    const nome = $("c-nome").value.trim();
-    if (!nome) return;
+    const nome = $("c-nome").value.trim(), extra = $("c-extra").value.trim();
+    if (extra.length > 1500 || (!nome && extra.length > 40)) return lerPagina(limparPagina(extra), $("c-obra").value.trim(), nome);
+    if (!nome) { $("passo1-estado").innerHTML = `<p class="erro">Write a name (or paste a page).</p>`; return; }
     $("gerar").disabled = $("regerar").disabled = true;
     $("passo1").hidden = false; $("passo2").hidden = true;
     $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">Getting to know ${escapar(nome)}…</span>This takes a few seconds.</div>`;
@@ -1412,139 +1353,20 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     caixa.style.backgroundImage = url ? `url(${url})` : "";
     caixa.classList.toggle("com-foto", !!url);
   }
-  for (const id of ["m-foto", "r-foto", "mw-foto"]) $(id).onchange = async e => {
+  for (const id of ["r-foto", "mw-foto"]) $(id).onchange = async e => {
     const f = e.target.files[0]; e.target.value = "";
     if (!f) return;
     try { fotoNova = await reduzirFoto(f); mostrarFoto($(id), fotoNova); }
-    catch (err) { $(id === "m-foto" ? "mao-estado" : id === "mw-foto" ? "mundo-estado" : "aviso-ficha").innerHTML = `<p class="erro">I couldn't open that image. Try another one (JPG or PNG).</p>`; }
+    catch (err) { $(id === "mw-foto" ? "mundo-estado" : "aviso-ficha").innerHTML = `<p class="erro">I couldn't open that image. Try another one (JPG or PNG).</p>`; }
   };
 
-  // ---------- Criar à mão ----------
-  let editarId = null;   // id da personagem que estamos a editar (ou null se é nova)
-  function botoesUnicos(caixa, lista, escolhida) {
-    caixa.innerHTML = lista.map(x => `<button type="button" class="tom" aria-pressed="${x === escolhida}">${x}</button>`).join("");
-    caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => {
-      const ja = b.getAttribute("aria-pressed") === "true";
-      caixa.querySelectorAll(".tom").forEach(x => x.setAttribute("aria-pressed", "false"));
-      b.setAttribute("aria-pressed", String(!ja));
-    });
-  }
-  function desenharTipos(escolhidos) {
-    const caixa = $("m-tipos");
-    caixa.innerHTML = Object.keys(PERSONALIDADES).map(t => `<button type="button" class="tom" aria-pressed="${escolhidos.includes(t)}">${t}</button>`).join("");
-    caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => {
-      const ligar = b.getAttribute("aria-pressed") !== "true";
-      if (ligar && caixa.querySelectorAll('.tom[aria-pressed="true"]').length >= 4) return;   // máximo 4
-      b.setAttribute("aria-pressed", String(ligar));
-    });
-  }
-  const CAMPOS = ["nome", "idade", "altura", "ocupacao", "obra", "aparencia", "personalidade", "fala", "exemplos", "perfil", "historico", "frase"];
-  function abrirMao(p, base) {
-    editarId = p ? p.id : null;
-    fotoNova = null;
-    const c = (p && p.campos) || Object.assign({ genero: "", tipos: [] }, base || {});
-    $("mao").reset();
-    for (const k of CAMPOS) $("m-" + k).value = c[k] || "";
-    botoesUnicos($("m-genero"), GENEROS, c.genero);
-    desenharTipos(c.tipos || []);
-    mostrarFoto($("m-foto"), p ? p.avatar : "");
-    $("mao-estado").innerHTML = "";
-    $("guardar-mao").textContent = p ? "Save changes" : "Create character";
-    $("modos").hidden = !!p;
-    escolherModo("mao");
-    if (p) $("criar-passo").textContent = "Edit character";
-    mostrar("ecra-criar");
-  }
-  function lerMao() {
-    const c = {};
-    for (const k of CAMPOS) c[k] = $("m-" + k).value.trim();
-    c.genero = ($("m-genero").querySelector('.tom[aria-pressed="true"]') || {}).textContent || "";
-    c.tipos = [...$("m-tipos").querySelectorAll('.tom[aria-pressed="true"]')].map(b => b.textContent);
-    return c;
-  }
-  // Junta os campos numa ficha de texto para o narrador.
-  function montarFicha(c) {
-    const linhas = [];
-    const id = [c.idade && c.idade + " years old", c.genero && c.genero.toLowerCase(), c.altura, c.ocupacao].filter(Boolean).join(", ");
-    linhas.push(`${c.nome}${id ? " — " + id : ""}.`);
-    if (c.aparencia) linhas.push("Appearance: " + c.aparencia);
-    if (c.tipos.length) linhas.push("Personality type: " + c.tipos.map(t => PERSONALIDADES[t]).join("; ") + ".");
-    if (c.personalidade) linhas.push("Personality: " + c.personalidade);
-    if (c.fala) linhas.push("Way of speaking: " + c.fala);
-    if (c.perfil) linhas.push("Relationship with the user and goals: " + c.perfil);
-    if (c.historico) linhas.push("Background: " + c.historico);
-    if (c.exemplos) linhas.push("Example lines:\n" + c.exemplos.split("\n").map(l => l.trim()).filter(Boolean).map(l => "- " + l.replace(/^[-–—]\s*/, "")).join("\n"));
-    return linhas.join("\n");
-  }
-  function maoOcupado(sim, texto) {
-    $("completar").disabled = $("guardar-mao").disabled = sim;
-    $("mao-estado").innerHTML = sim ? `<div class="carregar"><span class="grande">${texto}</span></div>` : "";
-  }
-
-  // "Completar com IA": preenche só os campos vazios, coerentes com o que já está escrito.
-  const ESQUEMA_COMPLETAR = obj({ aparencia: S, personalidade: S, fala: S, exemplos: S, perfil: S, historico: S, frase: S });
-  $("completar").onclick = async () => {
-    const c = lerMao();
-    if (!c.nome) { $("mao-estado").innerHTML = `<p class="erro">Write at least the name.</p>`; return; }
-    maoOcupado(true, "Filling in the character…");
-    try {
-      const d = await groq([{ role: "user", content: `You are helping to create a character for interactive fanfics.
-What the user already wrote (DON'T change any of it; you fill in the empty fields, consistent with the rest):
-${JSON.stringify(Object.assign({}, c, { tipos: c.tipos.map(t => PERSONALIDADES[t]) }), null, 1)}
-${c.obra ? "The character is from \"" + c.obra + "\": use what you know about them, without inventing facts you're not sure of." : "The character is the user's own original creation."}
-Return ALL the requested fields. For fields that are already filled in, return exactly the same text.
-- aparencia: 1 or 2 sentences. personalidade: 2 or 3 sentences. fala: 1 sentence about their tone and expressions.
-- exemplos: 4 short, typical lines, one per line, starting with "- ".
-- perfil: relationship with the user and goals, 1 or 2 sentences. historico: 2 or 3 sentences. frase: a description of up to 12 words.
-Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esforco: "medium", max: 2500 });
-      for (const k of Object.keys(ESQUEMA_COMPLETAR.properties))
-        if (!$("m-" + k).value.trim() && d[k]) $("m-" + k).value = String(d[k]).slice(0, +$("m-" + k).maxLength || 2000);
-      maoOcupado(false);
-      $("mao-estado").innerHTML = `<p class="dica">I filled in the empty fields. Change anything you like and tap ${escapar($("guardar-mao").textContent)}.</p>`;
-    } catch (e) { maoOcupado(false); $("mao-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
-  };
-
-  // Guardar: a idade decide a regra de menores; se for de uma obra, a IA confirma a idade na obra.
-  $("mao").onsubmit = async e => {
-    e.preventDefault();
-    const c = lerMao();
-    const idade = parseInt(c.idade, 10);
-    if (!c.nome) { $("mao-estado").innerHTML = `<p class="erro">The name is missing.</p>`; return; }
-    if (!Number.isFinite(idade) || idade < 1) { $("mao-estado").innerHTML = `<p class="erro">Write the age as a number (e.g. 22).</p>`; $("m-idade").focus(); return; }
-    let menor = idade < 18;
-    const antiga = editarId ? personagens().find(x => x.id === editarId) : null;
-    if (!menor && c.obra && !(antiga && antiga.campos && antiga.campos.obra === c.obra && antiga.campos.nome === c.nome)) {
-      maoOcupado(true, "Checking the character…");
-      try {
-        const d = await groq([{ role: "user", content: `The character "${c.nome}" from "${c.obra}": in the original work, are they under 18 for all or most of the story? If in doubt, answer true.` }],
-          { esquema: obj({ menor_na_obra: B }), nome: "idade", max: 400 });
-        menor = d.menor_na_obra !== false;
-      } catch (err) { maoOcupado(false); $("mao-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; return; }
-      maoOcupado(false);
-    } else if (!menor && antiga) menor = !!antiga.menor;
-    const p = Object.assign({}, antiga || { id: novoId(), emoji: "✨", cores: PALETAS[Math.floor(Math.random() * PALETAS.length)] }, {
-      nome: c.nome, obra: c.obra,
-      frase: c.frase || [c.ocupacao, c.tipos.slice(0, 2).join(", ").toLowerCase()].filter(Boolean).join(" · ") || "Original character",
-      ficha: montarFicha(c).slice(0, 4000),
-      campos: c, conhecida: true, menor,
-      avatar: fotoNova !== null ? fotoNova : (antiga ? antiga.avatar : ""),
-    });
-    const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
-    editarId = null;
-    if (depoisDeGuardar(p) === true) return;
-    if (menor && idade >= 18) $("historias").insertAdjacentHTML("afterbegin",
-      `<p class="aviso">${escapar(p.nome)} is a minor in the original work, so stories with this character don't have romance.</p>`);
-  };
-  $("modo-ia").onclick = () => escolherModo("ia");
-  $("modo-pagina").onclick = () => abrirPagina();
-  $("modo-mao").onclick = () => abrirMao(null, { nome: $("c-nome").value.trim(), obra: $("c-obra").value.trim() });
 
   $("passo1").onsubmit = e => { e.preventDefault(); gerarFicha(); };
   $("regerar").onclick = gerarFicha;
   $("passo2").onsubmit = e => { e.preventDefault(); guardarFicha(); };
   $("criar-voltar").onclick = () => {
-    if (mundoAlvo) { const m = mundoAlvo; mundoAlvo = null; rascunho = null; editarId = null; return abrirMundo(m); }
-    const id = editarId || (rascunho && rascunho.id); rascunho = null; editarId = null;
+    if (mundoAlvo) { const m = mundoAlvo; mundoAlvo = null; rascunho = null; return abrirMundo(m); }
+    const id = rascunho && rascunho.id; rascunho = null;
     id && personagens().some(x => x.id === id) ? abrirPersonagem(id) : mostrarGaleria();
   };
 
@@ -1558,24 +1380,10 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     return String(t).split("\n").map(l => l.replace(/\s+/g, " ").trim())
       .filter(l => l.length > 1 && !vistas.has(l) && vistas.add(l)).join("\n");
   }
-  function abrirPagina() {
-    escolherModo("pagina");
-    encontrados = [];
-    $("pg-resultado").hidden = true; $("pg-estado").innerHTML = ""; $("pg-estado2").innerHTML = "";
-    if (mundoAlvo && mundoDe(mundoAlvo) && !$("pg-grupo").value) $("pg-grupo").value = mundoDe(mundoAlvo).nome;
-    contarPagina();
-  }
-  function contarPagina() {
-    const n = limparPagina($("pg-texto").value).length;
-    $("pg-conta").textContent = !n ? "" : n <= PARTE_PAGINA * MAX_PARTES
-      ? `${n.toLocaleString("en-US")} characters · ${Math.ceil(n / PARTE_PAGINA)} request${n > PARTE_PAGINA ? "s" : ""} to the AI`
-      : `${n.toLocaleString("en-US")} characters · only the first ${(PARTE_PAGINA * MAX_PARTES).toLocaleString("en-US")} are read. Paste just the members' part if someone is missing.`;
-  }
-  $("pg-texto").oninput = contarPagina;
   const ESQUEMA_PAGINA = obj({ grupo: S, personagens: { type: "array", items: obj({
     nome: S, nascimento: S, idade: { type: "integer" }, papel: S, frase: S, ficha: S, emoji: S, cor1: S, cor2: S }) } });
-  const PEDIDO_PAGINA = (grupo, texto) => `Below is text copied from a web page about a group or a series${grupo ? ` ("${grupo}")` : ""}.
-Find every person or character it profiles (for example the members of a group, or the main cast).
+  const PEDIDO_PAGINA = (grupo, texto, alvo) => `Below is text copied from a web page about a group or a series${grupo ? ` ("${grupo}")` : ""}.
+${alvo ? `Only create "${alvo}" (ignore everyone else).` : "Find every person or character it profiles (for example the members of a group, or the main cast)."}
 For each one, using ONLY what the text says (no facts from memory, nothing invented):
 - nome: the name they're best known by (their stage name, if they have one)
 - nascimento: birth date as YYYY-MM-DD if the text gives it, otherwise ""
@@ -1604,21 +1412,18 @@ ${texto}`;
     }
     return Number.isInteger(x.idade) && x.idade > 0 && x.idade < 120 ? x.idade : null;
   }
-  $("pagina").onsubmit = async e => {
-    e.preventDefault();
-    const texto = limparPagina($("pg-texto").value);
-    if (texto.length < 40) { $("pg-estado").innerHTML = `<p class="erro">Paste the text of the page first.</p>`; return; }
+  let grupoPagina = "";
+  async function lerPagina(texto, grupo, alvo) {
     const partes = [];
     for (let i = 0; i < texto.length && partes.length < MAX_PARTES; i += PARTE_PAGINA) partes.push(texto.slice(i, i + PARTE_PAGINA));
-    $("pg-ler").disabled = true; $("pg-resultado").hidden = true;
+    $("gerar").disabled = true; $("pagina").hidden = true;
     const porNome = new Map();
-    let grupo = $("pg-grupo").value.trim();
     try {
       for (let i = 0; i < partes.length; i++) {
-        $("pg-estado").innerHTML = `<div class="carregar"><span class="grande">Reading the page${partes.length > 1 ? ` (${i + 1} of ${partes.length})` : ""}…</span>This takes a few seconds.</div>`;
-        const d = await groq([{ role: "user", content: PEDIDO_PAGINA(grupo, partes[i]) }],
+        $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">Reading the page${partes.length > 1 ? ` (${i + 1} of ${partes.length})` : ""}…</span>This takes a few seconds.</div>`;
+        const d = await groq([{ role: "user", content: PEDIDO_PAGINA(grupo, partes[i], alvo) }],
           { esquema: ESQUEMA_PAGINA, nome: "pagina", esforco: "low", max: 4000,
-            onEspera: seg => { $("pg-estado").innerHTML = `<div class="carregar"><span class="grande">Waiting ${seg} s…</span>Groq's free plan allows a few requests per minute.</div>`; } });
+            onEspera: seg => { $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">Waiting ${seg} s…</span>Groq's free plan allows a few requests per minute.</div>`; } });
         if (!grupo && d.grupo) grupo = String(d.grupo).slice(0, 80);
         // a mesma pessoa pode aparecer em duas partes: fica a ficha maior
         for (const x of (Array.isArray(d.personagens) ? d.personagens : [])) {
@@ -1629,19 +1434,20 @@ ${texto}`;
         }
       }
     } catch (err) {
-      $("pg-ler").disabled = false;
-      $("pg-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`;
+      $("gerar").disabled = false;
+      $("passo1-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`;
       if (!porNome.size) return;
     }
-    $("pg-ler").disabled = false;
-    if (grupo) $("pg-grupo").value = grupo;
+    $("gerar").disabled = false;
+    grupoPagina = grupo;
     // quem já está na galeria (mesmo nome) vem desmarcado, para não ficar repetido
     const jaTenho = new Set(personagens().map(x => x.nome.trim().toLowerCase()));
     encontrados = [...porNome.values()].map(x => Object.assign(x, { ja: jaTenho.has(x.nome.toLowerCase()), incluir: !jaTenho.has(x.nome.toLowerCase()) }));
-    if (!encontrados.length) { $("pg-estado").innerHTML = `<p class="erro">I couldn't find any characters in that text. Try copying the part of the page with the profiles.</p>`; return; }
-    $("pg-estado").innerHTML = "";
+    if (!encontrados.length) { $("passo1-estado").innerHTML = `<p class="erro">I couldn't find any characters in that text. Try copying the part of the page with the profiles.</p>`; return; }
+    $("passo1-estado").innerHTML = "";
+    $("passo1").hidden = true;
     desenharEncontrados();
-  };
+  }
   function desenharEncontrados() {
     $("pg-lista").innerHTML = encontrados.map((x, i) => `<div class="encontrado${x.incluir ? "" : " fora"}" data-i="${i}">
         <div class="encontrado-topo"><input type="checkbox" class="incluir" ${x.incluir ? "checked" : ""} aria-label="Include">
@@ -1661,7 +1467,8 @@ ${texto}`;
     $("pg-grupo-opcao").hidden = !!mundoAlvo || encontrados.length < 2;
     const n = encontrados.filter(x => x.incluir).length;
     $("pg-criar").textContent = `Create ${n} character${n === 1 ? "" : "s"}`;
-    $("pg-resultado").hidden = false;
+    $("pagina").hidden = false;
+    $("criar-passo").textContent = "Review";
     $("pg-estado2").innerHTML = "";
   }
   $("pg-criar").onclick = () => {
@@ -1669,7 +1476,7 @@ ${texto}`;
     if (!escolhidos.length) { $("pg-estado2").innerHTML = `<p class="erro">Pick at least one character.</p>`; return; }
     const semIdade = escolhidos.filter(x => !Number.isInteger(x.idade) || x.idade < 1);
     if (semIdade.length) { $("pg-estado2").innerHTML = `<p class="erro">Write the age of ${escapar(semIdade.map(x => x.nome).join(", "))}. It decides whether romance is allowed.</p>`; return; }
-    const grupo = $("pg-grupo").value.trim();
+    const grupo = grupoPagina;
     const novos = escolhidos.map(x => ({
       id: novoId(), nome: String(x.nome).trim().slice(0, 80), obra: grupo.slice(0, 120),
       frase: String(x.frase || x.papel || "").slice(0, 200),
@@ -1699,11 +1506,9 @@ ${texto}`;
     $("pers-nome").textContent = pers.nome; $("pers-obra").textContent = pers.obra;
     $("pers-frase").innerHTML = formatar(pers.frase);
     origem = { tipo: "pers" };
-    $("pers-fundo-tirar").hidden = !pers.fundo; $("pers-fundo-estado").textContent = "";
-    $("apagar-pers").dataset.confirmar = ""; $("apagar-pers").textContent = "Delete this character";
     listaHistorias($("historias"), historias().filter(h => h.personagem === pers.id),
       `No stories with ${escapar(pers.nome)} yet. Tap <b>New story</b> to begin.`,
-      h => h.mundo && mundoDe(h.mundo) ? "🌌 " + mundoDe(h.mundo).nome + " · " : "", () => abrirPersonagem(pers.id));
+      h => h.mundo && mundoDe(h.mundo) ? mundoDe(h.mundo).nome + " · " : "", () => abrirPersonagem(pers.id));
     mostrar("ecra-personagem");
   }
   // A lista de histórias, com apagar (o 1.º toque pede confirmação, o 2.º apaga; sem confirmar em 3 s volta ao normal).
@@ -1833,11 +1638,20 @@ ${texto}`;
     guardarFundoPers(await reduzirFundo(imagemGerada));
     $("img-estado").textContent = $("pers-fundo-estado").textContent.startsWith("Done") ? "Saved as the story background ✓" : $("pers-fundo-estado").textContent;
   };
-  $("pers-gerar").onclick = () => { $("img-gerar").textContent = "Generate"; abrirImagem(); };
+  $("pers-gerar").onclick = () => { $("painel-pers").hidden = true; $("img-gerar").textContent = "Generate"; abrirImagem(); };
   $("img-fechar").onclick = () => { $("painel-imagem").hidden = true; };
   $("painel-imagem").onclick = e => { if (e.target.id === "painel-imagem") $("painel-imagem").hidden = true; };
   $("pers-voltar").onclick = mostrarGaleria;
-  $("pers-editar").onclick = () => (mundoAlvo = null, pers.campos) ? abrirMao(pers) : mostrarRevisao(Object.assign({}, pers), true);
+  // ✎ abre o menu da personagem
+  $("pers-editar").onclick = () => {
+    $("pm-titulo").textContent = pers.nome;
+    $("pers-fundo-tirar").hidden = !pers.fundo; $("pers-fundo-estado").textContent = "";
+    $("apagar-pers").dataset.confirmar = ""; $("apagar-pers").textContent = "Delete this character";
+    $("painel-pers").hidden = false;
+  };
+  $("pers-editar-ficha").onclick = () => { $("painel-pers").hidden = true; mundoAlvo = null; mostrarRevisao(Object.assign({}, pers), true); };
+  $("fechar-pers").onclick = () => { $("painel-pers").hidden = true; };
+  $("painel-pers").onclick = e => { if (e.target.id === "painel-pers") $("painel-pers").hidden = true; };
   $("nova-historia").onclick = () => abrirNova(null);
 
   // ---------- Nova história ----------
@@ -1862,11 +1676,9 @@ ${texto}`;
     $("form-nova").reset();
     $("nova-estado").innerHTML = "";
     $("h-elenco-bloco").hidden = !m;
-    $("h-universo-campo").hidden = !!m;   // num grupo, a situação já diz onde estão
-    $("h-premissa-rotulo").textContent = m ? "The situation" : "The idea";
+    $("h-mais").open = false;
     $("h-premissa").placeholder = m ? "e.g. the night before the comeback, the power goes out in the dorm and everyone ends up in the living room."
                                     : "e.g. L needs someone to go undercover at a party and picks you.";
-    $("h-universo").placeholder = m ? "e.g. the capital, during the winter festival" : "e.g. alternate universe, modern-day London, winter.";
     if (m) {
       const ms = membros(m); pers = ms.find(x => pers && x.id === pers.id) || ms[0];
       outrosEscolhidos = new Set(ms.filter(x => x.id !== pers.id).slice(0, 4).map(x => x.id));   // por defeito, estão todos
@@ -1884,7 +1696,6 @@ ${texto}`;
   }
   function atualizarNovaCom() {
     $("nova-com").textContent = "with " + pers.nome + (novaMundo && mundoDe(novaMundo) ? " · " + mundoDe(novaMundo).nome : "");
-    $("atalho-slow").hidden = semRomanceNova();
   }
   // Escolher a personagem principal (uma) e quem mais entra (até 3).
   function desenharElenco(ms) {
@@ -1906,7 +1717,7 @@ ${texto}`;
       b.setAttribute("aria-pressed", String(outrosEscolhidos.has(id)));
     });
   }
-  const lerNova = () => ({ premissa: $("h-premissa").value.trim(), universo: $("h-universo").value.trim(),
+  const lerNova = () => ({ premissa: $("h-premissa").value.trim(), universo: "",
                            papel: $("h-papel").value.trim(), relacao: relacaoDe($("h-relacao")), tons: tonsDe($("h-tons")),
                            mundo: novaMundo, elenco: novaMundo ? [...outrosEscolhidos] : [], persona: personaNova || null });
   function limparTons(tons, h) {
@@ -1926,20 +1737,9 @@ ${texto}`;
     };
   }
   function ocupado(sim, texto) {
-    $("surpreende").disabled = $("comecar").disabled = sim;
+    $("comecar").disabled = sim;
     $("nova-estado").innerHTML = sim ? `<div class="carregar"><span class="grande">${texto}</span></div>` : "";
   }
-  $("surpreende").onclick = async () => {
-    ocupado(true, "Dreaming up a story…");
-    try {
-      const h = await pedirIdeia(Object.assign(lerNova(), { premissa: "", universo: "", papel: "" }));
-      $("h-premissa").value = h.premissa; $("h-universo").value = h.universo; $("h-papel").value = h.papel;
-      desenharTons($("h-tons"), h.tons, semRomanceNova());
-      desenharRelacao($("h-relacao"), h.relacao);
-      ocupado(false);
-      $("nova-estado").innerHTML = `<p class="dica">Idea: <b>${escapar(h.titulo)}</b>. Change anything you like and tap Start story.</p>`;
-    } catch (e) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
-  };
   $("form-nova").onsubmit = async e => {
     e.preventDefault();
     ocupado(true, "Writing the first scene…");
@@ -1957,13 +1757,6 @@ ${texto}`;
       ocupado(false);
       abrirHistoria(h.id);
     } catch (err) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; }
-  };
-  // Atalho: marca o slow burn e pede só para escolher se são amigos ou rivais.
-  $("atalho-slow").onclick = () => {
-    desenharTons($("h-tons"), ["Romance", "Slow burn"], semRomanceNova());
-    const r = relacaoDe($("h-relacao"));
-    desenharRelacao($("h-relacao"), ["Best friends", "Rivals"].includes(r) ? r : "Best friends");
-    $("nova-estado").innerHTML = `<p class="dica">I've ticked <b>Romance</b> and <b>Slow burn</b>. Choose whether you're <b>Best friends</b> or <b>Rivals</b> and write your role (your name and who you are). The rest can stay empty.</p>`;
   };
   $("nova-voltar").onclick = voltar;
 
@@ -2101,7 +1894,7 @@ ${texto}`;
   const pontosPorPasso = h => (h.tons || []).includes("Slow burn") ? 2 : 3;
   function pintarBarraRelacao() {
     const barra = $("relacao-barra");
-    barra.hidden = ler("sussurros-aspeto", {}).barra === "nao" || !hist;
+    barra.hidden = !hist;
     if (barra.hidden) return;
     const quem = hist.mundo ? (elencoCena(hist).find(x => x.id === cont.foco) || pers) : pers;
     const amor = romantico(quem, hist), v = valorProx(cont, hist, quem.id), f = faseDe(v, amor), n = quem.nome;
@@ -2144,42 +1937,26 @@ ${texto}`;
     if (!img) return;
     caixa.classList.toggle("desfocado", !pers.fundo);
     caixa.querySelector(".imagem").style.backgroundImage = `url(${img})`;
-    const veu = ["0.45", "0.6", "0.75"].includes(a.veu) ? +a.veu : 0.6;
+    const veu = 0.6;
     caixa.querySelector(".veu").style.background = (a.tema === "claro" ? `rgba(251,247,249,${veu})` : `rgba(8,5,10,${veu})`);
-  }
-  // Em que mensagem começa cada capítulo: a cada 10 cenas (o cabeçalho vai antes da tua jogada que abriu o capítulo).
-  function iniciosDeCapitulo(c) {
-    const inicios = {}; let k = 0;
-    c.mensagens.forEach((m, i) => {
-      if (m.tipo !== "cena") return;
-      if (k % CENAS_POR_CAPITULO === 0) inicios[i > 0 && c.mensagens[i - 1].tipo !== "cena" ? i - 1 : i] = k / CENAS_POR_CAPITULO + 1;
-      k++;
-    });
-    return inicios;
   }
   // O que se pode refazer/desfazer (nunca o que já foi para o resumo).
   const podeRefazer = c => { const n = c.mensagens.length; return n > 0 && c.mensagens[n - 1].tipo === "cena" && n - 1 >= c.resumidas_ate; };
   const podeDesfazer = c => { const n = c.mensagens.length; return n >= 2 && c.mensagens[n - 1].tipo === "cena" && c.mensagens[n - 2].tipo !== "cena" && n - 2 >= c.resumidas_ate; };
 
   function desenhar(extra = "") {
-    const caps = cont.capitulos || [];
-    const comCapitulos = nCenas(cont) > CENAS_POR_CAPITULO || caps.length > 0;
-    const inicios = comCapitulos ? iniciosDeCapitulo(cont) : {};
-    const cabecalho = n => `<div class="capitulo"><small>Chapter ${n}</small>${caps[n - 1] ? `<b>${escapar(caps[n - 1])}</b>` : ""}</div>`;
     $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Untitled")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
-      cont.mensagens.map((m, i) => (inicios[i] ? cabecalho(inicios[i]) : "") + (m.tipo === "cena" ? desenharCena(m)
+      cont.mensagens.map(m => (m.tipo === "cena" ? desenharCena(m)
         : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
         : m.tipo === "continuar" ? `<div class="continuou" aria-hidden="true">· · ·</div>`
         : `<div class="acao">${formatar(m.texto)}</div>`)).join("") + extra;
     const r = $("rolar-historia"); r.scrollTop = r.scrollHeight;
-    $("contador").textContent = cont.memoria.length;
     pintarBarraRelacao();
-    $("lampada").classList.toggle("ligada", verSugestoes);
-    const botoes = (podeRefazer(cont) ? `<button class="mini-acao" id="refazer" title="Write this scene again">↻ Redo</button>` : "")
-      + (podeDesfazer(cont) ? `<button class="mini-acao" id="desfazer" title="Take back your last move">↩ Undo</button>` : "");
+    const botoes = (podeRefazer(cont) ? `<button class="mini-acao" id="refazer" title="Write this scene again" aria-label="Redo">↻</button>` : "")
+      + (podeDesfazer(cont) ? `<button class="mini-acao" id="desfazer" title="Take back your last move" aria-label="Undo">↩</button>` : "");
     $("escolhas").innerHTML = (aEspera || modoNota) ? "" :
-      (verSugestoes ? (cont.escolhas || []).map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("") : "")
-      + (cont.mensagens.length ? `<div class="linha-acoes"><button class="continuar-btn" id="continuar">Continue ▸ <small>let the story move on</small></button>`
+      (cont.escolhas || []).map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("")
+      + (cont.mensagens.length ? `<div class="linha-acoes"><button class="continuar-btn" id="continuar">Continue ▸</button>`
         + `<div class="mini-acoes">${botoes}</div></div>` : "");
     $("escolhas").hidden = !$("escolhas").innerHTML;
     if ($("continuar")) $("continuar").onclick = () => enviar("", false);
@@ -2241,7 +2018,7 @@ ${texto}`;
       } else avisarRelacao(proxAntes, proxDe(c, hist));
       // Em segundo plano: o resumo e o título do capítulo (com o modelo pequeno)
       const h = hist, p = pers;
-      resumirSePreciso(c, p).then(() => tituloCapitulo(c, p)).then(() => guardarFundo(h, c));
+      resumirSePreciso(c, p).then(() => guardarFundo(h, c));
       return true;
     } catch (e) {
       cont = antes; aEspera = false;
@@ -2285,26 +2062,6 @@ ${texto}`;
     $("texto").focus();
   }
 
-  // Título do capítulo: quando um capítulo de 10 cenas acaba (ou falta o título de um antigo), pede-o ao modelo pequeno.
-  async function tituloCapitulo(c, p) {
-    const completos = Math.floor(nCenas(c) / CENAS_POR_CAPITULO);
-    c.capitulos = c.capitulos || [];
-    let n = 0;
-    while (n < completos && c.capitulos[n]) n++;
-    if (n >= completos) return;
-    // as mensagens desse capítulo
-    const idx = []; c.mensagens.forEach((m, i) => { if (m.tipo === "cena") idx.push(i); });
-    const ini = n === 0 ? 0 : idx[n * CENAS_POR_CAPITULO - 1] + 1, fim = idx[(n + 1) * CENAS_POR_CAPITULO - 1] + 1;
-    const texto = c.mensagens.slice(ini, fim).filter(m => m.tipo !== "continuar")
-      .map(m => (m.tipo === "cena" ? "" : "You: ") + m.texto).join("\n").slice(-5000);
-    try {
-      const t = await groq([{ role: "user", content: `Here is chapter ${n + 1} of an interactive fanfic with ${p.nome}:\n${texto}\n\n`
-        + "Give this chapter a short, evocative title (2 to 6 words), in English. Reply only with the title, without quotation marks." }],
-        { max: 300, preferir: 1 });
-      const titulo = String(t || "").split("\n")[0].replace(/^["'“”*\s]+|["'“”*.\s]+$/g, "").slice(0, 60);
-      if (titulo) c.capitulos[n] = titulo;
-    } catch (e) { /* tenta-se outra vez na próxima jogada */ }
-  }
   // Guarda o resultado das tarefas em segundo plano sem apagar jogadas feitas entretanto.
   function guardarFundo(h, c) {
     if (cont === c) { gravarConteudo(h.id, c); if (hist && hist.id === h.id && !aEspera) desenhar(); return; }
@@ -2362,7 +2119,6 @@ ${texto}`;
     clearTimeout(temporizador);
     temporizador = setTimeout(() => $("toast").classList.remove("ver"), 4000);
   }
-  $("lampada").onclick = () => { verSugestoes = !verSugestoes; gravar("sussurros-sugestoes", verSugestoes); desenhar(); };
   $("relacao-barra").onclick = () => $("abrir-contexto").click();   // tocar na barra mostra as de todos
   $("hist-voltar").onclick = () => { $("recap").hidden = true; voltar(); };
   // Enviar com a caixa vazia não faz nada (para não avançar sem querer); para isso há o "Continuar ▸".
@@ -2374,7 +2130,7 @@ ${texto}`;
   // ---------- Painel: contexto e memória ----------
   $("abrir-contexto").onclick = () => {
     $("e-titulo").value = hist.titulo || ""; $("e-premissa").value = hist.premissa || "";
-    $("e-universo").value = hist.universo || ""; $("e-papel").value = hist.papel || "";
+    $("e-papel").value = hist.papel || "";
     let personaCtx = personaDe(hist.persona) ? hist.persona : "";
     desenharPersonas($("e-persona"), personaCtx, id => {
       personaCtx = id; $("e-persona").dataset.id = id;
@@ -2383,26 +2139,7 @@ ${texto}`;
     $("e-persona").dataset.id = personaCtx;
     desenharTons($("e-tons"), hist.tons, pers.menor || eMenor(personaDe(personaCtx)));
     desenharRelacao($("e-relacao"), hist.relacao);
-    const mw = hist.mundo && mundoDe(hist.mundo);
-    const jaCanon = mw ? linhas(mw.canon).map(x => x.toLowerCase()) : [];
-    $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map((f, i) => `<li>${formatar(f)}${mw
-        ? (jaCanon.includes(f.toLowerCase()) ? ` <small class="vazio">· canon</small>` : ` <button type="button" class="ligacao canonizar" data-i="${i}">make canon</button>`)
-          + (historicoDe(mw, pers.id).toLowerCase().includes(f.toLowerCase()) ? ` <small class="vazio">· in ${escapar(pers.nome)}'s history</small>`
-             : ` <button type="button" class="ligacao para-historico" data-i="${i}">add to ${escapar(pers.nome)}'s history</button>`) : ""}</li>`).join("")
-        + (mw ? `<p class="dica">Canon facts stay true in every story in ${escapar(mw.nome)}.</p>` : "")
-      : `<p class="vazio">Nothing yet.</p>`;
-    $("mem-factos").querySelectorAll(".canonizar").forEach(b => b.onclick = () => {
-      const m2 = mundoDe(hist.mundo), f = cont.memoria[b.dataset.i];
-      m2.canon = (m2.canon ? m2.canon.trimEnd() + "\n" : "") + f;
-      atualizarMundo(m2);
-      b.outerHTML = `<small class="vazio">· canon</small>`;
-    });
-    $("mem-factos").querySelectorAll(".para-historico").forEach(b => b.onclick = () => {
-      const m2 = mundoDe(hist.mundo), f = cont.memoria[b.dataset.i], velho = historicoDe(m2, pers.id);
-      m2.historicos = Object.assign({}, m2.historicos, { [pers.id]: (velho ? velho.trimEnd() + "\n" : "") + f });
-      gravarMundoSemOrdem(m2);
-      b.outerHTML = `<small class="vazio">· in ${escapar(pers.nome)}'s history</small>`;
-    });
+    $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map(f => `<li>${formatar(f)}</li>`).join("") : `<p class="vazio">Nothing yet.</p>`;
     $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">The summary appears once the story gets longer.</span>`;
     for (const id of ["recomecar", "apagar-historia"]) $(id).dataset.confirmar = "";
     $("recomecar").textContent = "Restart this story";
@@ -2416,7 +2153,7 @@ ${texto}`;
   $("form-contexto").onsubmit = e => {
     e.preventDefault();
     hist = Object.assign({}, hist, { titulo: $("e-titulo").value.trim().slice(0, 120), premissa: $("e-premissa").value.trim(),
-      universo: $("e-universo").value.trim(), papel: $("e-papel").value.trim(), relacao: relacaoDe($("e-relacao")), tons: tonsDe($("e-tons")),
+      papel: $("e-papel").value.trim(), relacao: relacaoDe($("e-relacao")), tons: tonsDe($("e-tons")),
       persona: $("e-persona").dataset.id || null });
     if (!hist.persona) delete hist.persona;
     atualizarHistoria(hist);
@@ -2450,7 +2187,7 @@ ${texto}`;
     pintarAvatar($("mundo-avatar"), mundo);
     $("mundo-nome").textContent = mundo.nome;
     const nm = membros(mundo).length;
-    $("mundo-sub").textContent = [mundo.genero, mundo.obra && "based on " + mundo.obra].filter(Boolean).join(" · ") || (nm + " " + (nm === 1 ? "member" : "members"));
+    $("mundo-sub").textContent = nm + " " + (nm === 1 ? "member" : "members");
     $("mundo-frase").innerHTML = formatar(mundo.frase || "");
     $("mundo-descricao").textContent = mundo.descricao || "";
     $("mundo-estado-p").innerHTML = "";
@@ -2491,95 +2228,54 @@ ${texto}`;
       m.personagens = (m.personagens || []).concat(b.dataset.id);
       atualizarMundo(m); abrirMundo(m.id);
     });
-    // Canon: factos verdadeiros em todas as histórias deste universo (× tira um)
-    const canon = linhas(mundo.canon);
-    $("mundo-canon").innerHTML = canon.length
-      ? canon.map((f, i) => `<li><span>${formatar(f)}</span><button type="button" class="icone tirar-canon" data-i="${i}" aria-label="Remove">×</button></li>`).join("")
-      : `<p class="dica">Nothing yet. Add facts when you edit the universe, or tap <b>make canon</b> on a memory in a story's 📖 panel. The narrator keeps them true in every story here.</p>`;
-    $("mundo-canon").querySelectorAll(".tirar-canon").forEach(b => b.onclick = () => {
-      const m = mundoDe(mundo.id), l = linhas(m.canon); l.splice(+b.dataset.i, 1);
-      m.canon = l.join("\n"); atualizarMundo(m); abrirMundo(m.id);
-    });
     const hs = historias().filter(h => h.mundo === mundo.id);
-    listaHistorias($("mundo-historias"), hs, "No stories in this universe yet.",
+    listaHistorias($("mundo-historias"), hs, "No stories with this group yet.",
       h => "with " + ((personagens().find(p => p.id === h.personagem) || {}).nome || "?") + " · ", () => abrirMundo(id));
     mostrar("ecra-mundo");
   }
   $("mundo-voltar").onclick = mostrarGaleria;
   $("mundo-editar").onclick = () => abrirEditarMundo(mundo);
-  $("mundo-importar").onclick = () => { const id = mundo.id; abrirCriar(); mundoAlvo = id; abrirPagina(); };
-  $("mundo-nova-pers").onclick = () => { const id = mundo.id; abrirCriar(); mundoAlvo = id; };
+  $("mundo-nova-pers").onclick = () => { const m = mundo; abrirCriar("", m.nome); mundoAlvo = m.id; };
   $("mundo-nova-historia").onclick = () => {
     if (!membros(mundo).length) {
-      $("mundo-estado-p").innerHTML = `<p class="aviso">Add at least one character to this universe first (below).</p>`;
+      $("mundo-estado-p").innerHTML = `<p class="aviso">Add at least one member first (below).</p>`;
       return;
     }
     abrirNova(mundo);
   };
 
-  const CAMPOS_MUNDO = ["nome", "obra", "genero", "descricao", "lugares", "grupos", "regras", "canon", "frase"];
+  const CAMPOS_MUNDO = ["nome", "descricao"];
   let mundoEditar = null;   // id do universo a editar (null = novo)
-  let visualMundo = null;   // emoji e cores sugeridos pela IA
   function abrirEditarMundo(m) {
-    mundoEditar = m ? m.id : null; fotoNova = null; visualMundo = null;
+    mundoEditar = m ? m.id : null; fotoNova = null;
     $("form-mundo").reset();
     for (const k of CAMPOS_MUNDO) $("mw-" + k).value = (m && m[k]) || "";
     mostrarFoto($("mw-foto"), m ? m.avatar : "");
-    $("mw-titulo").textContent = m ? "Edit universe" : "New universe";
-    $("guardar-mundo").textContent = m ? "Save changes" : "Create universe";
+    $("mw-titulo").textContent = m ? "Edit group" : "New group";
+    $("guardar-mundo").textContent = m ? "Save changes" : "Create group";
     $("mw-perigos").hidden = !m;
-    $("apagar-mundo").dataset.confirmar = ""; $("apagar-mundo").textContent = "Delete this universe";
+    $("apagar-mundo").dataset.confirmar = ""; $("apagar-mundo").textContent = "Delete this group";
     $("mundo-estado").innerHTML = "";
-    $("mw-mais").open = !!(m && ["obra", "genero", "lugares", "grupos", "regras", "canon", "frase"].some(k => m[k]));
     mostrar("ecra-mundo-editar");
     $("mw-nome").focus();
   }
   const lerMundo = () => Object.fromEntries(CAMPOS_MUNDO.map(k => [k, $("mw-" + k).value.trim()]));
-  function mundoOcupado(sim, texto) {
-    $("completar-mundo").disabled = $("guardar-mundo").disabled = sim;
-    $("mundo-estado").innerHTML = sim ? `<div class="carregar"><span class="grande">${texto}</span></div>` : "";
-  }
-  // "Fill in with AI": preenche só os campos vazios.
-  const ESQUEMA_MUNDO = obj({ genero: S, descricao: S, lugares: S, grupos: S, regras: S, canon: S, frase: S, emoji: S, cor1: S, cor2: S });
-  $("completar-mundo").onclick = async () => {
-    const c = lerMundo();
-    if (!c.nome) { $("mundo-estado").innerHTML = `<p class="erro">Write at least the name.</p>`; return; }
-    mundoOcupado(true, "Building the world…");
-    try {
-      const d = await groq([{ role: "user", content: `You are helping to create a universe (a shared world) for interactive fanfics.
-What the user already wrote (DON'T change any of it; fill in the empty fields, consistent with the rest):
-${JSON.stringify(c, null, 1)}
-${c.obra ? "It's based on \"" + c.obra + "\": stay true to that world's canon (places, factions, rules), without inventing facts you're not sure of." : "It's an original world: make it vivid and specific, with hooks for stories."}
-If you don't know it well (for example a recent group, or real people), don't invent specific facts about real people or events: keep it general and fitting.
-Return ALL the fields. For fields that are already filled in, return exactly the same text.
-- genero: the kind of world, a few words. descricao: 3 to 5 sentences (how it works, the era, the atmosphere, what's happening now).
-- lugares: 3 to 5 places, one per line, "Name: short description". grupos: 2 to 4 groups or factions, one per line, same format.
-- regras: 2 to 4 rules of this world, one per line. canon: 2 to 4 facts that are true in every story, one per line.
-- frase: a tagline of up to 12 words. emoji: one fitting emoji. cor1 and cor2: two dark, saturated hex colors (e.g. "#3a2f5c").
-Everything in English.` }], { esquema: ESQUEMA_MUNDO, nome: "universo", esforco: "medium", max: 2500 });
-      for (const k of CAMPOS_MUNDO)
-        if (k in d && !$("mw-" + k).value.trim() && d[k]) $("mw-" + k).value = String(d[k]).slice(0, +$("mw-" + k).maxLength || 1500);
-      visualMundo = { emoji: String(d.emoji || "🌌").slice(0, 8), cores: [cor(d.cor1, "#22304a"), cor(d.cor2, "#5a4a7a")] };
-      mundoOcupado(false);
-      $("mundo-estado").innerHTML = `<p class="dica">I filled in the empty fields. Change anything you like and tap ${escapar($("guardar-mundo").textContent)}.</p>`;
-    } catch (e) { mundoOcupado(false); $("mundo-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
-  };
   $("form-mundo").onsubmit = e => {
     e.preventDefault();
     const c = lerMundo();
     if (!c.nome) return;
     const antigo = mundoEditar ? mundoDe(mundoEditar) : null;
     const m = Object.assign({}, antigo || { id: novoId(), personagens: [], emoji: "🌌", cores: PALETAS[Math.floor(Math.random() * PALETAS.length)] },
-      visualMundo || {}, c, { avatar: fotoNova !== null ? fotoNova : (antigo ? antigo.avatar || "" : "") });
+      c, { avatar: fotoNova !== null ? fotoNova : (antigo ? antigo.avatar || "" : "") });
     atualizarMundo(m);
-    visualMundo = null; mundoEditar = null;
+    mundoEditar = null;
     abrirMundo(m.id);
   };
   $("mw-voltar").onclick = () => mundoEditar ? abrirMundo(mundoEditar) : mostrarGaleria();
   // Apagar o universo apaga as histórias dele; as personagens ficam na galeria.
   $("apagar-mundo").onclick = () => {
     const b = $("apagar-mundo");
-    if (!b.dataset.confirmar) { b.dataset.confirmar = "1"; b.textContent = "Delete this universe and its stories? Your characters stay. Tap again."; return; }
+    if (!b.dataset.confirmar) { b.dataset.confirmar = "1"; b.textContent = "Delete this group and its stories? Your characters stay. Tap again."; return; }
     apagarHistorias(historias().filter(h => h.mundo === mundoEditar).map(h => h.id));
     gravarMundos(mundos().filter(x => x.id !== mundoEditar));
     mundoEditar = null;
@@ -2640,6 +2336,7 @@ Everything in English.` }], { esquema: ESQUEMA_MUNDO, nome: "universo", esforco:
     gravarMundos(mundos().map(m => Object.assign({}, m, { personagens: (m.personagens || []).filter(x => x !== id) })));
     gravarPersonagens(personagens().filter(x => x.id !== id));
     pers = null;
+    $("painel-pers").hidden = true;
     mostrarGaleria();
   };
 
@@ -2666,12 +2363,10 @@ Everything in English.` }], { esquema: ESQUEMA_MUNDO, nome: "universo", esforco:
     opcoes($("a-tema"), TEMAS, a.tema || "escuro", "tema");
     opcoes($("a-letra"), LETRAS, a.letra || "1", "letra");
     opcoes($("a-fundo"), [["foto", "Character picture"], ["liso", "Plain"]], a.fundo || "foto", "fundo");
-    opcoes($("a-veu"), [["0.45", "Soft"], ["0.6", "Medium"], ["0.75", "Strong"]], a.veu || "0.6", "veu");
-    opcoes($("a-barra"), [["sim", "Show"], ["nao", "Hide"]], a.barra || "sim", "barra");
     $("painel-aspeto").hidden = false;
   }
   $("abrir-aspeto").onclick = abrirAspeto;
-  $("abrir-aspeto-h").onclick = () => { $("recap").hidden = true; abrirAspeto(); };
+  $("abrir-aspeto-h").onclick = () => { $("recap").hidden = true; $("painel-contexto").hidden = true; abrirAspeto(); };
   $("fechar-aspeto").onclick = () => { $("painel-aspeto").hidden = true; };
   $("painel-aspeto").onclick = e => { if (e.target.id === "painel-aspeto") $("painel-aspeto").hidden = true; };
   aplicarAspeto();
