@@ -380,8 +380,8 @@
         <p class="dica">Write who it is. The AI writes their personality and way of talking, and you can review it.</p>
         <label>Name<input id="c-nome" maxlength="80" placeholder="e.g. L"></label>
         <label>From (optional)<input id="c-obra" maxlength="120" placeholder="e.g. Death Note, or the name of a group"></label>
-        <label>Paste info or a profile page (optional)<textarea id="c-extra" rows="5" maxlength="60000"
-          placeholder="Text from a wiki or a profile page. If it's about a whole group, everyone in it is created at once."></textarea></label>
+        <label>Paste a link, info or a profile page (optional)<textarea id="c-extra" rows="5" maxlength="60000"
+          placeholder="A link, or text from a wiki or a profile page. If it's about a whole group, everyone in it is created at once."></textarea></label>
         <button class="botao" id="gerar">Create</button>
         <div id="passo1-estado"></div>
       </form>
@@ -467,6 +467,8 @@
         <div class="avatar-linha"><label class="carregar-avatar" for="mw-foto"><span>+<small>Cover</small></span></label>
           <input type="file" id="mw-foto" accept="image/*" hidden><p class="dica">Tap to add a cover picture (optional).</p></div>
         <label>Name *<input id="mw-nome" maxlength="60" placeholder="e.g. the group's name" required></label>
+        <label>Link to a page about the group (optional)<input id="mw-link" type="url" inputmode="url" maxlength="500" placeholder="e.g. a Kprofiles or Wikipedia page"></label>
+        <p class="dica" id="mw-link-dica">The AI reads the page and creates every member. You just check the list.</p>
         <label>In a few words (optional)<textarea id="mw-descricao" rows="2" maxlength="1200" placeholder="e.g. a K-pop group that debuted this year; they live together in a dorm in Seoul."></textarea></label>
         <button class="botao" id="guardar-mundo">Create group</button>
         <div id="mundo-estado"></div>
@@ -1324,6 +1326,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   }
   async function gerarFicha() {
     const nome = $("c-nome").value.trim(), extra = $("c-extra").value.trim();
+    if (eLink(extra)) return lerPaginaDoLink(extra, $("c-obra").value.trim(), nome);
     if (extra.length > 1500 || (!nome && extra.length > 40)) return lerPagina(limparPagina(extra), $("c-obra").value.trim(), nome);
     if (!nome) { $("passo1-estado").innerHTML = `<p class="erro">Write a name (or paste a page).</p>`; return; }
     $("gerar").disabled = $("regerar").disabled = true;
@@ -1408,7 +1411,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     return String(t).split("\n").map(l => l.replace(/\s+/g, " ").trim())
       .filter(l => l.length > 1 && !vistas.has(l) && vistas.add(l)).join("\n");
   }
-  const ESQUEMA_PAGINA = obj({ grupo: S, personagens: { type: "array", items: obj({
+  const ESQUEMA_PAGINA = obj({ grupo: S, sobre: S, personagens: { type: "array", items: obj({
     nome: S, nascimento: S, idade: { type: "integer" }, papel: S, frase: S, ficha: S, emoji: S, cor1: S, cor2: S }) } });
   const PEDIDO_PAGINA = (grupo, texto, alvo) => `Below is text copied from a web page about a group or a series${grupo ? ` ("${grupo}")` : ""}.
 ${alvo ? `Only create "${alvo}" (ignore everyone else).` : "Find every person or character it profiles (for example the members of a group, or the main cast)."}
@@ -1423,6 +1426,7 @@ For each one, using ONLY what the text says (no facts from memory, nothing inven
 - frase: up to 12 words for a gallery card
 - emoji: one fitting emoji; cor1 and cor2: two dark, saturated hex colors (e.g. "#3a2f5c")
 grupo: the group or series name, if the text says it.
+sobre: 1 or 2 sentences about the group or series itself (what it is, when it started), from the text; "" if it doesn't say.
 If the text profiles nobody, return an empty list. Ignore ads, comments and navigation text.
 
 TEXT:
@@ -1440,12 +1444,34 @@ ${texto}`;
     }
     return Number.isInteger(x.idade) && x.idade > 0 && x.idade < 120 ? x.idade : null;
   }
-  let grupoPagina = "";
+  let grupoPagina = "", sobrePagina = "";
+  // Um browser não pode ler páginas de outros sites diretamente (bloqueiam-no), por isso pedimos o texto
+  // ao Jina Reader (r.jina.ai), um serviço grátis que abre a página e devolve só o texto.
+  const eLink = t => /^https?:\/\/\S+$/i.test(String(t).trim());
+  async function lerLink(url) {
+    let r;
+    try { r = await fetch("https://r.jina.ai/" + url.trim(), { headers: { "Accept": "text/plain" } }); }
+    catch (e) { throw { link: true }; }
+    const t = r.ok ? await r.text() : "";
+    if (!r.ok || t.replace(/\s+/g, " ").length < 300) throw { link: true };
+    return t;
+  }
+  const ERRO_LINK = "I couldn't open that link (some sites block it). Open the page, copy its text and paste it here instead.";
+  // Lê um link e mostra as personagens que lá estão (para confirmar).
+  async function lerPaginaDoLink(url, grupo, alvo) {
+    $("gerar").disabled = true;
+    $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">Opening the link…</span>This takes a few seconds.</div>`;
+    let texto;
+    try { texto = await lerLink(url); }
+    catch (e) { $("gerar").disabled = false; $("passo1-estado").innerHTML = `<p class="erro">${ERRO_LINK}</p>`; return; }
+    return lerPagina(limparPagina(texto), grupo, alvo);
+  }
   async function lerPagina(texto, grupo, alvo) {
     const partes = [];
     for (let i = 0; i < texto.length && partes.length < MAX_PARTES; i += PARTE_PAGINA) partes.push(texto.slice(i, i + PARTE_PAGINA));
     $("gerar").disabled = true; $("pagina").hidden = true;
     const porNome = new Map();
+    sobrePagina = "";
     try {
       for (let i = 0; i < partes.length; i++) {
         $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">Reading the page${partes.length > 1 ? ` (${i + 1} of ${partes.length})` : ""}…</span>This takes a few seconds.</div>`;
@@ -1453,6 +1479,7 @@ ${texto}`;
           { esquema: ESQUEMA_PAGINA, nome: "pagina", esforco: "low", max: 4000,
             onEspera: seg => { $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">Waiting ${seg} s…</span>Groq's free plan allows a few requests per minute.</div>`; } });
         if (!grupo && d.grupo) grupo = String(d.grupo).slice(0, 80);
+        if (!sobrePagina && d.sobre) sobrePagina = String(d.sobre).slice(0, 600);
         // a mesma pessoa pode aparecer em duas partes: fica a ficha maior
         for (const x of (Array.isArray(d.personagens) ? d.personagens : [])) {
           const nome = String(x.nome || "").trim().slice(0, 60);
@@ -1517,10 +1544,11 @@ ${texto}`;
     if (mundoAlvo && mundoDe(mundoAlvo)) {
       const m = mundoDe(mundoAlvo); mundoAlvo = null;
       m.personagens = (m.personagens || []).concat(novos.map(x => x.id));
+      if (!m.descricao && sobrePagina) m.descricao = sobrePagina;   // o grupo fica com a descrição que vinha na página
       atualizarMundo(m); return abrirMundo(m.id);
     }
     if (novos.length > 1 && $("pg-criar-grupo").checked) {
-      const m = { id: novoId(), nome: grupo || "New group", descricao: "", personagens: novos.map(x => x.id), emoji: novos[0].emoji, cores: novos[0].cores };
+      const m = { id: novoId(), nome: grupo || "New group", descricao: sobrePagina || "", personagens: novos.map(x => x.id), emoji: novos[0].emoji, cores: novos[0].cores };
       atualizarMundo(m); return abrirMundo(m.id);
     }
     if (novos.length === 1) { abrirPersonagem(novos[0].id); return abrirNova(null); }
@@ -2019,7 +2047,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "24 Oct · word by word 2";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "24 Oct · group link";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2359,6 +2387,12 @@ ${texto}`;
       c, { avatar: fotoNova !== null ? fotoNova : (antigo ? antigo.avatar || "" : "") });
     atualizarMundo(m);
     mundoEditar = null;
+    const link = $("mw-link").value.trim();
+    if (link && eLink(link)) {   // com link: lê a página e mostra os membros para confirmar
+      abrirCriar("", m.nome); mundoAlvo = m.id;
+      $("c-extra").value = link;
+      return lerPaginaDoLink(link, m.nome, "");
+    }
     abrirMundo(m.id);
   };
   $("mw-voltar").onclick = () => mundoEditar ? abrirMundo(mundoEditar) : mostrarGaleria();
