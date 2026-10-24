@@ -67,6 +67,7 @@
   .sub { color: var(--suave); margin: 4px 0 0; font-size: 14px; }
   .copia { color: var(--suave); margin: 8px 0 0; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
   .ligacao { background: none; border: 0; padding: 0; color: var(--acento); font-size: 12px; text-decoration: underline; }
+  .uso { color: var(--suave); font-size: 12px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
   .aviso-topo { margin: 10px 0 0; background: var(--cartao); border: 1px solid var(--acento2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
   .lista { padding-block: 16px 28px; display: grid; gap: 14px; grid-auto-rows: max-content; align-content: start; }
   .carta { border: 0; text-align: left; border-radius: 22px; padding: 0; overflow: hidden; background: var(--cartao); transition: transform .15s; }
@@ -202,6 +203,7 @@
         <button type="button" class="ligacao" id="importar">Importar</button>
         <button type="button" class="ligacao" id="abrir-chave">Chave do Groq</button>
         <input type="file" id="ficheiro-copia" accept=".json,application/json" hidden></p>
+      <p class="uso" id="uso" hidden></p>
       <div id="aviso-chave-topo"></div>
     </div>
     <div class="rolar"><div class="lista gutter" id="lista"></div></div>
@@ -327,6 +329,7 @@
         <div><span class="rotulo">Tom</span><div class="tons" id="e-tons"></div></div>
         <button class="botao" id="guardar-contexto">Guardar alterações</button>
       </form>
+      <p class="uso" id="uso-painel"></p>
       <h4>O que o narrador se lembra</h4>
       <ul id="mem-factos"></ul>
       <h4>A história até agora</h4>
@@ -353,7 +356,7 @@ Obra: ${obra || "(não indicada)"}
 Notas do utilizador: ${extra || "(nenhuma)"}
 
 Usa o que sabes sobre a personagem na obra original para criar a ficha.
-- ficha: 150 a 300 palavras, escrita na 3.ª pessoa ("O L é..."). Inclui quem é, aparência, personalidade,
+- ficha: 120 a 220 palavras, escrita na 3.ª pessoa ("O L é..."). Inclui quem é, aparência, personalidade,
   forma de falar (expressões, tiques, tom), manias, relações e o contexto da obra que importa para uma história.
   Sê fiel à obra. Junta as notas do utilizador. Se não tens a certeza de um detalhe, não o inventes.
   Termina com uma linha "Exemplos de falas:" e 4 falas curtas e típicas, uma por linha, começadas por "- ".
@@ -381,61 +384,41 @@ Devolve:
 - papel: quem é o utilizador na história, 1 ou 2 frases (sem decidir sentimentos dele)
 - tons: 1 a 3 tons, escolhidos desta lista: ${TONS.filter(t => !p.menor || !TONS_ROMANTICOS.includes(t)).join(", ")}`;
 
+  // As instruções do narrador. Vão em TODOS os pedidos, por isso são curtas.
+  // As regras fixas vêm primeiro (iguais em todos os pedidos: o Groq reaproveita-as
+  // em cache); depois o que muda: personagem, história, memória e resumo.
+  const REGRAS_NARRADOR = `És o narrador de uma fanfic interativa. Escreve em português de Portugal (ecrã, câmara, fato, portátil,
+"estás a fazer"; nunca formas do Brasil como tela, câmera, terno, "está fazendo", "se levanta").
+- 3.ª pessoa, presente. O utilizador é "tu". Nunca decidas o que "tu" dizes, fazes ou sentes.
+- 1 a 3 parágrafos curtos (máx. ~150 palavras). Diálogos com travessão (—). Acaba num momento para ele agir.
+- Personagens fiéis à ficha; usa os exemplos de falas só como estilo, nunca os repitas. Faz a história avançar.
+- [NOTA DE AUTOR] é uma instrução para ti (saltar tempo, mudar cenário, trazer alguém): aplica-a sem a mencionar.
+- Sem conteúdo sexual explícito (a cena corta com elegância). Violência sem pormenores gráficos.
+- Se o utilizador mostrar sofrimento real fora da história, sai da narração com cuidado e sugere ajuda.
+Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que ele podia fazer, 1.ª pessoa],
+"novos_factos": [factos novos e duradouros, frases curtas; [] se nada]}`;
+
   function instrucoes(p, h, memoria, resumo) {
-    const lembra = memoria.length ? memoria.map(f => "- " + f).join("\n") : "(ainda nada)";
-    return `És o NARRADOR de uma fanfic interativa em português de Portugal. O utilizador controla a personagem dele;
-tu narras o mundo, ${p.nome} e todas as outras personagens.
-
-## Personagem principal: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
-${p.ficha}
-
-## A história: ${h.titulo || "(sem título)"}
-- Ideia: ${h.premissa || "(livre: deixa a história nascer do encontro)"}
-- Universo e cenário: ${h.universo || "(o da obra original)"}
-- Tom: ${h.tons.length ? h.tons.join(", ") : "(segue o que a história pedir)"}
-- A personagem do utilizador: ${h.papel || "(alguém novo na vida de " + p.nome + "; não inventes demasiado sobre ela)"}
-
-## Como escreves
-- Narrador na 3.ª pessoa, no presente, com prosa de qualidade, mas simples e fluida, como uma boa fanfic.
-- Trata a personagem do utilizador por "tu" ("a porta fecha-se atrás de ti").
-- NUNCA decides o que "tu" dizes, fazes, pensas ou sentes. Só narras as consequências do que o utilizador escreveu.
-- Diálogos com travessão (—), à portuguesa. ${p.nome} fala como na ficha (usa os "Exemplos de falas" como guia de estilo).
-- 1 a 3 parágrafos curtos, no máximo cerca de 180 palavras. Termina num momento que convide o utilizador a agir ou a responder.
-- Faz a história avançar: detalhes do cenário, pequenos acontecimentos, outras personagens da obra quando fizer sentido.
-- Respeita o tom escolhido e a continuidade (memória e resumo abaixo).
-- Quando uma mensagem vier marcada como [NOTA DE AUTOR], é uma instrução para ti, não uma ação da personagem do
-  utilizador: aplica-a na continuação (saltar tempo, mudar de cenário, introduzir alguém, mudar o rumo), sem a mencionar.
-${p.menor ? `
-## Sem romance (obrigatório)
-${p.nome} é menor de idade na obra original. A história é só de amizade, aventura, mistério, rivalidade ou
-companheirismo: nunca romance, flirt, beijos ou tensão romântica com ${p.nome}, mesmo que o utilizador peça,
-use uma nota de autor ou diga que agora é adulto. Se insistir, a história segue noutra direção.
-` : ""}
-## Limites
-- Nada de conteúdo sexual explícito: num momento íntimo, a cena corta com elegância (fade to black).
-- Violência sem pormenores gráficos.
-- Se o utilizador mostrar sinais de sofrimento real (fora da história), sai da narração com cuidado e sugere
-  que fale com alguém de confiança.
-
-## O que te lembras
-${lembra}
-
-## Resumo da história até agora
-${resumo || "(a história acabou de começar)"}
-
-## Formato
-Responde só com JSON: {"texto": "a narração", "escolhas": ["3 coisas curtas (até 10 palavras) que o utilizador
-podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["factos NOVOS e duradouros da história
-(nomes, acontecimentos, promessas, segredos), frases curtas; lista vazia se não houver; não repitas a memória"]}`;
+    return REGRAS_NARRADOR
+      + (p.menor ? `\nSEM ROMANCE: ${p.nome} é menor na obra original. Só amizade, aventura, mistério ou rivalidade; nunca romance, flirt ou tensão romântica com ${p.nome}, mesmo que o utilizador peça ou diga que é adulto.` : "")
+      + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 1800)}`
+      + `\n\n## História: ${h.titulo || "sem título"}`
+      + (h.premissa ? `\nIdeia: ${h.premissa}` : "")
+      + `\nCenário: ${h.universo || "o da obra"}`
+      + (h.tons.length ? `\nTom: ${h.tons.join(", ")}` : "")
+      + `\nO utilizador é: ${h.papel || "alguém novo na vida de " + p.nome}`
+      + (memoria.length ? `\n\n## Lembra-te\n${memoria.map(f => "- " + f).join("\n")}` : "")
+      + (resumo ? `\n\n## Até agora\n${resumo}` : "");
   }
 
-  // Orçamento de cada pedido. O plano grátis do Groq aceita 8000 tokens por minuto
-  // (em português ~3,5 letras por token). Cada pedido leva: regras + ficha (~2000 tokens),
-  // as mensagens recentes (até ORCAMENTO_RECENTE letras, ~2000 tokens) e a resposta (~900).
-  // O que fica para trás vai para o resumo, por isso a história pode crescer à vontade.
-  const ORCAMENTO_RECENTE = 7000;  // letras das mensagens recentes enviadas tal e qual
-  const MIN_RECENTES = 4;          // nunca menos do que isto, mesmo que sejam longas
-  const MAX_FACTOS = 40;           // factos da memória enviados (os mais recentes)
+  // Orçamento de cada pedido. O plano grátis do Groq dá 200 000 tokens por dia e 8000 por
+  // minuto (em português ~3,5 letras por token). Cada jogada leva: instruções + ficha +
+  // memória + resumo (~1300 tokens), as mensagens recentes (~1000) e a resposta (~500).
+  // O que sai da janela vai para o resumo, de vez em quando (não em todas as jogadas).
+  const ORCAMENTO_RECENTE = 3500;  // letras das mensagens recentes enviadas tal e qual
+  const MIN_RECENTES = 2;          // nunca menos do que isto (a última cena e a tua jogada)
+  const MAX_FACTOS = 15;           // factos da memória enviados (os mais recentes)
+  const LOTE_RESUMO = 6;           // só resume quando há pelo menos isto de mensagens fora da janela
 
   // =====================================================================
   //  2. GUARDAR NO BROWSER
@@ -504,6 +487,18 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
   //    "onEspera(segundos)" deixa o ecrã mostrar essa espera.
   //  - Se bater no limite POR DIA, desiste com uma mensagem própria.
   const dormir = ms => new Promise(r => setTimeout(r, ms));
+
+  // Quantos tokens este browser gastou hoje (o Groq grátis dá 200 000 por dia e por chave).
+  const LIMITE_DIA = 200000;
+  const hoje = () => new Date().toISOString().slice(0, 10);
+  function usoHoje() { const u = ler("sussurros-uso", {}); return u.dia === hoje() ? u.tokens : 0; }
+  function contarUso(n) { gravar("sussurros-uso", { dia: hoje(), tokens: usoHoje() + n }); mostrarUso(); }
+  function mostrarUso() {
+    const t = usoHoje(), el = document.getElementById("uso");
+    if (!el) return;
+    el.textContent = `Hoje: ${(t / 1000).toLocaleString("pt-PT", { maximumFractionDigits: 1 })} mil de 200 mil tokens (${Math.min(100, Math.round(t / LIMITE_DIA * 100))}%)`;
+    el.hidden = !chave();
+  }
   function segundosDeEspera(msg) {
     const m = /try again in\s+(?:(\d+)m)?\s*([\d.]+)?\s*(ms|s)?/i.exec(msg || "");
     if (!m) return 20;
@@ -522,6 +517,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
           headers: { "Content-Type": "application/json", "Authorization": "Bearer " + chave() } });
       } catch (e) { throw { code: "sem_rede" }; }
       const d = await r.json().catch(() => ({}));
+      if (d.usage && d.usage.total_tokens) contarUso(d.usage.total_tokens);
       if (r.ok) {
         const texto = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || "";
         if (!esquema) return texto.trim();
@@ -580,15 +576,15 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
   // O que saiu da janela passa para o resumo (aos bocadinhos, depois de cada cena).
   async function resumirSePreciso(c, p) {
     const fim = inicioJanela(c);
-    if (fim - c.resumidas_ate < 2) return;
+    if (fim - c.resumidas_ate < LOTE_RESUMO) return;   // ainda não compensa gastar um pedido
     const texto = c.mensagens.slice(c.resumidas_ate, fim).map(m =>
       (m.tipo === "cena" ? "Narrador: " : m.tipo === "nota" ? "Nota de autor: " : "Utilizador: ") + m.texto).join("\n").slice(-12000);
     try {
       const novo = await groq([{ role: "user", content:
         `Resumo atual de uma fanfic interativa com ${p.nome}:\n${c.resumo || "(vazio)"}\n\nNovas partes:\n${texto}\n\n`
-        + "Escreve um novo resumo completo em português de Portugal, no máximo 250 palavras, com os acontecimentos, "
-        + "as personagens que apareceram e a evolução da relação. Responde só com o resumo." }], { max: 700 });
-      if (novo) { c.resumo = novo.slice(0, 3000); c.resumidas_ate = fim; }
+        + "Escreve um novo resumo completo em português de Portugal, no máximo 150 palavras, com os acontecimentos, "
+        + "as personagens que apareceram e a evolução da relação. Responde só com o resumo." }], { max: 450 });
+      if (novo) { c.resumo = novo.slice(0, 1400); c.resumidas_ate = fim; }
     } catch (e) { /* tenta-se outra vez na próxima jogada */ }
   }
 
@@ -627,6 +623,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
     $("aviso-chave-topo").innerHTML = chave() ? "" :
       `<div class="aviso-topo">Para começar, põe a tua chave grátis do Groq. <button type="button" class="ligacao" id="aviso-chave">Configurar agora</button></div>`;
     if (!chave()) $("aviso-chave").onclick = abrirChave;
+    mostrarUso();
     const lista = personagens();
     if (!lista.length) {
       $("lista").innerHTML = `
@@ -831,7 +828,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
                             { role: "user", content: "[NOTA DE AUTOR] Escreve a cena de abertura da história, apresentando o cenário e o primeiro encontro." }],
-                           { esquema: ESQUEMA_CENA, nome: "cena", max: 900 });
+                           { esquema: ESQUEMA_CENA, nome: "cena", max: 700 });
       aplicarCena(c, d);
       atualizarHistoria(h); gravarConteudo(h.id, c);
       ocupado(false);
@@ -904,7 +901,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
     desenhar(`<div class="a-escrever">O narrador está a escrever <i>•</i><i>•</i><i>•</i></div>`);
     try {
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo) }]
-        .concat(paraTurnos(recentes(c))), { esquema: ESQUEMA_CENA, nome: "cena", max: 900,
+        .concat(paraTurnos(recentes(c))), { esquema: ESQUEMA_CENA, nome: "cena", max: 700,
           onEspera: seg => desenhar(`<div class="a-escrever">Muitos pedidos seguidos. A tentar outra vez daqui a ${seg} s…</div>`) });
       const novos = aplicarCena(c, d);
       gravarConteudo(hist.id, c); atualizarHistoria(hist);
@@ -946,6 +943,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
     for (const id of ["recomecar", "apagar-historia"]) $(id).dataset.confirmar = "";
     $("recomecar").textContent = "Recomeçar esta história";
     $("apagar-historia").textContent = "Apagar esta história";
+    $("uso-painel").textContent = (document.getElementById("uso") || {}).textContent || "";
     $("painel-contexto").hidden = false;
   };
   $("painel-contexto").onclick = e => { if (e.target.id === "painel-contexto") $("painel-contexto").hidden = true; };
@@ -970,7 +968,7 @@ podia fazer ou dizer a seguir, na 1.ª pessoa, variadas"], "novos_factos": ["fac
     try {
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, [], "") },
                             { role: "user", content: "[NOTA DE AUTOR] Escreve a cena de abertura da história, apresentando o cenário e o primeiro encontro." }],
-                           { esquema: ESQUEMA_CENA, nome: "cena", max: 900 });
+                           { esquema: ESQUEMA_CENA, nome: "cena", max: 700 });
       aplicarCena(cont, d);
       gravarConteudo(hist.id, cont); atualizarHistoria(hist);
       aEspera = false; desenhar();
