@@ -536,7 +536,7 @@
         <button type="button" class="menu-item" id="importar">⬆ Import backup</button>
         <input type="file" id="ficheiro-copia" accept=".json,application/json" hidden>
       </div>
-      <p class="dica">Everything is saved only in this browser.</p>
+      <p class="dica">Everything is saved only in this browser. · Version <span id="versao"></span></p>
       <button type="button" class="botao secundario" id="fechar-definicoes">Close</button>
     </div>
   </div>
@@ -2019,9 +2019,11 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
+  const VERSAO = "24 Oct · word by word 2";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return fim();
+    // (já não depende da opção "reduzir movimento" do telemóvel: escrever texto não é uma animação de movimento)
     const textos = [], w = document.createTreeWalker(bloco, NodeFilter.SHOW_TEXT);
     while (w.nextNode()) if (w.currentNode.textContent.trim()) textos.push(w.currentNode);
     // o nome de quem fala (no topo do balão) aparece logo com o balão
