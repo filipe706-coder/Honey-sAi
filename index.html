@@ -370,7 +370,8 @@ Usa o que sabes sobre a personagem na obra original para criar a ficha.
 - ficha: 120 a 220 palavras, escrita na 3.ª pessoa ("O L é..."). Inclui quem é, aparência, personalidade,
   forma de falar (expressões, tiques, tom), manias, relações e o contexto da obra que importa para uma história.
   Sê fiel à obra. Junta as notas do utilizador. Se não tens a certeza de um detalhe, não o inventes.
-  Termina com uma linha "Exemplos de falas:" e 4 falas curtas e típicas, uma por linha, começadas por "- ".
+  Termina com uma linha "Exemplos de falas:" e 4 falas curtas, uma por linha, começadas por "- ": falas reais da obra
+  ou muito fiéis ao vocabulário e ao humor da personagem, em situações diferentes. Nada de frases genéricas.
 - frase: descrição curta (até 15 palavras) para o cartão da galeria.
 - menor_na_obra: true se a personagem tem menos de 18 anos em toda ou na maior parte da obra original. Na dúvida, true.
 - conhecida: false se não conheces esta personagem (nesse caso cria a ficha a partir das notas).
@@ -401,7 +402,7 @@ Devolve:
   // As regras fixas vêm primeiro (iguais em todos os pedidos: o Groq reaproveita-as
   // em cache); depois o que muda: personagem, história, memória e resumo.
   const REGRAS_NARRADOR = `És o narrador de uma fanfic interativa. Escreve em português de Portugal (ecrã, câmara, fato, portátil,
-"estás a fazer"; nunca formas do Brasil como tela, câmera, terno, "está fazendo", "se levanta").
+"estás a fazer", subtil, tarte; nunca formas do Brasil como tela, câmera, terno, sutil, torta, "está fazendo", "se levanta").
 - 3.ª pessoa, presente. O utilizador é "tu". Interpretas todas as outras personagens e o ambiente, mas NUNCA decides
   o que "tu" dizes, fazes, pensas ou sentes, nem reações tuas (corar, coração acelerado). Reages ao que ele escreve.
 - 1 a 3 parágrafos curtos (máx. ~150 palavras). Diálogos com travessão (—).
@@ -409,11 +410,14 @@ Devolve:
   provocação, um segredo, um problema, alguém que chega). O utilizador só reage; não esperes que ele invente o rumo.
 - Acaba SEMPRE com uma personagem a falar diretamente com "tu" (pergunta, desafio, convite) ou numa situação que
   exige uma resposta dele já. Nunca acabes numa descrição parada.
+- VARIA: alterna cenas de ação ou enredo, provocação e humor, e momentos calmos, a sós ou vulneráveis. Não faças
+  o mesmo tipo de pergunta duas cenas seguidas; muitas vezes a pergunta deve ser pessoal ou provocadora, não sobre o enredo.
 - Personagens fiéis à ficha; usa os exemplos de falas só como estilo, nunca os repitas. Faz a história avançar.
 - [NOTA DE AUTOR] é uma instrução para ti (saltar tempo, mudar cenário, trazer alguém): aplica-a sem a mencionar.
 - Sem conteúdo sexual explícito (a cena corta com elegância). Violência sem pormenores gráficos.
 - Se o utilizador mostrar sofrimento real fora da história, sai da narração com cuidado e sugere ajuda.
-Responde só com JSON: {"texto": narração, "escolhas": [3 respostas curtas e diferentes ao que acabou de acontecer, 1.ª pessoa],
+Responde só com JSON: {"texto": narração, "escolhas": [3 respostas curtas, 1.ª pessoa, em bom português: uma sobre o que está a acontecer,
+uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, picar ou mostrar algo vulnerável)],
 "novos_factos": [factos novos e duradouros, frases curtas; [] se nada]}`;
 
   // Regras extra quando a história é slow burn (e a personagem é adulta na obra).
@@ -597,7 +601,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 respostas curtas e d
     return mensagens.map(m => m.tipo === "cena"
       ? { role: "assistant", content: m.texto }
       : m.tipo === "continuar"
-      ? { role: "user", content: "[NOTA DE AUTOR] Continua tu: avança a história até à próxima situação que peça uma resposta minha, sem decidir nada por mim." }
+      ? { role: "user", content: "[NOTA DE AUTOR] Continua tu: faz acontecer algo novo (alguém interrompe, um salto no tempo, um problema, um momento a sós ou uma revelação) e leva a história até à próxima situação que peça uma resposta minha, sem decidir nada por mim." }
       : { role: "user", content: m.tipo === "nota" ? "[NOTA DE AUTOR] " + m.texto : m.texto });
   }
 
