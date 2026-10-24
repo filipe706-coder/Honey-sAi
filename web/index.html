@@ -296,6 +296,12 @@
   .encontrado p { margin: 0; color: var(--suave); font-size: 13px; line-height: 1.4; }
   .linha-check { display: flex; gap: 8px; align-items: center; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--texto); }
   .linha-check input { width: auto; margin: 0; }
+  .relacao-barra { cursor: pointer; }
+  .rel-lista { display: grid; gap: 10px; }
+  .rel-item { background: var(--fundo); border-radius: 12px; padding: 8px 12px; display: grid; gap: 5px; }
+  .rel-item .relacao-topo b { color: var(--texto); }
+  .rel-item .relacao-topo span.fase { color: var(--acento); font-size: 13px; font-weight: 600; }
+  .gerada { width: 100%; aspect-ratio: 3 / 4; border-radius: 16px; background: var(--fundo) center / cover no-repeat; display: grid; place-items: center; color: var(--suave); font-size: 13px; text-align: center; padding: 16px; }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
@@ -471,6 +477,7 @@
           <button type="button" class="botao secundario" id="pers-fundo-btn">🖼 Story background</button>
           <button type="button" class="ligacao" id="pers-fundo-tirar" hidden>use the avatar instead</button>
           <input type="file" id="pers-fundo" accept="image/*" hidden>
+          <button type="button" class="botao secundario" id="pers-gerar">✨ Generate a picture</button>
         </div>
         <p class="dica" id="pers-fundo-estado"></p>
       </div>
@@ -671,6 +678,24 @@
     </div>
   </div>
 
+  <!-- Painel: gerar uma imagem da personagem com IA -->
+  <div class="painel" id="painel-imagem" hidden>
+    <div class="gaveta gutter">
+      <h3>Generate a picture</h3>
+      <p class="dica">An illustration made from the character's appearance, by a free image AI (Pollinations). It's a drawing inspired by the description, not a photo of anyone.</p>
+      <div><span class="rotulo">Style</span><div class="tons" id="img-estilo"></div></div>
+      <div class="formulario" style="padding:0"><label>What they look like<textarea id="img-descricao" rows="3" maxlength="500" placeholder="Hair, eyes, clothes, mood…"></textarea></label></div>
+      <button type="button" class="botao" id="img-gerar">Generate</button>
+      <div class="gerada" id="img-ver" hidden></div>
+      <div class="acoes" id="img-acoes" hidden>
+        <button type="button" class="botao secundario" id="img-avatar">Use as avatar</button>
+        <button type="button" class="botao secundario" id="img-fundo">Use as story background</button>
+      </div>
+      <p class="dica" id="img-estado"></p>
+      <button type="button" class="botao secundario" id="img-fechar">Close</button>
+    </div>
+  </div>
+
   <!-- Painel: contexto e memória da história -->
   <div class="painel" id="painel-contexto" hidden>
     <div class="gaveta gutter">
@@ -686,6 +711,8 @@
         <button class="botao" id="guardar-contexto">Save changes</button>
       </form>
       <p class="uso" id="uso-painel"></p>
+      <h4 id="rel-titulo" hidden>Relationships</h4>
+      <div class="rel-lista" id="rel-lista" hidden></div>
       <h4>What the narrator remembers</h4>
       <ul id="mem-factos"></ul>
       <h4>The story so far</h4>
@@ -854,7 +881,8 @@ one funny or teasing, and one about the relationship between you two (getting cl
           + (hx(x) ? `\nHistory with "you": ${hx(x).slice(0, 500)}` : "")).join("\n") : "")
       + (outros.length ? "\n\n## Others in this group (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}`
           + (hx(x) ? ` · with you: ${hx(x).slice(0, 160)}` : "")).join("\n") : "")
-      + (menores.length ? `\nNO ROMANCE with ${menores.join(", ")}: minors in their original work. Never romance, flirting or romantic tension with them.` : "");
+      + (menores.length ? `\nNO ROMANCE with ${menores.join(", ")}: minors in their original work. Never romance, flirting or romantic tension with them.` : "")
+      + `\nIn the JSON, instead of "proximidade" return "proximidades": [{"quem": name, "passo": -2..2}] for each character in the scene whose feelings toward "you" changed (leave out the ones that didn't). Each one has their own feelings: one can get closer while another gets jealous or distant.`;
   }
 
   function instrucoes(p, h, memoria, resumo, nCena = 0, prox = null) {
@@ -875,7 +903,9 @@ one funny or teasing, and one about the relationship between you two (getting cl
       + `don't write what "you" do, say, your expression or clothes unless the user wrote it (you only narrate the rest of the world).`
       + (memoria.length ? `\n\n## Remember\n${memoria.map(f => "- " + f).join("\n")}` : "")
       + (resumo ? `\n\n## So far\n${resumo}` : "")
-      + (prox === null ? "" : `\n\nHow close ${p.nome} feels to "you" right now: ${faseDe(prox, romantico(p, h)).nome} (${prox}/100). Keep ${p.nome}'s behaviour consistent with it.`);
+      + (prox === null ? "" : typeof prox === "object"
+          ? `\n\nHow close each one feels to "you" right now: ${Object.entries(prox).map(([id, v]) => { const x = personagens().find(y => y.id === id); return x ? `${x.nome}: ${faseDe(v, romantico(x, h)).nome} (${v}/100)` : ""; }).filter(Boolean).join("; ")}. Keep their behaviour consistent with it.`
+          : `\n\nHow close ${p.nome} feels to "you" right now: ${faseDe(prox, romantico(p, h)).nome} (${prox}/100). Keep ${p.nome}'s behaviour consistent with it.`);
   }
 
   // Orçamento de cada pedido. O plano grátis do Groq dá 200 000 tokens por dia e 8000 por
@@ -982,6 +1012,10 @@ one funny or teasing, and one about the relationship between you two (getting cl
   const ESQUEMA_FICHA = obj({ conhecida: B, nome: S, obra: S, frase: S, ficha: S, menor_na_obra: B, emoji: S, cor1: S, cor2: S });
   const ESQUEMA_IDEIA = obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS });
   const ESQUEMA_PARTE = obj({ tipo: { type: "string", enum: ["narracao", "fala"] }, quem: S, texto: S });
+  // Num grupo, o narrador dá um passo de proximidade para CADA membro cujos sentimentos mudaram.
+  const ESQUEMA_CENA_GRUPO = obj({ partes: { type: "array", items: ESQUEMA_PARTE }, escolhas: LS, novos_factos: LS,
+    proximidades: { type: "array", items: obj({ quem: S, passo: { type: "integer", enum: [-2, -1, 0, 1, 2] } }) } });
+  const esquemaCena = h => h && h.mundo ? ESQUEMA_CENA_GRUPO : ESQUEMA_CENA;
   const ESQUEMA_CENA = obj({ partes: { type: "array", items: ESQUEMA_PARTE }, escolhas: LS, novos_factos: LS,
                               proximidade: { type: "integer", enum: [-2, -1, 0, 1, 2] } });
 
@@ -1726,6 +1760,73 @@ ${texto}`;
     catch (err) { $("pers-fundo-estado").textContent = "I couldn't open that image. Try another one (JPG or PNG)."; }
   };
   $("pers-fundo-tirar").onclick = () => guardarFundoPers("");
+  // ---------- Gerar uma imagem com IA (Pollinations, grátis e sem chave) ----------
+  // A imagem vem de um endereço com a descrição; a app descarrega-a e guarda uma cópia reduzida.
+  const ESTILOS = [["anime", "Anime", "anime style illustration, soft cel shading"], ["pintura", "Painted", "digital painting, painterly, soft light"],
+                   ["pastel", "Soft pastel", "soft pastel illustration, dreamy, gentle colors"], ["noir", "Moody", "moody cinematic illustration, dramatic lighting"]];
+  let imagemGerada = null, estiloImg = "anime";
+  async function abrirImagem() {
+    $("img-ver").hidden = true; $("img-acoes").hidden = true; $("img-estado").textContent = "";
+    $("img-estilo").innerHTML = ESTILOS.map(e => `<button type="button" class="tom" data-v="${e[0]}" aria-pressed="${e[0] === estiloImg}">${e[1]}</button>`).join("");
+    $("img-estilo").querySelectorAll(".tom").forEach(b => b.onclick = () => {
+      estiloImg = b.dataset.v; $("img-estilo").querySelectorAll(".tom").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    });
+    $("img-descricao").value = (pers.campos && pers.campos.aparencia) || pers.descricaoImagem || "";
+    $("painel-imagem").hidden = false;
+    // sem aparência escrita: o modelo pequeno tira-a da ficha (um pedido curto)
+    if (!$("img-descricao").value) {
+      $("img-estado").textContent = "Reading the profile…";
+      try {
+        const t = await groq([{ role: "user", content: `Profile of a character:\n${String(pers.ficha).slice(0, 2500)}\n\n`
+          + "Describe only their physical appearance for an illustration, in English, in at most 30 words: hair, eyes, build, clothes, expression. "
+          + "If the profile says nothing about it, invent something that fits. Reply only with the description." }], { max: 300, preferir: 1 });
+        if (!$("img-descricao").value) $("img-descricao").value = String(t || "").slice(0, 400);
+        $("img-estado").textContent = "";
+      } catch (e) { $("img-estado").textContent = mensagemDeErro(e); }
+    }
+  }
+  function urlImagem(desc, semente) {
+    const estilo = (ESTILOS.find(e => e[0] === estiloImg) || ESTILOS[0])[2];
+    const pedido = `${estilo}, portrait of one person, head and shoulders, fully clothed, ${desc}, detailed face, beautiful lighting, no text`;
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(pedido.slice(0, 700))}?width=768&height=1024&seed=${semente}&nologo=true`;
+  }
+  $("img-gerar").onclick = async () => {
+    const desc = $("img-descricao").value.trim();
+    if (!desc) { $("img-estado").textContent = "Describe what they look like first."; return; }
+    const url = urlImagem(desc, Math.floor(Math.random() * 1e9));
+    $("img-gerar").disabled = true; $("img-acoes").hidden = true;
+    $("img-ver").hidden = false; $("img-ver").style.backgroundImage = ""; $("img-ver").textContent = "Drawing… this can take 10 to 30 seconds.";
+    $("img-estado").textContent = "";
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw 0;
+      imagemGerada = await r.blob();
+      $("img-ver").textContent = "";
+      $("img-ver").style.backgroundImage = `url(${URL.createObjectURL(imagemGerada)})`;
+      $("img-acoes").hidden = false;
+      $("img-gerar").textContent = "Try another";
+    } catch (e) {
+      $("img-ver").hidden = true;
+      $("img-estado").textContent = "The image service didn't answer. Try again in a moment.";
+    }
+    $("img-gerar").disabled = false;
+  };
+  $("img-avatar").onclick = async () => {
+    if (!imagemGerada) return;
+    const l = personagens(), i = l.findIndex(x => x.id === pers.id), velho = l[i].avatar;
+    l[i].avatar = await reduzirFoto(imagemGerada);
+    if (!gravarPersonagens(l)) { l[i].avatar = velho; gravarPersonagens(l); $("img-estado").textContent = "Not enough space in this browser."; return; }
+    pers = l[i]; pintarAvatar($("pers-avatar"), pers);
+    $("img-estado").textContent = "Saved as the avatar ✓";
+  };
+  $("img-fundo").onclick = async () => {
+    if (!imagemGerada) return;
+    guardarFundoPers(await reduzirFundo(imagemGerada));
+    $("img-estado").textContent = $("pers-fundo-estado").textContent.startsWith("Done") ? "Saved as the story background ✓" : $("pers-fundo-estado").textContent;
+  };
+  $("pers-gerar").onclick = () => { $("img-gerar").textContent = "Generate"; abrirImagem(); };
+  $("img-fechar").onclick = () => { $("painel-imagem").hidden = true; };
+  $("painel-imagem").onclick = e => { if (e.target.id === "painel-imagem") $("painel-imagem").hidden = true; };
   $("pers-voltar").onclick = mostrarGaleria;
   $("pers-editar").onclick = () => (mundoAlvo = null, pers.campos) ? abrirMao(pers) : mostrarRevisao(Object.assign({}, pers), true);
   $("nova-historia").onclick = () => abrirNova(null);
@@ -1841,7 +1942,7 @@ ${texto}`;
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
                             { role: "user", content: notaAbertura(h) }],
-                           { esquema: ESQUEMA_CENA, nome: "cena", max: 700 });
+                           { esquema: esquemaCena(h), nome: "cena", max: 700 });
       aplicarCena(c, d, h);
       atualizarHistoria(h); gravarConteudo(h.id, c);
       ocupado(false);
@@ -1880,9 +1981,30 @@ ${texto}`;
       .filter(f => f && !ja.has(f.toLowerCase()));
     c.escolhas = (Array.isArray(d && d.escolhas) ? d.escolhas : []).map(String).filter(s => s.trim()).slice(0, 3);
     // a cena guarda os factos e as sugestões que trouxe: assim dá para a desfazer sem deixar restos
-    const antes = proxDe(c, h || {}), passo = [-2, -1, 0, 1, 2].includes(d && d.proximidade) ? d.proximidade : 0;
-    c.proximidade = Math.max(0, Math.min(100, antes + passo * pontosPorPasso(h || {})));
-    c.mensagens.push({ tipo: "cena", texto, partes, factos: novos, escolhas: c.escolhas, prox: c.proximidade - antes });
+    const limitar = v => Math.max(0, Math.min(100, v));
+    let cena;
+    if (h && h.mundo) {
+      const elenco = elencoCena(h), mudou = {};
+      c.proxs = Object.assign({}, c.proxs);
+      for (const x of (Array.isArray(d && d.proximidades) ? d.proximidades : [])) {
+        const quem = acharPorNome(elenco, x && x.quem), passo = [-2, -1, 0, 1, 2].includes(x && x.passo) ? x.passo : 0;
+        if (!quem || !passo || quem.id in mudou) continue;
+        const antes = valorProx(c, h, quem.id);
+        c.proxs[quem.id] = limitar(antes + passo * pontosPorPasso(h));
+        mudou[quem.id] = c.proxs[quem.id] - antes;
+      }
+      // em foco: quem mais mudou nesta cena; senão quem mais falou; senão a principal
+      const falas = {}; partes.forEach(x => { const q = x.tipo === "fala" && acharPorNome(elenco, x.quem); if (q) falas[q.id] = (falas[q.id] || 0) + 1; });
+      const ids = Object.keys(mudou);
+      c.foco = ids.length ? ids.sort((a, b) => Math.abs(mudou[b]) - Math.abs(mudou[a]))[0]
+             : Object.keys(falas).sort((a, b) => falas[b] - falas[a])[0] || h.personagem;
+      cena = { proxs: mudou };
+    } else {
+      const antes = proxDe(c, h || {}), passo = [-2, -1, 0, 1, 2].includes(d && d.proximidade) ? d.proximidade : 0;
+      c.proximidade = limitar(antes + passo * pontosPorPasso(h || {}));
+      cena = { prox: c.proximidade - antes };
+    }
+    c.mensagens.push(Object.assign({ tipo: "cena", texto, partes, factos: novos, escolhas: c.escolhas }, cena));
     c.memoria = c.memoria.concat(novos).slice(-80);  // guarda até 80; envia os últimos MAX_FACTOS
     return novos;
   }
@@ -1926,28 +2048,63 @@ ${texto}`;
     const ini = l[i][0], fim = i + 1 < l.length ? l[i + 1][0] : 100;
     return { i, nome: l[i][1], icone: l[i][2], dica: l[i][3], ini, fim, perto: i + 1 < l.length && fim - v <= 4 };
   }
+  // ---------- Relação por membro (histórias de grupo) ----------
+  // c.proxs = { idDaPersonagem: 0..100 }. Fora dos grupos continua a ser só c.proximidade (a principal).
+  function elencoCena(h) {
+    const todos = personagens(), principal = todos.find(x => x.id === h.personagem);
+    return [principal].concat((h.elenco || []).map(id => todos.find(x => x.id === id))).filter(Boolean);
+  }
+  function valorProx(c, h, id) {
+    if (!h.mundo) return proxDe(c, h);
+    const v = c.proxs && c.proxs[id];
+    if (typeof v === "number") return v;
+    if (id === h.personagem) return proxDe(c, h);
+    return historicoDe(mundoDe(h.mundo), id) ? 10 : 5;   // quem já tem história contigo começa um pouco à frente
+  }
+  // Quem é "quem" (o nome que a IA escreveu): nome completo, primeiro nome ou qualquer palavra do nome.
+  function acharPorNome(lista, nome) {
+    const n = String(nome || "").trim().toLowerCase();
+    if (!n) return null;
+    return lista.find(x => x.nome.toLowerCase() === n) || lista.find(x => x.nome.split(" ")[0].toLowerCase() === n.split(" ")[0])
+      || lista.find(x => x.nome.toLowerCase().split(" ").includes(n)) || null;
+  }
+  const valoresCena = (c, h) => Object.fromEntries(elencoCena(h).map(x => [x.id, valorProx(c, h, x.id)]));
   // Pontos por cada passo que o narrador dá: o slow burn anda mais devagar.
   const pontosPorPasso = h => (h.tons || []).includes("Slow burn") ? 2 : 3;
   function pintarBarraRelacao() {
     const barra = $("relacao-barra");
     barra.hidden = ler("sussurros-aspeto", {}).barra === "nao" || !hist;
     if (barra.hidden) return;
-    const amor = romantico(pers, hist), v = proxDe(cont, hist), f = faseDe(v, amor), n = pers.nome;
+    const quem = hist.mundo ? (elencoCena(hist).find(x => x.id === cont.foco) || pers) : pers;
+    const amor = romantico(quem, hist), v = valorProx(cont, hist, quem.id), f = faseDe(v, amor), n = quem.nome;
     $("rel-icone").textContent = f.icone;
-    $("rel-nome").textContent = f.nome;
+    $("rel-nome").textContent = hist.mundo ? `${f.nome} · ${quem.nome}` : f.nome;
     $("rel-dica").textContent = f.perto
       ? (amor ? `Just a little more and ${n}'s heart will be closer.` : `Just a little more and you'll be even closer.`)
       : f.dica.replace("{n}", n);
     $("rel-cheio").style.width = (f.fim > f.ini ? Math.round((v - f.ini) / (f.fim - f.ini) * 100) : 100) + "%";
   }
   // Aviso quando a relação muda de fase.
-  function avisarRelacao(antes, depois) {
-    const amor = romantico(pers, hist), a = faseDe(antes, amor), d = faseDe(depois, amor);
-    if (a.i === d.i) return;
-    const n = pers.nome;
+  function avisarRelacao(antes, depois, quem = pers) {
+    const amor = romantico(quem, hist), a = faseDe(antes, amor), d = faseDe(depois, amor);
+    if (a.i === d.i) return false;
+    const n = quem.nome;
     avisar(d.i > a.i ? `<b>${d.icone} ${escapar(d.nome)}</b><br>${escapar(d.dica.replace("{n}", n))}`
                      : `<b>💔 ${escapar(d.nome)}</b><br>${escapar(n)} pulled away a little.`, 5000);
     $("relacao-barra").classList.remove("pulsa"); void $("relacao-barra").offsetWidth; $("relacao-barra").classList.add("pulsa");
+    return true;
+  }
+  // No painel 📖: as barras de todos os que estão na história
+  function desenharListaRelacoes() {
+    const lista = hist.mundo ? elencoCena(hist) : [pers];
+    $("rel-titulo").hidden = $("rel-lista").hidden = !hist.mundo;
+    if (!hist.mundo) return;
+    $("rel-lista").innerHTML = lista.map(x => {
+      const v = valorProx(cont, hist, x.id), f = faseDe(v, romantico(x, hist));
+      return `<div class="rel-item"><div class="relacao-topo"><span class="icone-rel">${f.icone}</span><b>${escapar(x.nome)}</b>
+        <span class="fase">${escapar(f.nome)}</span><small>${v}/100</small></div>
+        <div class="relacao-trilho"><div class="relacao-cheio" style="width:${f.fim > f.ini ? Math.round((v - f.ini) / (f.fim - f.ini) * 100) : 100}%"></div></div></div>`;
+    }).join("");
   }
 
   // ---------- Fundo da história: a imagem da personagem ----------
@@ -2041,16 +2198,19 @@ ${texto}`;
     desenhar(`<div class="a-escrever">The narrator is writing <i>•</i><i>•</i><i>•</i></div>`);
     try {
       const turnos = c.mensagens.length ? paraTurnos(recentes(c)) : [{ role: "user", content: notaAbertura(hist) }];
-      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + nCenas(c), proxDe(c, hist)) }]
-        .concat(turnos), { esquema: ESQUEMA_CENA, nome: "cena", max: 700,
+      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + nCenas(c), hist.mundo ? valoresCena(c, hist) : proxDe(c, hist)) }]
+        .concat(turnos), { esquema: esquemaCena(hist), nome: "cena", max: 700,
           onEspera: seg => desenhar(`<div class="a-escrever">Too many requests in a row. Trying again in ${seg} s…</div>`) });
-      const proxAntes = proxDe(c, hist);
+      const proxAntes = hist.mundo ? valoresCena(c, hist) : proxDe(c, hist);
       const novos = aplicarCena(c, d);
       gravarConteudo(hist.id, c); atualizarHistoria(hist);
       if (novos.length) avisarMemoria(novos);
       aEspera = false;
       desenhar();
-      avisarRelacao(proxAntes, proxDe(c, hist));
+      if (hist.mundo) {
+        const depois = valoresCena(c, hist);
+        for (const x of elencoCena(hist)) if (avisarRelacao(proxAntes[x.id], depois[x.id], x)) break;   // um aviso de cada vez
+      } else avisarRelacao(proxAntes, proxDe(c, hist));
       // Em segundo plano: o resumo e o título do capítulo (com o modelo pequeno)
       const h = hist, p = pers;
       resumirSePreciso(c, p).then(() => tituloCapitulo(c, p)).then(() => guardarFundo(h, c));
@@ -2066,6 +2226,7 @@ ${texto}`;
   function tirarUltimaCena(c) {
     const m = c.mensagens.pop();
     if (typeof c.proximidade === "number" && m.prox) c.proximidade = Math.max(0, Math.min(100, c.proximidade - m.prox));
+    for (const [id, dv] of Object.entries(m.proxs || {})) if (c.proxs && typeof c.proxs[id] === "number") c.proxs[id] = Math.max(0, Math.min(100, c.proxs[id] - dv));
     const tirar = new Set((m.factos || []).map(f => f.toLowerCase()));
     c.memoria = c.memoria.filter(f => !tirar.has(f.toLowerCase()));
     const anterior = [...c.mensagens].reverse().find(x => x.tipo === "cena");
@@ -2174,6 +2335,7 @@ ${texto}`;
     temporizador = setTimeout(() => $("toast").classList.remove("ver"), 4000);
   }
   $("lampada").onclick = () => { verSugestoes = !verSugestoes; gravar("sussurros-sugestoes", verSugestoes); desenhar(); };
+  $("relacao-barra").onclick = () => $("abrir-contexto").click();   // tocar na barra mostra as de todos
   $("hist-voltar").onclick = () => { $("recap").hidden = true; voltar(); };
   // Enviar com a caixa vazia não faz nada (para não avançar sem querer); para isso há o "Continuar ▸".
   $("form").onsubmit = e => { e.preventDefault(); if ($("texto").value.trim()) enviar($("texto").value, modoNota); };
@@ -2218,6 +2380,7 @@ ${texto}`;
     $("recomecar").textContent = "Restart this story";
     $("apagar-historia").textContent = "Delete this story";
     $("uso-painel").textContent = (document.getElementById("uso") || {}).textContent || "";
+    desenharListaRelacoes();
     $("painel-contexto").hidden = false;
     $("recap").hidden = true;
   };
