@@ -542,7 +542,8 @@ uma divertida ou provocadora, e uma sobre a relação entre os dois (aproximar, 
       + `\nCenário: ${h.universo || "o da obra"}`
       + (h.relacao && h.relacao !== "Livre" ? `\nRelação entre os dois: ${h.relacao}` : "")
       + (h.tons.length ? `\nTom: ${h.tons.join(", ")}` : "")
-      + `\nO utilizador é: ${h.papel || "alguém novo na vida de " + p.nome}`
+      + `\nO utilizador é: ${h.papel || "alguém novo na vida de " + p.nome}. Na narração é SEMPRE "tu", nunca pelo nome; `
+      + `não escrevas o que "tu" fazes, dizes, a tua expressão ou roupa se ele não o escreveu (narras só o resto do mundo).`
       + (memoria.length ? `\n\n## Lembra-te\n${memoria.map(f => "- " + f).join("\n")}` : "")
       + (resumo ? `\n\n## Até agora\n${resumo}` : "");
   }
