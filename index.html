@@ -316,6 +316,7 @@
   .opcao span { color: var(--italico); font-size: 14px; line-height: 1.45; }
   .opcao small { color: var(--acento); font-size: 12px; font-weight: 600; }
   .opcao.carregando { min-height: 96px; animation: pulsar 1.6s infinite; }
+  .bloco-cena { display: flex; flex-direction: column; gap: 12px; }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
@@ -1798,7 +1799,7 @@ ${texto}`;
       aplicarCena(c, d, h);
       atualizarHistoria(h); gravarConteudo(h.id, c);
       ocupado(false);
-      abrirHistoria(h.id);
+      abrirHistoria(h.id, true);
     } catch (err) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; }
   }
   $("nova-voltar").onclick = voltar;
@@ -1872,7 +1873,7 @@ ${texto}`;
     c.memoria = c.memoria.concat(novos).slice(-80);  // guarda até 80; envia os últimos MAX_FACTOS
     return novos;
   }
-  function abrirHistoria(id) {
+  function abrirHistoria(id, animarAbertura = false) {
     hist = historias().find(h => h.id === id);
     if (!hist) return pers ? abrirPersonagem(pers.id) : mostrarGaleria();
     pers = personagens().find(p => p.id === hist.personagem) || pers;
@@ -1885,7 +1886,7 @@ ${texto}`;
     definirNota(false);
     mostrar("ecra-historia");
     pintarFundoHistoria();
-    desenhar();
+    desenhar("", animarAbertura);
     mostrarRecap(hist, cont, pers);
     $("texto").focus();
   }
@@ -1987,9 +1988,11 @@ ${texto}`;
   const podeRefazer = c => { const n = c.mensagens.length; return n > 0 && c.mensagens[n - 1].tipo === "cena" && n - 1 >= c.resumidas_ate; };
   const podeDesfazer = c => { const n = c.mensagens.length; return n >= 2 && c.mensagens[n - 1].tipo === "cena" && c.mensagens[n - 2].tipo !== "cena" && n - 2 >= c.resumidas_ate; };
 
-  function desenhar(extra = "") {
+  function desenhar(extra = "", animar = false) {
+    if (animacao) animacao.acabar(true);   // se ainda estava a escrever a anterior, mostra-a já toda
+    const ultima = cont.mensagens.length - 1;
     $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Untitled")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
-      cont.mensagens.map(m => (m.tipo === "cena" ? desenharCena(m)
+      cont.mensagens.map((m, i) => (m.tipo === "cena" ? `<div class="bloco-cena"${animar && i === ultima ? ' id="a-animar"' : ""}>${desenharCena(m)}</div>`
         : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
         : m.tipo === "continuar" ? `<div class="continuou" aria-hidden="true">· · ·</div>`
         : `<div class="acao">${formatar(m.texto)}</div>`)).join("") + extra;
@@ -2002,12 +2005,53 @@ ${texto}`;
       + (cont.mensagens.length ? `<div class="linha-acoes"><button class="continuar-btn" id="continuar">Continue ▸</button>`
         + `<div class="mini-acoes">${botoes}</div></div>` : "");
     $("escolhas").hidden = !$("escolhas").innerHTML;
+    // palavra a palavra: as sugestões só aparecem quando o texto acaba
+    if (animar && $("a-animar")) { const tinha = !$("escolhas").hidden; $("escolhas").hidden = true; animarCena($("a-animar"), () => { $("escolhas").hidden = !tinha; rolarFundo(); }); }
     if ($("continuar")) $("continuar").onclick = () => enviar("", false);
     if ($("refazer")) $("refazer").onclick = refazer;
     if ($("desfazer")) $("desfazer").onclick = desfazer;
     document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(cont.escolhas[b.dataset.i], false));
     $("enviar").disabled = aEspera;
   }
+  // ---------- Texto a aparecer palavra a palavra (como no Whispy) ----------
+  // A resposta da IA chega toda de uma vez; aqui mostramo-la aos poucos.
+  // Esvazia os textos da cena e vai repondo uma palavra de cada vez; cada parte (narração ou balão)
+  // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
+  let animacao = null;
+  const MS_POR_PALAVRA = 45;
+  const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
+  function animarCena(bloco, fim) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return fim();
+    const textos = [], w = document.createTreeWalker(bloco, NodeFilter.SHOW_TEXT);
+    while (w.nextNode()) if (w.currentNode.textContent.trim()) textos.push(w.currentNode);
+    // o nome de quem fala (no topo do balão) aparece logo com o balão
+    const itens = textos.map(n => ({ n, inteiro: n.textContent, bocados: n.textContent.split(/(\s+)/), nome: !!n.parentElement.closest(".balao > b") }));
+    itens.forEach(x => { if (!x.nome) x.n.textContent = ""; });
+    const partes = [...bloco.children];
+    partes.forEach(el => { el.style.visibility = "hidden"; });
+    let i = 0, j = 0, relogio;
+    const acabar = () => {
+      clearTimeout(relogio); animacao = null;
+      itens.forEach(x => { x.n.textContent = x.inteiro; });
+      partes.forEach(el => { el.style.visibility = ""; });
+      fim();
+    };
+    const passo = () => {
+      while (i < itens.length && (itens[i].nome || j >= itens[i].bocados.length)) { i++; j = 0; }
+      if (i >= itens.length) return acabar();
+      const x = itens[i], parte = partes.find(el => el.contains(x.n));
+      if (parte) parte.style.visibility = "";
+      let pedaco = x.bocados[j++];
+      if (j < x.bocados.length && /^\s+$/.test(x.bocados[j])) pedaco += x.bocados[j++];   // a palavra e o espaço a seguir
+      x.n.textContent += pedaco;
+      rolarFundo();
+      relogio = setTimeout(passo, MS_POR_PALAVRA);
+    };
+    animacao = { acabar };
+    passo();
+  }
+  $("rolar-historia").addEventListener("click", () => { if (animacao) animacao.acabar(); });
+
   function definirNota(sim) {
     modoNota = sim;
     $("botao-nota").setAttribute("aria-pressed", String(sim));
@@ -2054,7 +2098,7 @@ ${texto}`;
       gravarConteudo(hist.id, c); atualizarHistoria(hist);
       if (novos.length) avisarMemoria(novos);
       aEspera = false;
-      desenhar();
+      desenhar("", true);
       if (hist.mundo) {
         const depois = valoresCena(c, hist);
         for (const x of elencoCena(hist)) if (avisarRelacao(proxAntes[x.id], depois[x.id], x)) break;   // um aviso de cada vez
@@ -2107,7 +2151,7 @@ ${texto}`;
 
   // Guarda o resultado das tarefas em segundo plano sem apagar jogadas feitas entretanto.
   function guardarFundo(h, c) {
-    if (cont === c) { gravarConteudo(h.id, c); if (hist && hist.id === h.id && !aEspera) desenhar(); return; }
+    if (cont === c) { gravarConteudo(h.id, c); if (hist && hist.id === h.id && !aEspera && !animacao) desenhar(); return; }
     const atual = hist && hist.id === h.id ? cont : conteudoDe(h.id);
     if (c.resumidas_ate > atual.resumidas_ate && c.resumidas_ate <= atual.mensagens.length - 2) { atual.resumo = c.resumo; atual.resumidas_ate = c.resumidas_ate; }
     const completos = Math.floor(nCenas(atual) / CENAS_POR_CAPITULO);
