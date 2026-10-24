@@ -813,9 +813,11 @@ Return:
 - STEP BY STEP: answer only the user's last message. Show how the characters react to it and stop at the very first
   moment where "you" would answer (a question, a look, a gesture that waits for you). Don't skip ahead, don't resolve
   things, don't play out a whole conversation: one beat per turn, then it's the user's turn.
-- Very short: 40 to 90 words in total, at most 4 parts and at most 2 lines of dialogue (in a group, at most 3, from
-  different characters). Characters don't hold long conversations among themselves. The opening scene and
-  "you continue" turns may go up to 130 words.
+- Short: 40 to 90 words in total (up to 130 when several characters are in the scene). The opening scene and
+  "you continue" turns may be a little longer.
+- Characters CAN talk to each other when it fits: banter, teasing, arguing, reacting to one another. In group stories
+  that's welcome and makes them feel alive. Keep it to a short exchange of a few lines, then turn it back to "you"
+  (someone asks you something, looks at you, waits for your side) so the user always has the next move.
 - Keep it alive: if the user only reacts briefly, give a character something small to say or do that invites a reply
   (a tease, a question, a little surprise). Big turns (someone arriving, a problem, a time skip) only when the user
   asks for them, writes an author's note, or lets the story move on.
@@ -1971,12 +1973,12 @@ ${texto}`;
       .map(x => ({ tipo: x && x.tipo === "fala" ? "fala" : "narracao", quem: String((x && x.quem) || "").trim().slice(0, 60),
                    texto: String((x && x.texto) || "").trim().replace(/^[—–-]\s*/, "") }))
       .filter(x => x.texto);
-    // Passo a passo: depois de uma mensagem tua, no máximo 4 partes e 2 falas (3 num grupo);
-    // na abertura, no "Continue" e nas notas de autor pode ser um pouco mais.
+    // Passo a passo: depois de uma mensagem tua, no máximo 5 partes e 3 falas; num grupo 7 partes e 5 falas
+    // (para poderem falar uns com os outros). Na abertura, no "Continue" e nas notas de autor pode ser mais.
     {
       const ultimaMsg = c.mensagens[c.mensagens.length - 1];
       const respostaTua = !!ultimaMsg && ultimaMsg.tipo === "acao", grupo = !!(h && h.mundo);
-      const maxPartes = respostaTua ? (grupo ? 5 : 4) : 6, maxFalas = respostaTua ? (grupo ? 3 : 2) : 4;
+      const maxPartes = respostaTua ? (grupo ? 7 : 5) : (grupo ? 9 : 6), maxFalas = respostaTua ? (grupo ? 5 : 3) : (grupo ? 7 : 4);
       const ficam = []; let falas = 0;
       for (const x of partes) {
         if (ficam.length >= maxPartes) break;
