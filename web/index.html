@@ -271,6 +271,21 @@
   .relacao-cheio { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--acento2), var(--acento)); transition: width .8s ease; }
   .relacao-barra.pulsa .relacao-cheio { animation: pulsar 1s 2; }
   .botoes-pers { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  /* Universo como grupo: cartões dos membros com o histórico de cada um */
+  details.mais summary { cursor: pointer; color: var(--acento); font-size: 13px; font-weight: 600; padding: 4px 0; list-style: none; }
+  details.mais summary::before { content: "▸ "; }
+  details.mais[open] summary::before { content: "▾ "; }
+  details.mais .dentro { display: grid; gap: 14px; padding-top: 10px; }
+  .membros { display: grid; gap: 10px; }
+  .membro { background: var(--cartao); border-radius: 16px; padding: 12px; display: grid; gap: 8px; }
+  .membro-topo { display: flex; align-items: center; gap: 10px; }
+  .membro-topo .avatar { width: 36px; height: 36px; font-size: 18px; }
+  .membro-topo b { font-family: var(--f-titulo); font-size: 20px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .membro-topo button.ligacao { font-size: 12px; }
+  .membro textarea { width: 100%; background: var(--fundo); border: 1px solid var(--linha); border-radius: 12px; padding: 9px 12px; font-size: 14px;
+                     line-height: 1.45; resize: vertical; outline: none; }
+  .membro textarea:focus { border-color: var(--acento2); }
+  .membro small { color: var(--suave); font-size: 11px; min-height: 1em; }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
@@ -447,14 +462,16 @@
       <div class="perfil gutter">
         <p class="perfil-frase" id="mundo-frase"></p>
         <p class="dica" id="mundo-descricao"></p>
-        <button class="botao" id="mundo-nova-historia">New story in this universe</button>
+        <button class="botao" id="mundo-nova-historia">New story with this group</button>
         <div id="mundo-estado-p"></div>
       </div>
       <div class="mundo-bloco gutter">
-        <span class="rotulo">Who lives here</span>
-        <p class="dica">Tap a character from your gallery to add or remove them.</p>
+        <span class="rotulo">Members</span>
+        <p class="dica">Write each one's history with you: how you met, what you are to each other, what happened. The narrator uses it in every story here.</p>
+        <div class="membros" id="mundo-membros"></div>
+        <span class="rotulo" style="margin-top:6px">Add from your gallery</span>
         <div class="tons" id="mundo-elenco"></div>
-        <button type="button" class="atalho" id="mundo-nova-pers">+ Create a new character for this universe</button>
+        <button type="button" class="atalho" id="mundo-nova-pers">+ Create a new character for this group</button>
       </div>
       <div class="mundo-bloco gutter">
         <span class="rotulo">Canon</span>
@@ -472,22 +489,23 @@
     </div>
     <div class="rolar">
       <form class="formulario gutter" id="form-mundo">
-        <p class="dica">Make up a world of your own, or base it on one you know. Leave fields empty and tap <b>Fill in with AI</b>.</p>
+        <p class="dica">A place to bring characters together: a K-pop group, a friend group, a team… You add the members and their history with you on the next page.</p>
         <div class="avatar-linha"><label class="carregar-avatar" for="mw-foto"><span>+<small>Cover</small></span></label>
           <input type="file" id="mw-foto" accept="image/*" hidden><p class="dica">Tap to add a cover picture (optional).</p></div>
-        <label>Name *<input id="mw-nome" maxlength="60" placeholder="e.g. Ashveil Academy" required></label>
-        <label>Based on (optional)<input id="mw-obra" maxlength="120" placeholder="e.g. Attack on Titan · empty if it's original"></label>
-        <label>Kind of world<input id="mw-genero" maxlength="80" placeholder="e.g. dark fantasy, magic school, cyberpunk city"></label>
-        <label>The world<textarea id="mw-descricao" rows="4" maxlength="1200" placeholder="How it works, the era, the atmosphere, what's going on right now."></textarea></label>
+        <label>Name *<input id="mw-nome" maxlength="60" placeholder="e.g. the group's name" required></label>
+        <label>In a few words (optional)<textarea id="mw-descricao" rows="2" maxlength="1200" placeholder="e.g. a K-pop group that debuted this year; they live together in a dorm in Seoul."></textarea></label>
+        <details class="mais" id="mw-mais"><summary>More details (optional)</summary><div class="dentro">
+        <p class="dica">Only if you want a specific world. If you leave this empty, the narrator invents places and details as the story needs them, and remembers them.</p>
+        <label>Based on<input id="mw-obra" maxlength="120" placeholder="e.g. Attack on Titan · empty if it's original"></label>
+        <label>Kind of world<input id="mw-genero" maxlength="80" placeholder="e.g. idol life in Seoul, magic school, cyberpunk city"></label>
         <label>Places<textarea id="mw-lugares" rows="3" maxlength="800" placeholder="One per line. e.g. The Glass Library: forbidden after midnight."></textarea></label>
         <label>Groups and factions<textarea id="mw-grupos" rows="3" maxlength="800" placeholder="One per line. e.g. The Night Wardens: guard the city, trust nobody."></textarea></label>
         <label>Rules<textarea id="mw-regras" rows="3" maxlength="800" placeholder="Magic, technology, laws, what's impossible here."></textarea></label>
         <label>Canon facts<textarea id="mw-canon" rows="3" maxlength="1500" placeholder="One per line. Things that stay true in every story here."></textarea></label>
         <label>Card tagline<input id="mw-frase" maxlength="120" placeholder="Shown in the gallery"></label>
-        <div class="acoes">
-          <button type="button" class="botao secundario" id="completar-mundo">Fill in with AI</button>
-          <button class="botao" id="guardar-mundo">Create universe</button>
-        </div>
+        <button type="button" class="botao secundario" id="completar-mundo">Fill in the empty details with AI</button>
+        </div></details>
+        <button class="botao" id="guardar-mundo">Create universe</button>
         <div id="mundo-estado"></div>
         <div class="perigos" id="mw-perigos"><button type="button" class="perigo" id="apagar-mundo">Delete this universe</button></div>
       </form>
@@ -505,11 +523,11 @@
         <p class="dica">Write whatever you like, it's all optional. Out of ideas? Tap <b>Surprise me</b>.</p>
         <div class="elenco-bloco" id="h-elenco-bloco" hidden>
           <span class="rotulo">Main character</span><div class="tons" id="h-principal"></div>
-          <span class="rotulo" style="margin-top:10px">Also in the story (up to 3)</span><div class="tons" id="h-outros"></div>
+          <span class="rotulo" style="margin-top:10px">Also in the scene (up to 4)</span><div class="tons" id="h-outros"></div>
         </div>
         <button type="button" class="atalho" id="atalho-slow">✦ Slow burn between friends or rivals</button>
-        <label>The idea<textarea id="h-premissa" rows="3" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
-        <label><span id="h-universo-rotulo">World and setting</span><textarea id="h-universo" rows="2" maxlength="800" placeholder="e.g. alternate universe, modern-day London, winter."></textarea></label>
+        <label><span id="h-premissa-rotulo">The idea</span><textarea id="h-premissa" rows="3" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
+        <label id="h-universo-campo"><span id="h-universo-rotulo">World and setting</span><textarea id="h-universo" rows="2" maxlength="800" placeholder="e.g. alternate universe, modern-day London, winter."></textarea></label>
         <div><span class="rotulo">You are</span><div class="tons" id="h-persona"></div></div>
         <label>Your role in this story<textarea id="h-papel" rows="2" maxlength="800" placeholder="e.g. Cat, 24, a hacker who works at a café by day."></textarea></label>
         <div><span class="rotulo">Your relationship</span><div class="tons" id="h-relacao"></div></div>
@@ -711,7 +729,7 @@ Everything in English.`;
   const PEDIDO_IDEIA = (p, h) => `Suggest the starting point of an interactive fanfic, in English.
 
 Main character: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
-${p.ficha}${h.mundo ? blocoMundo(mundoDe(h.mundo)) : ""}${(h.elenco || []).length ? "\nAlso in the story: " + h.elenco.map(id => (personagens().find(x => x.id === id) || {}).nome).filter(Boolean).join(", ") : ""}
+${p.ficha}${h.mundo ? blocoMundo(mundoDe(h.mundo)) + (historicoDe(mundoDe(h.mundo), p.id) ? "\nHistory with the user: " + historicoDe(mundoDe(h.mundo), p.id).slice(0, 500) : "") : ""}${(h.elenco || []).length ? "\nAlso in the story: " + h.elenco.map(id => (personagens().find(x => x.id === id) || {}).nome).filter(Boolean).join(", ") : ""}
 
 What the user already wrote (respect it and build on it; invent whatever is empty):
 - Idea: ${h.premissa || "(empty)"}
@@ -788,18 +806,24 @@ one funny or teasing, and one about the relationship between you two (getting cl
       + (m.lugares ? `\nPlaces:\n${m.lugares.slice(0, 400)}` : "")
       + (m.grupos ? `\nGroups and factions:\n${m.grupos.slice(0, 400)}` : "")
       + (m.regras ? `\nRules of this world (never break them):\n${m.regras.slice(0, 400)}` : "")
-      + (canon.length ? `\nCanon (true in every story in this universe):\n${canon.map(f => "- " + f).join("\n")}` : "");
+      + (canon.length ? `\nCanon (true in every story in this universe):\n${canon.map(f => "- " + f).join("\n")}` : "")
+      + `\n(Anything not described here: invent it to fit, then keep it consistent.)`;
   }
   // Quem está na história recebe uma ficha média; quem só vive no universo recebe uma linha.
   function blocoElenco(p, h) {
     const m = h.mundo && mundoDe(h.mundo);
     if (!m) return "";
     const todos = personagens();
-    const elenco = (h.elenco || []).map(id => todos.find(x => x.id === id)).filter(x => x && x.id !== p.id).slice(0, 3);
+    const elenco = (h.elenco || []).map(id => todos.find(x => x.id === id)).filter(x => x && x.id !== p.id).slice(0, 4);
     const outros = membros(m).filter(x => x.id !== p.id && !elenco.some(e => e.id === x.id)).slice(0, 8);
     const menores = elenco.concat(outros).filter(x => x.menor).map(x => x.nome);
-    return (elenco.length ? "\n\n## Also in this story\n" + elenco.map(x => `### ${x.nome}\n${String(x.ficha).slice(0, 900)}`).join("\n") : "")
-      + (outros.length ? "\n\n## Others who live in this world (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}`).join("\n") : "")
+    const hx = x => historicoDe(m, x.id);
+    // Quem está na cena: ficha + histórico contigo. Quem não está: uma linha (e o início do histórico).
+    return (hx(p) ? `\nHistory with "you" (in ${m.nome}): ${hx(p).slice(0, 700)}` : "")
+      + (elenco.length ? "\n\n## Also in this scene\n" + elenco.map(x => `### ${x.nome}\n${String(x.ficha).slice(0, 700)}`
+          + (hx(x) ? `\nHistory with "you": ${hx(x).slice(0, 500)}` : "")).join("\n") : "")
+      + (outros.length ? "\n\n## Others in this group (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}`
+          + (hx(x) ? ` · with you: ${hx(x).slice(0, 160)}` : "")).join("\n") : "")
       + (menores.length ? `\nNO ROMANCE with ${menores.join(", ")}: minors in their original work. Never romance, flirting or romantic tension with them.` : "");
   }
 
@@ -813,7 +837,7 @@ one funny or teasing, and one about the relationship between you two (getting cl
       + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 2200)}`
       + blocoElenco(p, h)
       + `\n\n## Story: ${h.titulo || "untitled"}`
-      + (h.premissa ? `\nIdea: ${h.premissa}` : "")
+      + (h.premissa ? `\n${h.mundo ? "Situation" : "Idea"}: ${h.premissa}` : "")
       + `\nSetting: ${h.universo || (h.mundo && mundoDe(h.mundo) ? "somewhere in " + mundoDe(h.mundo).nome : "the original work's")}`
       + (h.relacao && h.relacao !== "Open" ? `\nRelationship between them: ${h.relacao}` : "")
       + (h.tons.length ? `\nTone: ${h.tons.join(", ")}` : "")
@@ -829,6 +853,9 @@ one funny or teasing, and one about the relationship between you two (getting cl
   // memória + resumo (~1300 tokens), as mensagens recentes (~1000) e a resposta (~500).
   // O que sai da janela vai para o resumo, de vez em quando (não em todas as jogadas).
   const NOTA_ABERTURA = "[AUTHOR'S NOTE] Write the opening scene of the story, introducing the setting and the first encounter.";
+  // Num grupo as personagens já te conhecem: a abertura parte da situação e do histórico de cada uma.
+  const NOTA_ABERTURA_GRUPO = "[AUTHOR'S NOTE] Write the opening scene: set up the situation with the characters in it, each one acting true to their history with you.";
+  const notaAbertura = h => h && h.mundo ? NOTA_ABERTURA_GRUPO : NOTA_ABERTURA;
   const CENAS_POR_CAPITULO = 10;
   const ORCAMENTO_RECENTE = 3500;  // letras das mensagens recentes enviadas tal e qual
   const MIN_RECENTES = 2;          // nunca menos do que isto (a última cena e a tua jogada)
@@ -862,8 +889,12 @@ one funny or teasing, and one about the relationship between you two (getting cl
   const mundos = () => ler("sussurros-universos", []);
   const gravarMundos = l => gravar("sussurros-universos", l);
   const mundoDe = id => mundos().find(m => m.id === id);
+  // Grava sem mudar a ordem nem a data (para o histórico que se vai escrevendo). Devolve false se não houver espaço.
+  function gravarMundoSemOrdem(m) { return gravarMundos(mundos().map(x => x.id === m.id ? m : x)); }
   function atualizarMundo(m) { const l = mundos().filter(x => x.id !== m.id); l.unshift(Object.assign({}, m, { atualizada: Date.now() })); gravarMundos(l); }
   const membros = m => (m.personagens || []).map(id => personagens().find(p => p.id === id)).filter(Boolean);
+  // O histórico de cada membro contigo, só neste universo: m.historicos = { idDaPersonagem: "texto" }
+  const historicoDe = (m, id) => (m && m.historicos && m.historicos[id]) || "";
   // Personas: { id, nome, idade, genero, aparencia, personalidade, extra } — quem TU és nas histórias
   const personas = () => ler("sussurros-personas", []);
   const gravarPersonas = l => gravar("sussurros-personas", l);
@@ -1545,9 +1576,16 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     $("form-nova").reset();
     $("nova-estado").innerHTML = "";
     $("h-elenco-bloco").hidden = !m;
-    $("h-universo-rotulo").textContent = m ? "Where in the universe" : "World and setting";
+    $("h-universo-campo").hidden = !!m;   // num grupo, a situação já diz onde estão
+    $("h-premissa-rotulo").textContent = m ? "The situation" : "The idea";
+    $("h-premissa").placeholder = m ? "e.g. the night before the comeback, the power goes out in the dorm and everyone ends up in the living room."
+                                    : "e.g. L needs someone to go undercover at a party and picks you.";
     $("h-universo").placeholder = m ? "e.g. the capital, during the winter festival" : "e.g. alternate universe, modern-day London, winter.";
-    if (m) { const ms = membros(m); pers = ms.find(x => pers && x.id === pers.id) || ms[0]; desenharElenco(ms); }
+    if (m) {
+      const ms = membros(m); pers = ms.find(x => pers && x.id === pers.id) || ms[0];
+      outrosEscolhidos = new Set(ms.filter(x => x.id !== pers.id).slice(0, 4).map(x => x.id));   // por defeito, estão todos
+      desenharElenco(ms);
+    }
     personaNova = personaDe(ler("sussurros-persona-ultima", "")) ? ler("sussurros-persona-ultima", "") : "";
     desenharPersonas($("h-persona"), personaNova, id => {
       personaNova = id;
@@ -1578,7 +1616,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     $("h-outros").querySelectorAll(".tom").forEach(b => b.onclick = () => {
       const id = b.dataset.id;
       if (outrosEscolhidos.has(id)) outrosEscolhidos.delete(id);
-      else if (outrosEscolhidos.size < 3) outrosEscolhidos.add(id);
+      else if (outrosEscolhidos.size < 4) outrosEscolhidos.add(id);
       b.setAttribute("aria-pressed", String(outrosEscolhidos.has(id)));
     });
   }
@@ -1626,7 +1664,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
       if (!h.persona) delete h.persona; else gravar("sussurros-persona-ultima", h.persona);   // da próxima vez vem já escolhida
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
-                            { role: "user", content: NOTA_ABERTURA }],
+                            { role: "user", content: notaAbertura(h) }],
                            { esquema: ESQUEMA_CENA, nome: "cena", max: 700 });
       aplicarCena(c, d, h);
       atualizarHistoria(h); gravarConteudo(h.id, c);
@@ -1826,7 +1864,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     $("recap").hidden = true;
     desenhar(`<div class="a-escrever">The narrator is writing <i>•</i><i>•</i><i>•</i></div>`);
     try {
-      const turnos = c.mensagens.length ? paraTurnos(recentes(c)) : [{ role: "user", content: NOTA_ABERTURA }];
+      const turnos = c.mensagens.length ? paraTurnos(recentes(c)) : [{ role: "user", content: notaAbertura(hist) }];
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + nCenas(c), proxDe(c, hist)) }]
         .concat(turnos), { esquema: ESQUEMA_CENA, nome: "cena", max: 700,
           onEspera: seg => desenhar(`<div class="a-escrever">Too many requests in a row. Trying again in ${seg} s…</div>`) });
@@ -1982,7 +2020,9 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     const mw = hist.mundo && mundoDe(hist.mundo);
     const jaCanon = mw ? linhas(mw.canon).map(x => x.toLowerCase()) : [];
     $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map((f, i) => `<li>${formatar(f)}${mw
-        ? (jaCanon.includes(f.toLowerCase()) ? ` <small class="vazio">· canon</small>` : ` <button type="button" class="ligacao canonizar" data-i="${i}">make canon</button>`) : ""}</li>`).join("")
+        ? (jaCanon.includes(f.toLowerCase()) ? ` <small class="vazio">· canon</small>` : ` <button type="button" class="ligacao canonizar" data-i="${i}">make canon</button>`)
+          + (historicoDe(mw, pers.id).toLowerCase().includes(f.toLowerCase()) ? ` <small class="vazio">· in ${escapar(pers.nome)}'s history</small>`
+             : ` <button type="button" class="ligacao para-historico" data-i="${i}">add to ${escapar(pers.nome)}'s history</button>`) : ""}</li>`).join("")
         + (mw ? `<p class="dica">Canon facts stay true in every story in ${escapar(mw.nome)}.</p>` : "")
       : `<p class="vazio">Nothing yet.</p>`;
     $("mem-factos").querySelectorAll(".canonizar").forEach(b => b.onclick = () => {
@@ -1990,6 +2030,12 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
       m2.canon = (m2.canon ? m2.canon.trimEnd() + "\n" : "") + f;
       atualizarMundo(m2);
       b.outerHTML = `<small class="vazio">· canon</small>`;
+    });
+    $("mem-factos").querySelectorAll(".para-historico").forEach(b => b.onclick = () => {
+      const m2 = mundoDe(hist.mundo), f = cont.memoria[b.dataset.i], velho = historicoDe(m2, pers.id);
+      m2.historicos = Object.assign({}, m2.historicos, { [pers.id]: (velho ? velho.trimEnd() + "\n" : "") + f });
+      gravarMundoSemOrdem(m2);
+      b.outerHTML = `<small class="vazio">· in ${escapar(pers.nome)}'s history</small>`;
     });
     $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">The summary appears once the story gets longer.</span>`;
     for (const id of ["recomecar", "apagar-historia"]) $(id).dataset.confirmar = "";
@@ -2036,21 +2082,47 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     origem = { tipo: "mundo", id };
     pintarAvatar($("mundo-avatar"), mundo);
     $("mundo-nome").textContent = mundo.nome;
-    $("mundo-sub").textContent = [mundo.genero, mundo.obra && "based on " + mundo.obra].filter(Boolean).join(" · ") || "Universe";
+    const nm = membros(mundo).length;
+    $("mundo-sub").textContent = [mundo.genero, mundo.obra && "based on " + mundo.obra].filter(Boolean).join(" · ") || (nm + " " + (nm === 1 ? "member" : "members"));
     $("mundo-frase").innerHTML = formatar(mundo.frase || "");
     $("mundo-descricao").textContent = mundo.descricao || "";
     $("mundo-estado-p").innerHTML = "";
-    // Quem vive aqui: botões com todas as personagens da galeria (as do universo primeiro e marcadas)
-    const ids = mundo.personagens || [];
-    const todos = personagens().sort((a, b) => ids.includes(b.id) - ids.includes(a.id));
-    $("mundo-elenco").innerHTML = todos.length
-      ? todos.map(p => `<button type="button" class="tom" data-id="${p.id}" aria-pressed="${ids.includes(p.id)}">${escapar(p.nome)}</button>`).join("")
-      : `<p class="dica">Your gallery has no characters yet.</p>`;
+    // Membros: um cartão por personagem, com o histórico dela contigo (grava sozinho enquanto escreves)
+    const ms = membros(mundo);
+    $("mundo-membros").innerHTML = ms.length ? ms.map(p => `<div class="membro" data-id="${p.id}">
+        <div class="membro-topo"><div class="avatar"></div><b>${escapar(p.nome)}</b>
+          <button type="button" class="ligacao tirar-membro">remove</button></div>
+        <textarea rows="3" maxlength="1500" placeholder="e.g. You met at a dance class two years ago. He's protective of you and pretends he isn't jealous.">${escapar(historicoDe(mundo, p.id))}</textarea>
+        <small></small></div>`).join("")
+      : `<p class="dica">No members yet. Add characters from your gallery below, or create new ones.</p>`;
+    $("mundo-membros").querySelectorAll(".membro").forEach(c => {
+      const id = c.dataset.id, p = ms.find(x => x.id === id), aviso = c.querySelector("small");
+      pintarAvatar(c.querySelector(".avatar"), p);
+      let espera;
+      c.querySelector("textarea").oninput = e => {
+        clearTimeout(espera); aviso.textContent = "";
+        espera = setTimeout(() => {
+          const m = mundoDe(mundo.id);
+          m.historicos = Object.assign({}, m.historicos, { [id]: e.target.value.trim() });
+          aviso.textContent = gravarMundoSemOrdem(m) ? "Saved ✓" : "Not enough space in this browser.";
+          mundo = m;
+        }, 600);
+      };
+      c.querySelector(".tirar-membro").onclick = () => {
+        const m = mundoDe(mundo.id);
+        m.personagens = (m.personagens || []).filter(x => x !== id);   // o histórico fica guardado, se a voltares a pôr
+        atualizarMundo(m); abrirMundo(m.id);
+      };
+    });
+    // Juntar personagens da galeria que ainda não estão no grupo
+    const fora = personagens().filter(p => !(mundo.personagens || []).includes(p.id));
+    $("mundo-elenco").innerHTML = fora.length
+      ? fora.map(p => `<button type="button" class="tom" data-id="${p.id}">+ ${escapar(p.nome)}</button>`).join("")
+      : `<p class="dica">${personagens().length ? "Everyone in your gallery is already here." : "Your gallery has no characters yet."}</p>`;
     $("mundo-elenco").querySelectorAll(".tom").forEach(b => b.onclick = () => {
-      const m = mundoDe(mundo.id), l = m.personagens || [], id = b.dataset.id;
-      m.personagens = l.includes(id) ? l.filter(x => x !== id) : l.concat(id);
-      atualizarMundo(m); mundo = m;
-      b.setAttribute("aria-pressed", String(m.personagens.includes(id)));
+      const m = mundoDe(mundo.id);
+      m.personagens = (m.personagens || []).concat(b.dataset.id);
+      atualizarMundo(m); abrirMundo(m.id);
     });
     // Canon: factos verdadeiros em todas as histórias deste universo (× tira um)
     const canon = linhas(mundo.canon);
@@ -2090,6 +2162,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     $("mw-perigos").hidden = !m;
     $("apagar-mundo").dataset.confirmar = ""; $("apagar-mundo").textContent = "Delete this universe";
     $("mundo-estado").innerHTML = "";
+    $("mw-mais").open = !!(m && ["obra", "genero", "lugares", "grupos", "regras", "canon", "frase"].some(k => m[k]));
     mostrar("ecra-mundo-editar");
     $("mw-nome").focus();
   }
@@ -2109,6 +2182,7 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
 What the user already wrote (DON'T change any of it; fill in the empty fields, consistent with the rest):
 ${JSON.stringify(c, null, 1)}
 ${c.obra ? "It's based on \"" + c.obra + "\": stay true to that world's canon (places, factions, rules), without inventing facts you're not sure of." : "It's an original world: make it vivid and specific, with hooks for stories."}
+If you don't know it well (for example a recent group, or real people), don't invent specific facts about real people or events: keep it general and fitting.
 Return ALL the fields. For fields that are already filled in, return exactly the same text.
 - genero: the kind of world, a few words. descricao: 3 to 5 sentences (how it works, the era, the atmosphere, what's happening now).
 - lugares: 3 to 5 places, one per line, "Name: short description". grupos: 2 to 4 groups or factions, one per line, same format.
