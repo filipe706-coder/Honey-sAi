@@ -146,6 +146,12 @@
   .historia b { font-family: var(--f-titulo); font-size: 20px; font-weight: 600; }
   .historia span { color: var(--suave); font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .historia small { color: var(--acento); font-size: 12px; font-weight: 600; }
+  /* Linha de cada história: o cartão e, ao lado, o botão de apagar */
+  .historia-linha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: stretch; }
+  .apagar-h { border: 1px solid var(--linha); background: var(--cartao); color: var(--suave); border-radius: 16px; padding: 0 14px; font-size: 13px; }
+  .apagar-h:hover { color: var(--acento); border-color: var(--acento2); }
+  .apagar-h.confirmar { color: #fff; background: #8a3a4a; border-color: #8a3a4a; font-weight: 600; }
+  .apagar-todas { justify-self: start; margin-top: 6px; }
 
   /* ---------- A história ---------- */
   .texto-historia { padding-block: 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -1130,13 +1136,35 @@ Everything in English.` }], { esquema: ESQUEMA_COMPLETAR, nome: "completar", esf
     $("pers-frase").innerHTML = formatar(pers.frase);
     const hs = historias().filter(h => h.personagem === pers.id);
     $("historias").innerHTML = hs.length
-      ? `<span class="rotulo">Your stories</span>` + hs.map(h => `<button class="historia" data-id="${h.id}">
+      ? `<span class="rotulo">Your stories</span>` + hs.map(h => `<div class="historia-linha">
+          <button class="historia" data-id="${h.id}">
           <b>${escapar(h.titulo || "Untitled")}</b>
           <span>${escapar(h.premissa || "Free story")}</span>
-          <small>${h.tons.length ? escapar(h.tons.join(" · ")) + " · " : ""}${quando(h.atualizada || Date.now())}</small></button>`).join("")
+          <small>${h.tons.length ? escapar(h.tons.join(" · ")) + " · " : ""}${quando(h.atualizada || Date.now())}</small></button>
+          <button class="apagar-h" data-id="${h.id}" aria-label="Delete this story">🗑</button></div>`).join("")
+        + (hs.length > 1 ? `<button class="ligacao apagar-todas" id="apagar-todas">Delete all stories with ${escapar(pers.nome)}</button>` : "")
       : `<p class="dica">No stories with ${escapar(pers.nome)} yet. Tap <b>New story</b> to begin.</p>`;
     document.querySelectorAll(".historia").forEach(b => b.onclick = () => abrirHistoria(b.dataset.id));
+    // Apagar: o 1.º toque pede confirmação ("Delete?"), o 2.º apaga. Se não confirmares em 3 s, volta ao normal.
+    document.querySelectorAll(".apagar-h").forEach(b => b.onclick = () => {
+      if (!b.classList.contains("confirmar")) {
+        b.classList.add("confirmar"); b.textContent = "Delete?";
+        setTimeout(() => { b.classList.remove("confirmar"); b.textContent = "🗑"; }, 3000);
+        return;
+      }
+      apagarHistorias([b.dataset.id]);
+    });
+    if ($("apagar-todas")) $("apagar-todas").onclick = () => {
+      const b = $("apagar-todas");
+      if (!b.dataset.confirmar) { b.dataset.confirmar = "1"; b.textContent = `Delete all ${hs.length} stories forever? Tap again.`; return; }
+      apagarHistorias(hs.map(h => h.id));
+    };
     mostrar("ecra-personagem");
+  }
+  function apagarHistorias(ids) {
+    ids.forEach(id => apagarChave("sussurros-h-" + id));
+    gravarHistorias(historias().filter(h => !ids.includes(h.id)));
+    abrirPersonagem(pers.id);
   }
   $("pers-voltar").onclick = mostrarGaleria;
   $("pers-editar").onclick = () => pers.campos ? abrirMao(pers) : mostrarRevisao(Object.assign({}, pers), true);
