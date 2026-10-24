@@ -1199,6 +1199,11 @@ Tudo em português de Portugal.` }], { esquema: ESQUEMA_COMPLETAR, nome: "comple
       .filter(x => x.texto);
     // sem nome, uma fala é da personagem principal
     partes.forEach(x => { if (x.tipo === "fala" && !x.quem) x.quem = pers.nome; });
+    // Proteção: a IA nunca fala pela personagem do utilizador. Se o fizer, essa fala é deitada fora.
+    const papel = (hist && hist.papel) || "";
+    const meuNome = papel.match(/\bsou (?:a |o )?([A-ZÀ-Ý][A-Za-zÀ-ÿ'-]+)/i) || papel.match(/^\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'-]+)/);
+    const proibidos = ["tu", "eu", "utilizador", "você"].concat(meuNome ? [meuNome[1].toLowerCase()] : []);
+    partes = partes.filter(x => x.tipo !== "fala" || !proibidos.includes(x.quem.toLowerCase()));
     if (!partes.length && d && d.texto) partes = [{ tipo: "narracao", quem: "", texto: String(d.texto).trim() }];
     if (!partes.length) partes = [{ tipo: "narracao", quem: "", texto: "*O silêncio prolonga-se por um momento.*" }];
     const texto = partes.map(x => x.tipo === "fala" ? `${x.quem}: — ${x.texto}` : x.texto).join("\n\n");
