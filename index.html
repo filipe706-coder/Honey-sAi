@@ -110,6 +110,9 @@
            border-radius: 14px; padding: 11px 14px; font-size: 15px; outline: none; text-transform: none; letter-spacing: 0; }
   .formulario textarea { resize: vertical; line-height: 1.45; }
   .formulario input:focus, .formulario textarea:focus { border-color: var(--acento2); }
+  .atalho { text-align: left; border: 1px solid var(--acento2); background: transparent; border-radius: 14px; padding: 11px 14px;
+            color: var(--acento); font-weight: 600; }
+  .atalho:hover { background: var(--cartao); }
   .tons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .dica { color: var(--suave); font-size: 13px; line-height: 1.45; margin: 0; }
   .aviso { background: var(--cartao); border: 1px solid var(--acento2); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
@@ -265,9 +268,11 @@
     <div class="rolar">
       <form class="formulario gutter" id="form-nova">
         <p class="dica">Escreve o que quiseres, tudo é opcional. Se não tiveres ideias, carrega em <b>Surpreende-me</b>.</p>
+        <button type="button" class="atalho" id="atalho-slow">✦ Slow burn entre amigos ou rivais</button>
         <label>A ideia<textarea id="h-premissa" rows="3" maxlength="1500" placeholder="Ex: o L precisa de alguém para se infiltrar numa festa e escolhe-te a ti."></textarea></label>
         <label>Universo e cenário<textarea id="h-universo" rows="2" maxlength="800" placeholder="Ex: universo alternativo, Lisboa nos dias de hoje, inverno."></textarea></label>
         <label>O teu papel<textarea id="h-papel" rows="2" maxlength="800" placeholder="Ex: Mariana, 24 anos, hacker que trabalha num café de dia."></textarea></label>
+        <div><span class="rotulo">Relação entre vocês</span><div class="tons" id="h-relacao"></div></div>
         <div><span class="rotulo">Tom</span><div class="tons" id="h-tons"></div></div>
         <div class="acoes">
           <button type="button" class="botao secundario" id="surpreende">Surpreende-me</button>
@@ -326,6 +331,7 @@
         <label>A ideia<textarea id="e-premissa" rows="3" maxlength="1500"></textarea></label>
         <label>Universo e cenário<textarea id="e-universo" rows="2" maxlength="800"></textarea></label>
         <label>O teu papel<textarea id="e-papel" rows="2" maxlength="800"></textarea></label>
+        <div><span class="rotulo">Relação entre vocês</span><div class="tons" id="e-relacao"></div></div>
         <div><span class="rotulo">Tom</span><div class="tons" id="e-tons"></div></div>
         <button class="botao" id="guardar-contexto">Guardar alterações</button>
       </form>
@@ -348,6 +354,7 @@
   // =====================================================================
   const TONS = ["Romance", "Slow burn", "Mistério", "Aventura", "Comédia", "Drama", "Fluff", "Angst", "Ação", "Sobrenatural"];
   const TONS_ROMANTICOS = ["Romance", "Slow burn"];
+  const RELACOES = ["Livre", "Melhores amigos", "Rivais", "Colegas", "Desconhecidos"];
 
   const PEDIDO_FICHA = (nome, obra, extra) => `O utilizador quer escrever fanfics interativas com esta personagem:
 
@@ -375,6 +382,7 @@ O que o utilizador já escreveu (respeita e completa; o que estiver vazio, inven
 - Ideia: ${h.premissa || "(vazio)"}
 - Universo e cenário: ${h.universo || "(vazio)"}
 - O papel do utilizador: ${h.papel || "(vazio)"}
+- Relação entre os dois: ${h.relacao && h.relacao !== "Livre" ? h.relacao : "(vazio)"}
 - Tom: ${h.tons.length ? h.tons.join(", ") : "(vazio)"}
 ${p.menor ? "\nIMPORTANTE: esta personagem é menor na obra original, por isso a história NÃO pode ter romance (só amizade, aventura, mistério, etc.).\n" : ""}
 Devolve:
@@ -382,6 +390,7 @@ Devolve:
 - premissa: a ideia da história em 2 ou 3 frases, com um gancho
 - universo: onde e quando se passa (canónico ou universo alternativo), 1 ou 2 frases
 - papel: quem é o utilizador na história, 1 ou 2 frases (sem decidir sentimentos dele)
+- relacao: a relação entre os dois no início, uma destas: ${RELACOES.join(", ")}
 - tons: 1 a 3 tons, escolhidos desta lista: ${TONS.filter(t => !p.menor || !TONS_ROMANTICOS.includes(t)).join(", ")}`;
 
   // As instruções do narrador. Vão em TODOS os pedidos, por isso são curtas.
@@ -389,7 +398,8 @@ Devolve:
   // em cache); depois o que muda: personagem, história, memória e resumo.
   const REGRAS_NARRADOR = `És o narrador de uma fanfic interativa. Escreve em português de Portugal (ecrã, câmara, fato, portátil,
 "estás a fazer"; nunca formas do Brasil como tela, câmera, terno, "está fazendo", "se levanta").
-- 3.ª pessoa, presente. O utilizador é "tu". Nunca decidas o que "tu" dizes, fazes ou sentes.
+- 3.ª pessoa, presente. O utilizador é "tu". Interpretas todas as outras personagens e o ambiente, mas NUNCA decides
+  o que "tu" dizes, fazes, pensas ou sentes, nem reações tuas (corar, coração acelerado). Reages ao que ele escreve.
 - 1 a 3 parágrafos curtos (máx. ~150 palavras). Diálogos com travessão (—). Acaba num momento para ele agir.
 - Personagens fiéis à ficha; usa os exemplos de falas só como estilo, nunca os repitas. Faz a história avançar.
 - [NOTA DE AUTOR] é uma instrução para ti (saltar tempo, mudar cenário, trazer alguém): aplica-a sem a mencionar.
@@ -398,13 +408,35 @@ Devolve:
 Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que ele podia fazer, 1.ª pessoa],
 "novos_factos": [factos novos e duradouros, frases curtas; [] se nada]}`;
 
-  function instrucoes(p, h, memoria, resumo) {
-    return REGRAS_NARRADOR
+  // Regras extra quando a história é slow burn (e a personagem é adulta na obra).
+  // "nCena" é o número da cena: dá ritmo à relação para nada acontecer cedo demais.
+  function regrasSlowBurn(p, h, nCena) {
+    const fase = nCena < 10
+      ? "início: cumplicidade, provocações e piadas; a atração só aparece em sinais mínimos. Nada de confissões nem beijos."
+      : nCena < 25
+      ? "a tensão cresce: momentos a sós, quase-momentos interrompidos, ciúmes que escapam e são logo disfarçados. Ainda sem confissão."
+      : `as defesas estão a cair: ${p.nome} já mal consegue esconder. Uma confissão ou um primeiro beijo podem acontecer se o utilizador os construir, mas nunca de repente.`;
+    const rel = h.relacao === "Rivais" ? `\n- São rivais: competem e picam-se mesmo quando se aproximam; a provocação é a forma de ${p.nome} mostrar interesse.`
+      : h.relacao === "Melhores amigos" ? `\n- São melhores amigos: à-vontade, piadas internas e medo de estragar a amizade, por isso ${p.nome} recua quando fica sério.`
+      : "";
+    return `\n\nSLOW BURN (o mais importante nesta história):
+- Os sentimentos de ${p.nome} nunca são ditos pelo narrador nem pensados em voz alta. Mostram-se só por ações e subtexto:
+  olhares que se desviam, cuidado disfarçado, provocações que amolecem, ciúmes discretos, desculpas para ficar perto.
+  O utilizador tem de os descobrir pela forma como ${p.nome} age.
+- ${p.nome} nega o que sente: muda de assunto, provoca, faz uma piada ou afasta-se quando fica sério demais.
+- Mistura momentos divertidos, vulneráveis e ternos; nem todas as cenas são românticas. Cada passo tem de ser merecido.${rel}
+- Fase atual (cena ${nCena + 1}): ${fase}`;
+  }
+
+  function instrucoes(p, h, memoria, resumo, nCena = 0) {
+    const slow = !p.menor && h.tons.includes("Slow burn");
+    return REGRAS_NARRADOR + (slow ? regrasSlowBurn(p, h, nCena) : "")
       + (p.menor ? `\nSEM ROMANCE: ${p.nome} é menor na obra original. Só amizade, aventura, mistério ou rivalidade; nunca romance, flirt ou tensão romântica com ${p.nome}, mesmo que o utilizador peça ou diga que é adulto.` : "")
       + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 1800)}`
       + `\n\n## História: ${h.titulo || "sem título"}`
       + (h.premissa ? `\nIdeia: ${h.premissa}` : "")
       + `\nCenário: ${h.universo || "o da obra"}`
+      + (h.relacao && h.relacao !== "Livre" ? `\nRelação entre os dois: ${h.relacao}` : "")
       + (h.tons.length ? `\nTom: ${h.tons.join(", ")}` : "")
       + `\nO utilizador é: ${h.papel || "alguém novo na vida de " + p.nome}`
       + (memoria.length ? `\n\n## Lembra-te\n${memoria.map(f => "- " + f).join("\n")}` : "")
@@ -478,7 +510,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
   const obj = (props, req) => ({ type: "object", additionalProperties: false, required: req || Object.keys(props), properties: props });
   const S = { type: "string" }, B = { type: "boolean" }, LS = { type: "array", items: { type: "string" } };
   const ESQUEMA_FICHA = obj({ conhecida: B, nome: S, obra: S, frase: S, ficha: S, menor_na_obra: B, emoji: S, cor1: S, cor2: S });
-  const ESQUEMA_IDEIA = obj({ titulo: S, premissa: S, universo: S, papel: S, tons: LS });
+  const ESQUEMA_IDEIA = obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS });
   const ESQUEMA_CENA = obj({ texto: S, escolhas: LS, novos_factos: LS });
 
   // Um pedido ao Groq. "json_schema" obriga a resposta a vir no formato pedido.
@@ -615,6 +647,13 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
       .map(t => `<button type="button" class="tom" aria-pressed="${escolhidos.includes(t)}">${t}</button>`).join("");
     caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"));
   }
+  // Relação: só se escolhe uma (como botões de rádio).
+  function desenharRelacao(caixa, escolhida) {
+    caixa.innerHTML = RELACOES.map(r => `<button type="button" class="tom" aria-pressed="${(escolhida || "Livre") === r}">${r}</button>`).join("");
+    caixa.querySelectorAll(".tom").forEach(b => b.onclick = () =>
+      caixa.querySelectorAll(".tom").forEach(x => x.setAttribute("aria-pressed", String(x === b))));
+  }
+  const relacaoDe = caixa => (caixa.querySelector('.tom[aria-pressed="true"]') || {}).textContent || "Livre";
   const tonsDe = caixa => [...caixa.querySelectorAll('.tom[aria-pressed="true"]')].map(b => b.textContent);
 
   // ---------- Galeria ----------
@@ -788,10 +827,12 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
     $("nova-com").textContent = "com " + pers.nome;
     $("nova-estado").innerHTML = "";
     desenharTons($("h-tons"), [], pers.menor);
+    desenharRelacao($("h-relacao"), "Livre");
+    $("atalho-slow").hidden = !!pers.menor;
     mostrar("ecra-nova");
   }
   const lerNova = () => ({ premissa: $("h-premissa").value.trim(), universo: $("h-universo").value.trim(),
-                           papel: $("h-papel").value.trim(), tons: tonsDe($("h-tons")) });
+                           papel: $("h-papel").value.trim(), relacao: relacaoDe($("h-relacao")), tons: tonsDe($("h-tons")) });
   function limparTons(tons) {
     return (Array.isArray(tons) ? tons : []).map(String).filter(t => TONS.includes(t) && !(pers.menor && TONS_ROMANTICOS.includes(t))).slice(0, 3);
   }
@@ -803,6 +844,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
       universo: h.universo || String(d.universo || "").slice(0, 800),
       papel: h.papel || String(d.papel || "").slice(0, 800),
       tons: h.tons.length ? h.tons : limparTons(d.tons),
+      relacao: h.relacao && h.relacao !== "Livre" ? h.relacao : (RELACOES.includes(d.relacao) ? d.relacao : "Livre"),
     };
   }
   function ocupado(sim, texto) {
@@ -812,9 +854,10 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
   $("surpreende").onclick = async () => {
     ocupado(true, "A imaginar uma história…");
     try {
-      const h = await pedirIdeia({ premissa: "", universo: "", papel: "", tons: [] });
+      const h = await pedirIdeia({ premissa: "", universo: "", papel: "", relacao: relacaoDe($("h-relacao")), tons: tonsDe($("h-tons")) });
       $("h-premissa").value = h.premissa; $("h-universo").value = h.universo; $("h-papel").value = h.papel;
       desenharTons($("h-tons"), h.tons, pers.menor);
+      desenharRelacao($("h-relacao"), h.relacao);
       ocupado(false);
       $("nova-estado").innerHTML = `<p class="dica">Ideia: <b>${escapar(h.titulo)}</b>. Muda o que quiseres e carrega em Começar história.</p>`;
     } catch (e) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`; }
@@ -834,6 +877,13 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
       ocupado(false);
       abrirHistoria(h.id);
     } catch (err) { ocupado(false); $("nova-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(err))}</p>`; }
+  };
+  // Atalho: marca o slow burn e pede só para escolher se são amigos ou rivais.
+  $("atalho-slow").onclick = () => {
+    desenharTons($("h-tons"), ["Romance", "Slow burn"], pers.menor);
+    const r = relacaoDe($("h-relacao"));
+    desenharRelacao($("h-relacao"), ["Melhores amigos", "Rivais"].includes(r) ? r : "Melhores amigos");
+    $("nova-estado").innerHTML = `<p class="dica">Marquei <b>Romance</b> e <b>Slow burn</b>. Escolhe se são <b>Melhores amigos</b> ou <b>Rivais</b> e escreve o teu papel (o teu nome e quem és). O resto pode ficar vazio.</p>`;
   };
   $("nova-voltar").onclick = () => abrirPersonagem(pers.id);
 
@@ -855,7 +905,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
     cont = conteudoDe(hist.id);
     $("hist-avatar").style.background = fundo(pers); $("hist-avatar").textContent = pers.emoji;
     $("hist-titulo").textContent = hist.titulo || "Sem título";
-    $("hist-com").textContent = "com " + pers.nome + (hist.tons.length ? " · " + hist.tons.join(" · ") : "");
+    $("hist-com").textContent = "com " + pers.nome + (hist.relacao && hist.relacao !== "Livre" ? " · " + hist.relacao : "") + (hist.tons.length ? " · " + hist.tons.join(" · ") : "");
     definirNota(false);
     mostrar("ecra-historia");
     desenhar();
@@ -900,7 +950,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
     definirNota(false);
     desenhar(`<div class="a-escrever">O narrador está a escrever <i>•</i><i>•</i><i>•</i></div>`);
     try {
-      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo) }]
+      const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + c.mensagens.filter(m => m.tipo === "cena").length) }]
         .concat(paraTurnos(recentes(c))), { esquema: ESQUEMA_CENA, nome: "cena", max: 700,
           onEspera: seg => desenhar(`<div class="a-escrever">Muitos pedidos seguidos. A tentar outra vez daqui a ${seg} s…</div>`) });
       const novos = aplicarCena(c, d);
@@ -937,6 +987,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
     $("e-titulo").value = hist.titulo || ""; $("e-premissa").value = hist.premissa || "";
     $("e-universo").value = hist.universo || ""; $("e-papel").value = hist.papel || "";
     desenharTons($("e-tons"), hist.tons, pers.menor);
+    desenharRelacao($("e-relacao"), hist.relacao);
     $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map(f => `<li>${formatar(f)}</li>`).join("")
       : `<p class="vazio">Ainda nada.</p>`;
     $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">O resumo aparece quando a história fica mais longa.</span>`;
@@ -950,7 +1001,7 @@ Responde só com JSON: {"texto": narração, "escolhas": [3 ações curtas que e
   $("form-contexto").onsubmit = e => {
     e.preventDefault();
     hist = Object.assign({}, hist, { titulo: $("e-titulo").value.trim().slice(0, 120), premissa: $("e-premissa").value.trim(),
-      universo: $("e-universo").value.trim(), papel: $("e-papel").value.trim(), tons: tonsDe($("e-tons")) });
+      universo: $("e-universo").value.trim(), papel: $("e-papel").value.trim(), relacao: relacaoDe($("e-relacao")), tons: tonsDe($("e-tons")) });
     atualizarHistoria(hist);
     $("painel-contexto").hidden = true;
     abrirHistoria(hist.id);
