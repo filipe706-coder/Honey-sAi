@@ -880,11 +880,19 @@ VOICE (very important):
 - Present tense. The user is "you" (second person); everyone else in the third person. You play every other character
   and the world, but you NEVER decide what "you" say, do, think or feel, nor "your" reactions (blushing, heart racing).
   You react to what the user writes.
+- MAKE SENSE FIRST (most important rule): read the user's last message carefully and answer exactly what "you" said,
+  asked or did, like a real person in that situation would. If "you" ask someone something (to talk in private, to come
+  along, a question), THAT character answers it: they agree, hesitate, refuse or ask why, and the scene follows from it.
+  NEVER give the user's words or request to a character (if "you" ask "can we talk in private?", nobody else says it back).
+  Every line must follow logically from the line before and fit the place and situation; no random lines, no non sequiturs,
+  no jokes that come from nowhere. If a line doesn't make sense right there, leave it out.
+- The user's messages arrive as "YOU: ..." = what "you" say (or do, if written as an action). Those words are already said;
+  the characters hear them and react.
 - STEP BY STEP: answer only the user's last message. Show how the characters react to it and stop at the very first
   moment where "you" would answer (a question, a look, a gesture that waits for you). Don't skip ahead, don't resolve
   things, don't play out a whole conversation: one beat per turn, then it's the user's turn.
-- Each turn has about 3 lines of dialogue (characters talking to you or to each other), with a little narration
-  between them: 60 to 130 words in total. The opening scene and "you continue" turns may be a little longer.
+- Each turn has UP TO 3 lines of dialogue (characters talking to you or to each other), with a little narration
+  between them: 40 to 130 words in total. Fewer lines are better than filler: 1 or 2 good lines beat 3 forced ones. The opening scene and "you continue" turns may be a little longer.
 - Characters CAN talk to each other when it fits: banter, teasing, arguing, reacting to one another. In group stories
   that's welcome and makes them feel alive. Keep it to a short exchange of a few lines, then turn it back to "you"
   (someone asks you something, looks at you, waits for your side) so the user always has the next move.
@@ -904,11 +912,11 @@ Reply only with JSON. The scene goes in "partes", in order: each part is narrati
 of dialogue (only the spoken words, no quotation marks and no "he says"; the gesture goes in a narration part before or after).
 There are never lines for "you".
 "para_ti": true on a line spoken TO "you" that waits for your answer (a question, an invitation, a challenge, a direct remark);
-false on everything else (narration, characters talking to each other). Write about 3 lines of dialogue, then stop:
-the 3rd (last) line should be spoken to "you" ("para_ti": true) and wait for your answer. Never write past it: it's the user's turn.
-If the user's message starts with (Replying to NAME: "..."), they are answering that exact line: NAME reacts first.
-When others are in the scene, they react to what "you" said or did too, each with their own feelings (one can get jealous,
-tease, sulk, defend you or compete for your attention), and often one of them turns to "you" with the next line.
+false on everything else (narration, characters talking to each other). Write up to 3 lines of dialogue, then stop:
+the last line should be spoken to "you" ("para_ti": true) and wait for your answer. Never write past it: it's the user's turn.
+If the user's message starts with (You are answering NAME, who said: "..."), "you" are replying to that line: NAME reacts first.
+Other characters in the scene may react too, but only when it makes sense for them and fits their tone and relationship
+(jealousy, teasing, defending you); if they have nothing meaningful to add, they stay quiet.
 {"partes": [{"tipo": "narracao", "quem": "", "texto": "...", "para_ti": false}, {"tipo": "fala", "quem": "name of the speaker", "texto": "...", "para_ti": true}],
 "escolhas": [3 short replies the user could send, written the way a person really types in a chat (casual, first person,
 can be one or two words, no fancy wording): one about what is happening, one lighter (funny or teasing, only if it fits the tone; otherwise a bolder choice), and one about the relationship
@@ -1252,7 +1260,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       : m.tipo === "continuar"
       ? { role: "user", content: "[AUTHOR'S NOTE] You continue: make something new happen (someone interrupts, a time skip, a problem, a moment alone or a revelation) and take the story to the next situation that needs an answer from me, without deciding anything for me." }
       : { role: "user", content: m.tipo === "nota" ? "[AUTHOR'S NOTE] " + m.texto
-          : (m.resposta ? `(Replying to ${m.resposta.quem}: "${String(m.resposta.texto).slice(0, 200)}") ` : "") + m.texto });
+          : (m.resposta ? `(You are answering ${m.resposta.quem}, who said: "${String(m.resposta.texto).slice(0, 200)}") ` : "") + "YOU: " + m.texto });
   }
 
   // Onde começam as mensagens recentes: andamos de trás para a frente até encher o
@@ -2147,7 +2155,7 @@ ${texto}`;
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
                             { role: "user", content: notaAbertura(h) + lembrete(pers, h) }],
-                           { esquema: esquemaCena(h), nome: "cena", max: 1200 });
+                           { esquema: esquemaCena(h), nome: "cena", max: 1600, esforco: "medium" });
       aplicarCena(c, d, h);
       atualizarHistoria(h); gravarConteudo(h.id, c);
       ocupado(false);
@@ -2393,7 +2401,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · stay in character";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · make sense";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2480,7 +2488,7 @@ ${texto}`;
       // o lembrete do tom e da relação vai colado à última mensagem tua
       for (let k = turnos.length - 1; k >= 0; k--) if (turnos[k].role === "user") { turnos[k] = Object.assign({}, turnos[k], { content: turnos[k].content + lembrete(pers, hist) }); break; }
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + nCenas(c), hist.mundo ? valoresCena(c, hist) : proxDe(c, hist)) }]
-        .concat(turnos), { esquema: esquemaCena(hist), nome: "cena", max: 1200,
+        .concat(turnos), { esquema: esquemaCena(hist), nome: "cena", max: 1600, esforco: "medium",
           onEspera: seg => desenhar(`<div class="a-escrever">Too many requests in a row. Trying again in ${seg} s…</div>`) });
       const proxAntes = hist.mundo ? valoresCena(c, hist) : proxDe(c, hist);
       const novos = aplicarCena(c, d);
