@@ -333,6 +333,10 @@
   .a-responder b { display: block; color: var(--acento); font-size: 12px; font-weight: 600; }
   .a-responder span { display: block; color: var(--suave); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bloco-cena { display: flex; flex-direction: column; gap: 12px; }
+  .campo-select { margin-top: 6px; background: var(--fundo); border: 1px solid var(--linha); border-radius: 12px; padding: 9px 12px;
+                  font-size: 15px; color: var(--texto); text-transform: none; letter-spacing: 0; }
+  .formulario .campo-select { width: 100%; background: var(--cartao); }
+  .membro .campo-select { margin: 0; flex: 1; min-width: 0; }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
   .caixa { display: flex; gap: 6px; padding-block: 10px 14px; border-top: 1px solid var(--linha); align-items: flex-end; }
@@ -414,6 +418,8 @@
         <label>Age (optional)<input id="r-idade" inputmode="numeric" maxlength="3" placeholder="e.g. 22"></label>
         <label>From<input id="r-obra" maxlength="120"></label>
         <label>Card tagline<input id="r-frase" maxlength="200"></label>
+        <div><span class="rotulo">Their tone (up to 3)</span><div class="tons" id="r-tipos"></div></div>
+        <label>Relationship with you<select id="r-relacao" class="campo-select"></select></label>
         <label>Personality and way of speaking<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
         <div class="acoes">
           <button type="button" class="botao secundario" id="regerar">Generate again</button>
@@ -737,7 +743,36 @@
     "Action": "fast, physical and dangerous; short sentences, high stakes",
     "Supernatural": "eerie, magical or uncanny things are real here",
   };
-  const RELACOES = ["Open", "Best friends", "Rivals", "Colleagues", "Strangers"];
+  const RELACOES = ["Open", "Strangers", "Colleagues", "Friends", "Best friends", "Rivals", "Enemies", "Crush", "Dating", "Ex", "Family"];
+  const RELACOES_ROMANTICAS = ["Crush", "Dating", "Ex"];   // nunca com menores
+  // O que cada relação quer dizer para o narrador.
+  const SENTIDO_RELACOES = {
+    "Open": "nothing set yet: let it develop naturally",
+    "Strangers": "you don't know each other yet",
+    "Colleagues": "you work, train or study together",
+    "Friends": "friends: comfortable, they trust you",
+    "Best friends": "very close: inside jokes, total comfort, and fear of ruining the friendship",
+    "Rivals": "rivals: competitive, they needle and challenge you, even when they start to care",
+    "Enemies": "real hostility or distrust between you; any trust has to be earned, slowly",
+    "Crush": "there's a crush between you: nerves, tension, they try to hide it",
+    "Dating": "you're together as a couple: affection, closeness, small jealousies",
+    "Ex": "you used to date: shared history, unresolved feelings, awkwardness",
+    "Family": "family (sibling or cousin): protective, teasing, never anything romantic",
+  };
+  // A relação desta personagem contigo: a que escolheste para ela; senão, a da história (só para a principal).
+  function relacaoComigo(x, h) {
+    let r = (x && x.relacao) || (x && h && x.id === h.personagem ? h.relacao : "") || "Open";
+    if (x && x.menor && RELACOES_ROMANTICAS.includes(r)) r = "Friends";   // menores: nunca relações românticas
+    return RELACOES.includes(r) ? r : "Open";
+  }
+  // O "tom" de uma personagem: os tipos de personalidade escolhidos para ela (até 3).
+  const tiposDe = x => (x && (x.tipos || (x.campos && x.campos.tipos))) || [];
+  // Linhas para o narrador: tom e relação, que a personagem tem de respeitar sempre.
+  function linhasPersonagem(x, h) {
+    const tipos = tiposDe(x).filter(t => PERSONALIDADES[t]), r = relacaoComigo(x, h);
+    return (tipos.length ? `\nTHEIR TONE (always act and talk like this): ${tipos.map(t => PERSONALIDADES[t]).join("; ")}.` : "")
+      + (r !== "Open" ? `\nTHEIR RELATIONSHIP WITH "YOU": ${r} = ${SENTIDO_RELACOES[r]}. Respect it in every line.` : "");
+  }
   const GENEROS = ["Male", "Female", "Non-binary"];
   // Tipos de personalidade: o texto explica à IA como a personagem age.
   const PERSONALIDADES = {
@@ -815,8 +850,10 @@ Return:
 Main character: ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}
 ${String(p.ficha).slice(0, 1800)}${h.mundo ? blocoMundo(mundoDe(h.mundo)) + "\nAlso in the group: " + elencoCena(h).filter(x => x.id !== p.id).map(x => x.nome + (historicoDe(mundoDe(h.mundo), x.id) ? " (with you: " + historicoDe(mundoDe(h.mundo), x.id).slice(0, 120) + ")" : "")).join("; ") + (historicoDe(mundoDe(h.mundo), p.id) ? "\nHistory with the user: " + historicoDe(mundoDe(h.mundo), p.id).slice(0, 400) : "") : ""}
 ${personaDe(h.persona) ? "Who the user is: " + textoPersona(personaDe(h.persona)) : ""}
+${linhasPersonagem(p, h)}
 ${p.menor || eMenor(personaDe(h.persona)) ? "IMPORTANT: someone is a minor, so NONE of the stories can have romance (friendship, adventure, mystery, comedy, drama…)." : "Make one of them romantic (romance or slow burn), one more adventurous or dramatic (mystery, action, angst…), and one light and fun (comedy, fluff)."}
 The three must feel clearly different from each other: different situations, places and moods. Each one with a hook.
+Respect each character's tone and their relationship with the user in every idea.
 ${h.mundo ? "Only use these characters, with exactly these names: " + [p].concat(elencoCena(h).filter(x => x.id !== p.id)).map(x => x.nome).join(", ") + ". Don't add other people the profiles mention." : ""}
 For each, return:
 - titulo: a short, beautiful title (up to 6 words)
@@ -920,9 +957,9 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     const hx = x => historicoDe(m, x.id);
     // Quem está na cena: ficha + histórico contigo. Quem não está: uma linha (e o início do histórico).
     return (hx(p) ? `\nHistory with "you" (in ${m.nome}): ${hx(p).slice(0, 700)}` : "")
-      + (elenco.length ? "\n\n## Also in this scene\n" + elenco.map(x => `### ${x.nome}\n${String(x.ficha).slice(0, 700)}`
+      + (elenco.length ? "\n\n## Also in this scene\n" + elenco.map(x => `### ${x.nome}\n${String(x.ficha).slice(0, 700)}` + linhasPersonagem(x, h)
           + (hx(x) ? `\nHistory with "you": ${hx(x).slice(0, 500)}` : "")).join("\n") : "")
-      + (outros.length ? "\n\n## Others in this group (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}`
+      + (outros.length ? "\n\n## Others in this group (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}` + (relacaoComigo(x, h) !== "Open" ? ` · with you: ${relacaoComigo(x, h)}` : "")
           + (hx(x) ? ` · with you: ${hx(x).slice(0, 160)}` : "")).join("\n") : "")
       + (menores.length ? `\nNO ROMANCE with ${menores.join(", ")}: minors in their original work. Never romance, flirting or romantic tension with them.` : "")
       + `\nTHE CHARACTERS AND THEIR NAMES: the group in this story is exactly ${[p].concat(elenco, outros).map(x => x.nome).join(", ")}. `
@@ -940,12 +977,12 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       + (p.menor ? `\nNO ROMANCE: ${p.nome} is a minor in the original work. Only friendship, adventure, mystery or rivalry; never romance, flirting or romantic tension with ${p.nome}, even if the user asks or says they're an adult.` : "")
       + (eMenor(eu) ? `\nNO ROMANCE: the user's character is under 18. Only friendship, adventure, mystery or rivalry; never romance, flirting or romantic tension with them.` : "")
       + blocoMundo(h.mundo && mundoDe(h.mundo))
-      + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 2200)}`
+      + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 2200)}` + linhasPersonagem(p, h)
       + blocoElenco(p, h)
       + `\n\n## Story: ${h.titulo || "untitled"}`
       + (h.premissa ? `\n${h.mundo ? "Situation" : "Idea"}: ${h.premissa}` : "")
       + `\nSetting: ${h.universo || (h.mundo && mundoDe(h.mundo) ? "somewhere in " + mundoDe(h.mundo).nome : "the original work's")}`
-      + (h.relacao && h.relacao !== "Open" ? `\nRelationship between them: ${h.relacao}` : "")
+
       + (h.tons.length ? `\n\nTONE OF THIS STORY (follow it in every scene, it decides the mood of everything): ${h.tons.map(t => t + " = " + (SENTIDO_TONS[t] || t)).join("; ")}.` : "")
       + `\nThe user is: ${eu ? textoPersona(eu) + (h.papel ? ". In this story: " + h.papel.replace(/[.\s]+$/, "") : "") : h.papel || "someone new in " + p.nome + "'s life"}. In the narration they are ALWAYS "you", never their name; `
       + `don't write what "you" do, say, your expression or clothes unless the user wrote it (you only narrate the rest of the world).`
@@ -1278,8 +1315,8 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"));
   }
   // Relação: só se escolhe uma (como botões de rádio).
-  function desenharRelacao(caixa, escolhida) {
-    caixa.innerHTML = RELACOES.map(r => `<button type="button" class="tom" aria-pressed="${(escolhida || "Open") === r}">${r}</button>`).join("");
+  function desenharRelacao(caixa, escolhida, menor = false) {
+    caixa.innerHTML = RELACOES.filter(r => !menor || !RELACOES_ROMANTICAS.includes(r)).map(r => `<button type="button" class="tom" aria-pressed="${(escolhida || "Open") === r}">${r}</button>`).join("");
     caixa.querySelectorAll(".tom").forEach(b => b.onclick = () =>
       caixa.querySelectorAll(".tom").forEach(x => x.setAttribute("aria-pressed", String(x === b))));
   }
@@ -1408,6 +1445,8 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     rascunho = p; aEditarFicha = !!editar;
     $("r-idade").value = Number.isInteger(p.idade) ? p.idade : "";
     $("r-link").value = ""; $("r-link-estado").innerHTML = "";
+    desenharTiposFicha(tiposDe(p));
+    opcoesRelacao($("r-relacao"), p.relacao || "Open", !!p.menor);
     $("r-nome").value = p.nome; $("r-obra").value = p.obra; $("r-frase").value = p.frase; $("r-ficha").value = p.ficha;
     $("aviso-ficha").innerHTML = p.conhecida ? "" :
       `<div class="aviso">I don't know this character well, so this profile is generic. You can write more about them below, or go back and paste some information.</div>`;
@@ -1514,6 +1553,20 @@ ${texto}`;
     const doGrupo = new Set(mundos().filter(m => gruposDela.includes(m.id)).flatMap(m => m.personagens || []));
     gravarPersonagens(personagens().map(x => x.id !== id && doGrupo.has(x.id) ? Object.assign({}, x, { ficha: troca(x.ficha), frase: troca(x.frase) }) : x));
   }
+  // Botões do tom da personagem (até 3) e a lista de relações (sem as românticas se for menor)
+  function desenharTiposFicha(escolhidos) {
+    const caixa = $("r-tipos");
+    caixa.innerHTML = Object.keys(PERSONALIDADES).map(t => `<button type="button" class="tom" data-v="${escapar(t)}" aria-pressed="${escolhidos.includes(t)}">${escapar(t)}</button>`).join("");
+    caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => {
+      const ligar = b.getAttribute("aria-pressed") !== "true";
+      if (ligar && caixa.querySelectorAll('.tom[aria-pressed="true"]').length >= 3) return;
+      b.setAttribute("aria-pressed", String(ligar));
+    });
+  }
+  function opcoesRelacao(sel, atual, menor) {
+    sel.innerHTML = RELACOES.filter(r => !menor || !RELACOES_ROMANTICAS.includes(r))
+      .map(r => `<option value="${r}"${r === (atual || "Open") ? " selected" : ""}>${r === "Open" ? "Not set" : r}</option>`).join("");
+  }
   function guardarFicha() {
     const txtIdade = $("r-idade").value.trim();
     if (txtIdade && !/^\d{1,3}$/.test(txtIdade)) { $("aviso-ficha").innerHTML = `<p class="erro">Write the age as a number (e.g. 22), or leave it empty.</p>`; return; }
@@ -1528,6 +1581,8 @@ ${texto}`;
       obra: $("r-obra").value.trim().slice(0, 120),
       frase: $("r-frase").value.trim().slice(0, 200),
       ficha: $("r-ficha").value.trim().slice(0, 4000) || rascunho.ficha,
+      tipos: [...$("r-tipos").querySelectorAll('.tom[aria-pressed="true"]')].map(b => b.dataset.v),
+      relacao: $("r-relacao").value === "Open" ? "" : $("r-relacao").value,
       avatar: fotoNova !== null ? fotoNova : rascunho.avatar,
     });
     // Idade: com a idade real guardada (ex.: importada de uma página), é ela que decide o romance.
@@ -1540,6 +1595,7 @@ ${texto}`;
               : `${p.nome} — ${idade} years old.\n` + p.ficha;
     }
     if (nomeVelho && nomeNovo !== nomeVelho) p.outrosNomes = [...new Set((rascunho.outrosNomes || []).concat(nomeVelho))].filter(n => n !== nomeNovo);
+    if (p.menor && RELACOES_ROMANTICAS.includes(p.relacao)) p.relacao = "Friends";
     const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
     if (nomeVelho && nomeNovo !== nomeVelho) renomearEmTudo(p.id, nomeVelho, nomeNovo);
     rascunho = null;
@@ -2183,9 +2239,12 @@ ${texto}`;
     [26, "Friendly", "✨", "{n} enjoys your company."], [42, "Friends", "✨", "{n} trusts you."],
     [58, "Close friends", "🌟", "{n} would go out of their way for you."], [74, "Best friends", "🌟", "{n} would do anything for you."],
     [90, "Inseparable", "💫", "Nothing could break this bond."]];
-  const romantico = (p, h) => !p.menor && !eMenor(personaDe(h.persona)) && (h.tons || []).some(t => TONS_ROMANTICOS.includes(t));
-  const BASE_RELACAO = { "Best friends": 30, "Colleagues": 15, "Rivals": 8, "Strangers": 0, "Open": 5 };
-  const proxDe = (c, h) => typeof c.proximidade === "number" ? c.proximidade : (BASE_RELACAO[h.relacao] ?? 5);
+  const romantico = (p, h) => !p.menor && !eMenor(personaDe(h.persona)) && relacaoComigo(p, h) !== "Family"
+    && ((h.tons || []).some(t => TONS_ROMANTICOS.includes(t)) || RELACOES_ROMANTICAS.includes(relacaoComigo(p, h)));
+  const BASE_RELACAO = { "Best friends": 30, "Colleagues": 15, "Rivals": 8, "Strangers": 0, "Open": 5,
+                          "Friends": 20, "Enemies": 0, "Crush": 25, "Dating": 60, "Ex": 30, "Family": 40 };
+  const proxDe = (c, h) => typeof c.proximidade === "number" ? c.proximidade
+    : (BASE_RELACAO[relacaoComigo(personagens().find(x => x.id === h.personagem), h)] ?? BASE_RELACAO[h.relacao] ?? 5);
   function faseDe(v, amor) {
     const l = amor ? FASES_AMOR : FASES_AMIZADE;
     let i = 0; while (i + 1 < l.length && v >= l[i + 1][0]) i++;
@@ -2203,6 +2262,8 @@ ${texto}`;
     const v = c.proxs && c.proxs[id];
     if (typeof v === "number") return v;
     if (id === h.personagem) return proxDe(c, h);
+    const r = relacaoComigo(personagens().find(x => x.id === id), h);
+    if (r !== "Open") return BASE_RELACAO[r] ?? 5;   // começa conforme a relação que escolheste
     return historicoDe(mundoDe(h.mundo), id) ? 10 : 5;   // quem já tem história contigo começa um pouco à frente
   }
   // Quem é "quem" (o nome que a IA escreveu): nome completo, primeiro nome ou qualquer palavra do nome.
@@ -2304,7 +2365,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · tone fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · tone + relationship";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2528,7 +2589,7 @@ ${texto}`;
     // });
     // $("e-persona").dataset.id = personaCtx;
     desenharTons($("e-tons"), hist.tons, pers.menor || eMenor(personaDe(personaCtx)));
-    desenharRelacao($("e-relacao"), hist.relacao);
+    desenharRelacao($("e-relacao"), hist.relacao, !!pers.menor);
     $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map(f => `<li>${formatar(f)}</li>`).join("") : `<p class="vazio">Nothing yet.</p>`;
     $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">The summary appears once the story gets longer.</span>`;
     for (const id of ["recomecar", "apagar-historia"]) $(id).dataset.confirmar = "";
@@ -2587,6 +2648,7 @@ ${texto}`;
         <div class="membro-topo"><div class="avatar"></div><b>${escapar(p.nome)}</b>
           <button type="button" class="ligacao editar-membro">edit</button>
           <button type="button" class="ligacao tirar-membro">remove</button></div>
+        <label class="linha-check" style="gap:8px">Relationship with you <select class="rel-membro campo-select"></select></label>
         <textarea rows="3" maxlength="1500" placeholder="e.g. You met at a dance class two years ago. He's protective of you and pretends he isn't jealous.">${escapar(historicoDe(mundo, p.id))}</textarea>
         <small></small></div>`).join("")
       : `<p class="dica">No members yet. Add characters from your gallery below, or create new ones.</p>`;
@@ -2605,6 +2667,12 @@ ${texto}`;
       };
       // edit: abre a ficha do membro; ao guardar volta ao grupo
       c.querySelector(".editar-membro").onclick = () => { mundoAlvo = mundo.id; mostrarRevisao(Object.assign({}, p), true); };
+      const sel = c.querySelector(".rel-membro");
+      opcoesRelacao(sel, p.relacao || "Open", !!p.menor);
+      sel.onchange = () => {   // guarda logo na personagem
+        const l = personagens(), k = l.findIndex(x => x.id === id);
+        if (k >= 0) { l[k] = Object.assign({}, l[k], { relacao: sel.value === "Open" ? "" : sel.value }); gravarPersonagens(l); aviso.textContent = "Saved ✓"; }
+      };
       c.querySelector(".tirar-membro").onclick = () => {
         const m = mundoDe(mundo.id);
         m.personagens = (m.personagens || []).filter(x => x !== id);   // o histórico fica guardado, se a voltares a pôr
