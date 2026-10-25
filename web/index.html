@@ -833,8 +833,8 @@ VOICE (very important):
 - STEP BY STEP: answer only the user's last message. Show how the characters react to it and stop at the very first
   moment where "you" would answer (a question, a look, a gesture that waits for you). Don't skip ahead, don't resolve
   things, don't play out a whole conversation: one beat per turn, then it's the user's turn.
-- Short: 40 to 90 words in total (up to 130 when several characters are in the scene). The opening scene and
-  "you continue" turns may be a little longer.
+- Each turn has about 3 lines of dialogue (characters talking to you or to each other), with a little narration
+  between them: 60 to 130 words in total. The opening scene and "you continue" turns may be a little longer.
 - Characters CAN talk to each other when it fits: banter, teasing, arguing, reacting to one another. In group stories
   that's welcome and makes them feel alive. Keep it to a short exchange of a few lines, then turn it back to "you"
   (someone asks you something, looks at you, waits for your side) so the user always has the next move.
@@ -853,8 +853,8 @@ Reply only with JSON. The scene goes in "partes", in order: each part is narrati
 of dialogue (only the spoken words, no quotation marks and no "he says"; the gesture goes in a narration part before or after).
 There are never lines for "you".
 "para_ti": true on a line spoken TO "you" that waits for your answer (a question, an invitation, a challenge, a direct remark);
-false on everything else (narration, characters talking to each other). The scene STOPS right after the first line with
-"para_ti": true: never write anything after it, it's the user's turn.
+false on everything else (narration, characters talking to each other). Write about 3 lines of dialogue, then stop:
+the 3rd (last) line should be spoken to "you" ("para_ti": true) and wait for your answer. Never write past it: it's the user's turn.
 If the user's message starts with (Replying to NAME: "..."), they are answering that exact line: NAME reacts first.
 When others are in the scene, they react to what "you" said or did too, each with their own feelings (one can get jealous,
 tease, sulk, defend you or compete for your attention), and often one of them turns to "you" with the next line.
@@ -951,6 +951,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   const NOTA_ABERTURA_GRUPO = "[AUTHOR'S NOTE] Write the opening scene: set up the situation with the characters in it, each one acting true to their history with you.";
   const notaAbertura = h => h && h.mundo ? NOTA_ABERTURA_GRUPO : NOTA_ABERTURA;
   const CENAS_POR_CAPITULO = 10;
+  const FALAS_POR_VEZ = 3;   // quantas falas a história avança antes de parar para tu responderes
   const ORCAMENTO_RECENTE = 3500;  // letras das mensagens recentes enviadas tal e qual
   const MIN_RECENTES = 2;          // nunca menos do que isto (a última cena e a tua jogada)
   const MAX_FACTOS = 15;           // factos da memória enviados (os mais recentes)
@@ -2087,9 +2088,12 @@ ${texto}`;
     const proibidos = ["you", "i", "me", "user", "tu", "eu", "utilizador", "você"].concat(meuNome ? [meuNome[1].toLowerCase()] : [])
       .concat(eu ? [eu.nome.toLowerCase(), eu.nome.split(" ")[0].toLowerCase()] : []);
     partes = partes.filter(x => x.tipo !== "fala" || !proibidos.includes(x.quem.toLowerCase()));
-    // Pausa: quando alguém fala diretamente contigo, a cena acaba aí e espera pela tua resposta.
-    const ate = partes.findIndex(x => x.para_ti);
-    if (ate >= 0) partes = partes.slice(0, ate + 1);
+    // Pausa: a cada FALAS_POR_VEZ falas a cena para e espera pela tua resposta (o resto que a IA tenha escrito é cortado).
+    {
+      let n = 0;
+      const ate = partes.findIndex(x => x.tipo === "fala" && ++n >= FALAS_POR_VEZ);
+      if (ate >= 0) partes = partes.slice(0, ate + 1);
+    }
     if (!partes.length && d && d.texto) partes = [{ tipo: "narracao", quem: "", texto: String(d.texto).trim() }];
     if (!partes.length) partes = [{ tipo: "narracao", quem: "", texto: "*The silence stretches on for a moment.*" }];
     const texto = partes.map(x => x.tipo === "fala" ? `${x.quem}: "${x.texto}"` : x.texto).join("\n\n");
@@ -2282,7 +2286,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · natural voice";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · 3 lines per turn";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2376,7 +2380,8 @@ ${texto}`;
       aEspera = false;
       desenhar("", true);
       { const ult = c.mensagens[c.mensagens.length - 1], fp = ult && (ult.partes || []).filter(x => x.tipo === "fala");
-        definirResposta(fp && fp.length && fp[fp.length - 1].para_ti ? fp[fp.length - 1] : null); }
+        const paraMim = (fp || []).filter(x => x.para_ti);   // a última fala dirigida a ti fica escolhida para responderes
+        definirResposta(paraMim.length ? paraMim[paraMim.length - 1] : null); }
       if (hist.mundo) {
         const depois = valoresCena(c, hist);
         for (const x of elencoCena(hist)) if (avisarRelacao(proxAntes[x.id], depois[x.id], x)) break;   // um aviso de cada vez
