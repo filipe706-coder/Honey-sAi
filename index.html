@@ -2069,7 +2069,11 @@ ${texto}`;
     {
       const ultimaMsg = c.mensagens[c.mensagens.length - 1];
       const respostaTua = !!ultimaMsg && ultimaMsg.tipo === "acao", grupo = !!(h && h.mundo);
-      const maxPartes = respostaTua ? (grupo ? 7 : 5) : (grupo ? 9 : 6), maxFalas = respostaTua ? (grupo ? 5 : 3) : (grupo ? 7 : 4);
+      // Igual para tudo (a tua mensagem, o "Continue", notas, a abertura): no máximo 3 falas e 6 partes por vez.
+      const maxFalas = FALAS_POR_VEZ, maxPartes = FALAS_POR_VEZ * 2;
+      // narrações seguidas juntam-se numa só (senão a IA enche a cena de pedaços de narração)
+      partes = partes.reduce((l, x) => { const u = l[l.length - 1];
+        if (u && u.tipo === "narracao" && x.tipo === "narracao") u.texto += " " + x.texto; else l.push(x); return l; }, []);
       const ficam = []; let falas = 0;
       for (const x of partes) {
         if (ficam.length >= maxPartes) break;
@@ -2286,7 +2290,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · 3 lines per turn";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · continue fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
