@@ -792,6 +792,7 @@ ${String(p.ficha).slice(0, 1800)}${h.mundo ? blocoMundo(mundoDe(h.mundo)) + "\nA
 ${personaDe(h.persona) ? "Who the user is: " + textoPersona(personaDe(h.persona)) : ""}
 ${p.menor || eMenor(personaDe(h.persona)) ? "IMPORTANT: someone is a minor, so NONE of the stories can have romance (friendship, adventure, mystery, comedy, drama…)." : "Make one of them romantic (romance or slow burn), one more adventurous or dramatic (mystery, action, angst…), and one light and fun (comedy, fluff)."}
 The three must feel clearly different from each other: different situations, places and moods. Each one with a hook.
+${h.mundo ? "Only use these characters, with exactly these names: " + [p].concat(elencoCena(h).filter(x => x.id !== p.id)).map(x => x.nome).join(", ") + ". Don't add other people the profiles mention." : ""}
 For each, return:
 - titulo: a short, beautiful title (up to 6 words)
 - premissa: the situation in 1 or 2 sentences, addressed to the user as "you"
@@ -881,6 +882,10 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       + (outros.length ? "\n\n## Others in this group (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}`
           + (hx(x) ? ` · with you: ${hx(x).slice(0, 160)}` : "")).join("\n") : "")
       + (menores.length ? `\nNO ROMANCE with ${menores.join(", ")}: minors in their original work. Never romance, flirting or romantic tension with them.` : "")
+      + `\nTHE CHARACTERS AND THEIR NAMES: the group in this story is exactly ${[p].concat(elenco, outros).map(x => x.nome).join(", ")}. `
+      + `Always call them by these names (in "quem" too), even if a profile mentions another name for them. `
+      + `Other people the profiles mention (other members, family, friends) are NOT part of this story: don't bring them in as characters, `
+      + `unless the user does.`
       + `\nIn the JSON, instead of "proximidade" return "proximidades": [{"quem": name, "passo": -2..2}] for each character in the scene whose feelings toward "you" changed because of what "you" said or did (leave out the ones that didn't). Each one has their own feelings: one can get closer while another gets jealous or distant.`;
   }
 
@@ -1413,8 +1418,14 @@ ${texto}`;
   function guardarFicha() {
     const txtIdade = $("r-idade").value.trim();
     if (txtIdade && !/^\d{1,3}$/.test(txtIdade)) { $("aviso-ficha").innerHTML = `<p class="erro">Write the age as a number (e.g. 22), or leave it empty.</p>`; return; }
+    const nomeNovo = $("r-nome").value.trim().slice(0, 80) || rascunho.nome, nomeVelho = rascunho.nome;
+    // se mudaste o nome, a ficha também passa a usar o nome novo (senão a IA continua a usar o antigo)
+    if (nomeVelho && nomeNovo !== nomeVelho) {
+      const escapado = nomeVelho.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      $("r-ficha").value = $("r-ficha").value.replace(new RegExp("\\b" + escapado + "\\b", "g"), nomeNovo);
+    }
     const p = Object.assign({}, rascunho, {
-      nome: $("r-nome").value.trim().slice(0, 80) || rascunho.nome,
+      nome: nomeNovo,
       obra: $("r-obra").value.trim().slice(0, 120),
       frase: $("r-frase").value.trim().slice(0, 200),
       ficha: $("r-ficha").value.trim().slice(0, 4000) || rascunho.ficha,
@@ -2175,7 +2186,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · hide suggestions";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · names fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
