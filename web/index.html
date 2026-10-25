@@ -473,7 +473,7 @@
         <div class="avatar-linha"><label class="carregar-avatar" for="mw-foto"><span>+<small>Cover</small></span></label>
           <input type="file" id="mw-foto" accept="image/*" hidden><p class="dica">Tap to add a cover picture (optional).</p></div>
         <label>Name *<input id="mw-nome" maxlength="60" placeholder="e.g. the group's name" required></label>
-        <label>Link to a page about the group (optional)<input id="mw-link" type="url" inputmode="url" maxlength="500" placeholder="e.g. a Kprofiles or Wikipedia page"></label>
+        <label>Link to a page about the group (optional)<input id="mw-link" type="text" inputmode="url" autocapitalize="off" autocorrect="off" maxlength="500" placeholder="e.g. a Kprofiles or Wikipedia page"></label>
         <p class="dica" id="mw-link-dica">The AI reads the page and creates every member. You just check the list.</p>
         <label>In a few words (optional)<textarea id="mw-descricao" rows="2" maxlength="1200" placeholder="e.g. a K-pop group that debuted this year; they live together in a dorm in Seoul."></textarea></label>
         <button class="botao" id="guardar-mundo">Create group</button>
@@ -1332,7 +1332,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   }
   async function gerarFicha() {
     const nome = $("c-nome").value.trim(), extra = $("c-extra").value.trim();
-    if (eLink(extra)) return lerPaginaDoLink(extra, $("c-obra").value.trim(), nome);
+    if (eLink(extra)) return lerPaginaDoLink(linkDe(extra), $("c-obra").value.trim(), nome);
     if (!nome && extra && extra.length <= 40) { $("passo1-estado").innerHTML = `<p class="erro">That's too little text. If the site didn't let you copy (Kprofiles blocks it), paste the page's link instead.</p>`; return; }
     if (extra.length > 1500 || (!nome && extra.length > 40)) return lerPagina(limparPagina(extra), $("c-obra").value.trim(), nome);
     if (!nome) { $("passo1-estado").innerHTML = `<p class="erro">Write a name (or paste a page).</p>`; return; }
@@ -1466,7 +1466,10 @@ ${texto}`;
   let grupoPagina = "", sobrePagina = "";
   // Um browser não pode ler páginas de outros sites diretamente (bloqueiam-no), por isso pedimos o texto
   // ao Jina Reader (r.jina.ai), um serviço grátis que abre a página e devolve só o texto.
-  const eLink = t => /^https?:\/\/\S+$/i.test(String(t).trim());
+  // Um link, mesmo com texto à volta (a partilha do telemóvel junta o título da página).
+  // Só conta se o texto for curto: num texto grande colado, um link pelo meio não é o que se quer ler.
+  const linkDe = t => { t = String(t || "").trim(); const m = t.length < 600 && /https?:\/\/[^\s<>"]+/i.exec(t); return m ? m[0].replace(/[).,;]+$/, "") : ""; };
+  const eLink = t => !!linkDe(t);
   // Tenta dois caminhos: 1) Jina Reader (devolve o texto pronto); 2) se falhar, AllOrigins (devolve o HTML da
   // página e a app tira-lhe o texto). Sites como o Kprofiles não deixam copiar o texto à mão, mas por aqui lê-se.
   async function lerLink(url) {
@@ -1486,6 +1489,19 @@ ${texto}`;
     }
     throw { link: true };
   }
+  // As páginas de perfis acabam com comentários e artigos relacionados (às vezes mais do que os perfis).
+  // Corta a partir do primeiro desses sinais, desde que já haja texto suficiente antes.
+  function cortarRestos(t) {
+    const m = /\n(?:#+\s*)?(?:\d+\s+)?(?:comments?|leave a (?:reply|comment)|related posts?|you may also like|recommended|who is your (?:favorite|bias)|do you like)\b/i;
+    let corte = t.length, from = 0;
+    while (true) {
+      const x = m.exec(t.slice(from)); if (!x) break;
+      const pos = from + x.index;
+      if (pos > 1200) { corte = pos; break; }
+      from = pos + 1;
+    }
+    return t.slice(0, corte);
+  }
   const ERRO_LINK = "I couldn't open that link (the site blocks it). Try another page about them (Wikipedia, a fan wiki), or copy the text and paste it here.";
   // Lê um link e mostra as personagens que lá estão (para confirmar).
   async function lerPaginaDoLink(url, grupo, alvo) {
@@ -1494,7 +1510,7 @@ ${texto}`;
     let texto;
     try { texto = await lerLink(url); }
     catch (e) { $("gerar").disabled = false; $("passo1-estado").innerHTML = `<p class="erro">${ERRO_LINK}</p>`; return; }
-    return lerPagina(limparPagina(texto), grupo, alvo);
+    return lerPagina(cortarRestos(limparPagina(texto)), grupo, alvo);
   }
   async function lerPagina(texto, grupo, alvo) {
     const partes = [];
@@ -2078,7 +2094,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · links 2";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · links 3";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2422,7 +2438,7 @@ ${texto}`;
     if (link && eLink(link)) {   // com link: lê a página e mostra os membros para confirmar
       abrirCriar("", m.nome); mundoAlvo = m.id;
       $("c-extra").value = link;
-      return lerPaginaDoLink(link, m.nome, "");
+      return lerPaginaDoLink(linkDe(link), m.nome, "");
     }
     abrirMundo(m.id);
   };
