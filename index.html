@@ -990,7 +990,35 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       + (resumo ? `\n\n## So far\n${resumo}` : "")
       + (prox === null ? "" : typeof prox === "object"
           ? `\n\nHow close each one feels to "you" right now: ${Object.entries(prox).map(([id, v]) => { const x = personagens().find(y => y.id === id); return x ? `${x.nome}: ${faseDe(v, romantico(x, h)).nome} (${v}/100)` : ""; }).filter(Boolean).join("; ")}. Keep their behaviour consistent with it.`
-          : `\n\nHow close ${p.nome} feels to "you" right now: ${faseDe(prox, romantico(p, h)).nome} (${prox}/100). Keep ${p.nome}'s behaviour consistent with it.`);
+          : `\n\nHow close ${p.nome} feels to "you" right now: ${faseDe(prox, romantico(p, h)).nome} (${prox}/100). Keep ${p.nome}'s behaviour consistent with it.`)
+      + folhaPersonagens(p, h);
+  }
+  // A "folha de personagens": o tom e a relação de cada um, curtos, no FIM das instruções (o que vem por último pesa mais).
+  function quemEntra(p, h) {
+    const m = h && h.mundo && mundoDe(h.mundo);
+    return m ? [p].concat(elencoCena(h).filter(x => x.id !== p.id)) : [p];
+  }
+  function resumoPersonagem(x, h) {
+    const tipos = tiposDe(x).filter(t => PERSONALIDADES[t]), r = relacaoComigo(x, h);
+    const partes = [];
+    if (tipos.length) partes.push(tipos.map(t => PERSONALIDADES[t].split(";")[0]).join("; "));
+    if (r !== "Open") partes.push(`${r} with you (${SENTIDO_RELACOES[r]})`);
+    return partes.length ? `${x.nome}: ${partes.join(" | ")}` : "";
+  }
+  function folhaPersonagens(p, h) {
+    const linhas = quemEntra(p, h).map(x => resumoPersonagem(x, h)).filter(Boolean);
+    return (linhas.length || (h.tons || []).length)
+      ? `\n\n## MOST IMPORTANT: stay true to this in every single line (even if earlier scenes drifted)\n`
+        + (h.tons && h.tons.length ? `Story tone: ${h.tons.join(", ")}.\n` : "")
+        + linhas.map(l => "- " + l).join("\n")
+        + `\nBefore writing each line, check it fits that character's tone and their relationship with "you". If it doesn't, rewrite it.`
+      : "";
+  }
+  // Lembrete curto que vai junto à última mensagem (não aparece no ecrã).
+  function lembrete(p, h) {
+    const linhas = quemEntra(p, h).map(x => resumoPersonagem(x, h)).filter(Boolean);
+    if (!linhas.length && !(h.tons || []).length) return "";
+    return `\n\n[Stay in character${h.tons && h.tons.length ? ", tone " + h.tons.join("/") : ""}: ${linhas.map(l => l.replace(/ \(.*?\)/g, "")).join(" · ")}]`;
   }
 
   // Orçamento de cada pedido. O plano grátis do Groq dá 200 000 tokens por dia e 8000 por
@@ -2118,7 +2146,7 @@ ${texto}`;
       if (!h.persona) delete h.persona; else gravar("sussurros-persona-ultima", h.persona);   // da próxima vez vem já escolhida
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
-                            { role: "user", content: notaAbertura(h) }],
+                            { role: "user", content: notaAbertura(h) + lembrete(pers, h) }],
                            { esquema: esquemaCena(h), nome: "cena", max: 1200 });
       aplicarCena(c, d, h);
       atualizarHistoria(h); gravarConteudo(h.id, c);
@@ -2365,7 +2393,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · tone + relationship";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · stay in character";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2449,6 +2477,8 @@ ${texto}`;
     desenhar(`<div class="a-escrever">The narrator is writing <i>•</i><i>•</i><i>•</i></div>`);
     try {
       const turnos = c.mensagens.length ? paraTurnos(recentes(c)) : [{ role: "user", content: notaAbertura(hist) }];
+      // o lembrete do tom e da relação vai colado à última mensagem tua
+      for (let k = turnos.length - 1; k >= 0; k--) if (turnos[k].role === "user") { turnos[k] = Object.assign({}, turnos[k], { content: turnos[k].content + lembrete(pers, hist) }); break; }
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + nCenas(c), hist.mundo ? valoresCena(c, hist) : proxDe(c, hist)) }]
         .concat(turnos), { esquema: esquemaCena(hist), nome: "cena", max: 1200,
           onEspera: seg => desenhar(`<div class="a-escrever">Too many requests in a row. Trying again in ${seg} s…</div>`) });
