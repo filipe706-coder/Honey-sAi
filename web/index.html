@@ -500,6 +500,8 @@
         <!-- PERSONAS: DESLIGADO POR AGORA ("You are" / personas). Para voltar a ligar, tira os comentários marcados com "PERSONAS".
         <div id="h-persona-linha"><span class="rotulo">You are</span><div class="tons" id="h-persona"></div></div>
         -->
+        <div id="h-foco-linha" hidden><span class="rotulo">Story with</span><div class="tons" id="h-foco"></div>
+          <p class="dica" style="margin-top:6px">The others in the group can show up too.</p></div>
         <div class="opcoes" id="opcoes"></div>
         <button type="button" class="ligacao" id="outras-opcoes">↻ Show 3 other ideas</button>
         <label>Or write your own idea<textarea id="h-premissa" rows="2" maxlength="1500" placeholder="e.g. L needs someone to go undercover at a party and picks you."></textarea></label>
@@ -1847,6 +1849,7 @@ ${texto}`;
     }
     $("form-nova").reset();
     $("nova-estado").innerHTML = "";
+    desenharFoco(m);
     $("h-premissa").placeholder = m ? "e.g. the night before the comeback, the power goes out in the dorm."
                                     : "e.g. " + pers.nome + " needs someone to go undercover at a party and picks you.";
     // PERSONAS: DESLIGADO POR AGORA ("You are" / personas). Para voltar a ligar, tira os comentários marcados com "PERSONAS".
@@ -1860,6 +1863,21 @@ ${texto}`;
     atualizarNovaCom();
     mostrar("ecra-nova");
     pedirOpcoes();
+  }
+  // Num grupo: escolher com quem é a história (a personagem principal). Mudar pede 3 ideias novas.
+  function desenharFoco(m) {
+    const ms = m ? membros(m) : [];
+    $("h-foco-linha").hidden = ms.length < 2;
+    if (ms.length < 2) return;
+    $("h-foco").innerHTML = ms.map(x => `<button type="button" class="tom" data-id="${x.id}" aria-pressed="${x.id === pers.id}">${escapar(x.nome)}</button>`).join("");
+    $("h-foco").querySelectorAll(".tom").forEach(b => b.onclick = () => {
+      if (b.dataset.id === pers.id) return;
+      pers = ms.find(x => x.id === b.dataset.id);
+      outrosEscolhidos = new Set(ms.filter(x => x.id !== pers.id).slice(0, 4).map(x => x.id));
+      $("h-foco").querySelectorAll(".tom").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+      atualizarNovaCom();
+      pedirOpcoes();
+    });
   }
   function atualizarNovaCom() {
     $("nova-com").textContent = "with " + pers.nome + (novaMundo && mundoDe(novaMundo) ? " · " + mundoDe(novaMundo).nome : "");
@@ -2156,7 +2174,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · member links";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · pick who";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
