@@ -322,6 +322,16 @@
   .opcao span { color: var(--italico); font-size: 14px; line-height: 1.45; }
   .opcao small { color: var(--acento); font-size: 12px; font-weight: 600; }
   .opcao.carregando { min-height: 96px; animation: pulsar 1.6s infinite; }
+  /* Responder a uma fala (como no WhatsApp) */
+  .fala .responder { align-self: center; background: none; border: 0; color: var(--suave); font-size: 15px; padding: 4px 6px; opacity: .7; }
+  .fala .responder:hover { opacity: 1; color: var(--acento); }
+  .citacao { border-left: 3px solid rgba(255,255,255,.75); background: rgba(0,0,0,.16); border-radius: 8px; padding: 4px 8px; margin-bottom: 6px; font-size: 13px; line-height: 1.35; }
+  .citacao b { display: block; font-size: 12px; font-weight: 600; }
+  .a-responder { display: flex; align-items: center; gap: 8px; border-left: 3px solid var(--acento); background: var(--cartao); border-radius: 10px; padding: 6px 6px 6px 10px; margin-block: 4px; }
+  .com-fundo .a-responder { background: var(--vidro-forte); }
+  .a-responder div { flex: 1; min-width: 0; }
+  .a-responder b { display: block; color: var(--acento); font-size: 12px; font-weight: 600; }
+  .a-responder span { display: block; color: var(--suave); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bloco-cena { display: flex; flex-direction: column; gap: 12px; }
   .continuou { align-self: center; color: var(--acento2); letter-spacing: 6px; font-size: 13px; }
   .modo-nota { font-size: 12px; color: var(--acento); padding-top: 8px; }
@@ -526,6 +536,8 @@
     </div>
     <div class="rolar" id="rolar-historia"><div class="texto-historia gutter" id="texto-historia"></div></div>
     <div class="escolhas gutter" id="escolhas"></div>
+    <div class="gutter"><div class="a-responder" id="a-responder" hidden><div><b id="ar-quem"></b><span id="ar-texto"></span></div>
+      <button type="button" class="icone" id="ar-fechar" aria-label="Cancel reply">×</button></div></div>
     <div class="modo-nota gutter" id="modo-nota" hidden>✎ Author's note: tell the narrator what to change (it isn't something you do).</div>
     <form class="caixa gutter" id="form">
       <button type="button" class="icone" id="botao-nota" aria-label="Author's note" aria-pressed="false">✎</button>
@@ -830,7 +842,11 @@ For each, return:
 Reply only with JSON. The scene goes in "partes", in order: each part is narration (description, actions, gestures) or a line
 of dialogue (only the spoken words, no quotation marks and no "he says"; the gesture goes in a narration part before or after).
 There are never lines for "you".
-{"partes": [{"tipo": "narracao", "quem": "", "texto": "..."}, {"tipo": "fala", "quem": "name of the speaker", "texto": "..."}],
+"para_ti": true on a line spoken TO "you" that waits for your answer (a question, an invitation, a challenge, a direct remark);
+false on everything else (narration, characters talking to each other). The scene STOPS right after the first line with
+"para_ti": true: never write anything after it, it's the user's turn.
+If the user's message starts with (Replying to NAME: "..."), they are answering that exact line: NAME reacts first.
+{"partes": [{"tipo": "narracao", "quem": "", "texto": "...", "para_ti": false}, {"tipo": "fala", "quem": "name of the speaker", "texto": "...", "para_ti": true}],
 "escolhas": [3 short replies, first person: one about what is happening,
 one funny or teasing, and one about the relationship between you two (getting closer, teasing or showing something vulnerable)],
 "novos_factos": [new, lasting facts, short sentences; [] if none],
@@ -1017,7 +1033,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   const ESQUEMA_FICHA = obj({ conhecida: B, nome: S, obra: S, frase: S, ficha: S, menor_na_obra: B, emoji: S, cor1: S, cor2: S });
   const ESQUEMA_OPCOES = obj({ opcoes: { type: "array", items: obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS }) } });
   const ESQUEMA_IDEIA = obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS });
-  const ESQUEMA_PARTE = obj({ tipo: { type: "string", enum: ["narracao", "fala"] }, quem: S, texto: S });
+  const ESQUEMA_PARTE = obj({ tipo: { type: "string", enum: ["narracao", "fala"] }, quem: S, texto: S, para_ti: B });
   // Num grupo, o narrador dá um passo de proximidade para CADA membro cujos sentimentos mudaram.
   const ESQUEMA_CENA_GRUPO = obj({ partes: { type: "array", items: ESQUEMA_PARTE }, escolhas: LS, novos_factos: LS,
     proximidades: { type: "array", items: obj({ quem: S, passo: { type: "integer", enum: [-2, -1, 0, 1, 2] } }) } });
@@ -1118,7 +1134,8 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       ? { role: "assistant", content: m.texto }
       : m.tipo === "continuar"
       ? { role: "user", content: "[AUTHOR'S NOTE] You continue: make something new happen (someone interrupts, a time skip, a problem, a moment alone or a revelation) and take the story to the next situation that needs an answer from me, without deciding anything for me." }
-      : { role: "user", content: m.tipo === "nota" ? "[AUTHOR'S NOTE] " + m.texto : m.texto });
+      : { role: "user", content: m.tipo === "nota" ? "[AUTHOR'S NOTE] " + m.texto
+          : (m.resposta ? `(Replying to ${m.resposta.quem}: "${String(m.resposta.texto).slice(0, 200)}") ` : "") + m.texto });
   }
 
   // Onde começam as mensagens recentes: andamos de trás para a frente até encher o
@@ -1169,10 +1186,11 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     if (q) return `<span class="mini-avatar" style="background:${fundo(q)}">${escapar(q.emoji)}</span>`;
     return `<span class="mini-avatar" style="background:${corDoNome(nome)}">${escapar([...nome][0] || "?")}</span>`;
   }
-  function desenharCena(m) {
+  function desenharCena(m, i) {
     if (!m.partes) return `<div class="cena">${paragrafos(m.texto)}</div>`;
-    return m.partes.map(x => x.tipo === "fala"
-      ? `<div class="fala">${avatarDe(x.quem)}<div class="balao"><b>${escapar(x.quem)}</b>${formatar(x.texto)}</div></div>`
+    return m.partes.map((x, j) => x.tipo === "fala"
+      ? `<div class="fala">${avatarDe(x.quem)}<div class="balao"><b>${escapar(x.quem)}</b>${formatar(x.texto)}</div>`
+        + (i != null ? `<button type="button" class="responder" data-m="${i}" data-p="${j}" aria-label="Reply to ${escapar(x.quem)}">↩</button>` : "") + `</div>`
       : `<div class="cena">${paragrafos(x.texto)}</div>`).join("");
   }
   const paragrafos = t => String(t).split(/\n\s*\n|\n(?=—)/).filter(s => s.trim()).map(s => `<p>${formatar(s.trim())}</p>`).join("");
@@ -2006,7 +2024,7 @@ ${texto}`;
   function aplicarCena(c, d, h = hist) {
     let partes = (Array.isArray(d && d.partes) ? d.partes : [])
       .map(x => ({ tipo: x && x.tipo === "fala" ? "fala" : "narracao", quem: String((x && x.quem) || "").trim().slice(0, 60),
-                   texto: String((x && x.texto) || "").trim().replace(/^[—–-]\s*/, "") }))
+                   texto: String((x && x.texto) || "").trim().replace(/^[—–-]\s*/, ""), para_ti: !!(x && x.tipo === "fala" && x.para_ti) }))
       .filter(x => x.texto);
     // Passo a passo: depois de uma mensagem tua, no máximo 5 partes e 3 falas; num grupo 7 partes e 5 falas
     // (para poderem falar uns com os outros). Na abertura, no "Continue" e nas notas de autor pode ser mais.
@@ -2032,6 +2050,9 @@ ${texto}`;
     const proibidos = ["you", "i", "me", "user", "tu", "eu", "utilizador", "você"].concat(meuNome ? [meuNome[1].toLowerCase()] : [])
       .concat(eu ? [eu.nome.toLowerCase(), eu.nome.split(" ")[0].toLowerCase()] : []);
     partes = partes.filter(x => x.tipo !== "fala" || !proibidos.includes(x.quem.toLowerCase()));
+    // Pausa: quando alguém fala diretamente contigo, a cena acaba aí e espera pela tua resposta.
+    const ate = partes.findIndex(x => x.para_ti);
+    if (ate >= 0) partes = partes.slice(0, ate + 1);
     if (!partes.length && d && d.texto) partes = [{ tipo: "narracao", quem: "", texto: String(d.texto).trim() }];
     if (!partes.length) partes = [{ tipo: "narracao", quem: "", texto: "*The silence stretches on for a moment.*" }];
     const texto = partes.map(x => x.tipo === "fala" ? `${x.quem}: "${x.texto}"` : x.texto).join("\n\n");
@@ -2072,6 +2093,7 @@ ${texto}`;
     return novos;
   }
   function abrirHistoria(id, animarAbertura = false) {
+    definirResposta(null);
     hist = historias().find(h => h.id === id);
     if (!hist) return pers ? abrirPersonagem(pers.id) : mostrarGaleria();
     pers = personagens().find(p => p.id === hist.personagem) || pers;
@@ -2191,10 +2213,10 @@ ${texto}`;
     if (animacao) animacao.acabar(true);   // se ainda estava a escrever a anterior, mostra-a já toda
     const ultima = cont.mensagens.length - 1;
     $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Untitled")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
-      cont.mensagens.map((m, i) => (m.tipo === "cena" ? `<div class="bloco-cena"${animar && i === ultima ? ' id="a-animar"' : ""}>${desenharCena(m)}</div>`
+      cont.mensagens.map((m, i) => (m.tipo === "cena" ? `<div class="bloco-cena"${animar && i === ultima ? ' id="a-animar"' : ""}>${desenharCena(m, i)}</div>`
         : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
         : m.tipo === "continuar" ? `<div class="continuou" aria-hidden="true">· · ·</div>`
-        : `<div class="acao">${formatar(m.texto)}</div>`)).join("") + extra;
+        : `<div class="acao">${m.resposta ? `<div class="citacao"><b>${escapar(m.resposta.quem)}</b>${formatar(String(m.resposta.texto).slice(0, 160))}</div>` : ""}${formatar(m.texto)}</div>`)).join("") + extra;
     const r = $("rolar-historia"); r.scrollTop = r.scrollHeight;
     pintarBarraRelacao();
     const botoes = (podeRefazer(cont) ? `<button class="mini-acao" id="refazer" title="Write this scene again" aria-label="Redo">↻</button>` : "")
@@ -2206,7 +2228,12 @@ ${texto}`;
     $("escolhas").hidden = !$("escolhas").innerHTML;
     // palavra a palavra: as sugestões só aparecem quando o texto acaba
     if (animar && $("a-animar")) { const tinha = !$("escolhas").hidden; $("escolhas").hidden = true; animarCena($("a-animar"), () => { $("escolhas").hidden = !tinha; rolarFundo(); }); }
-    if ($("continuar")) $("continuar").onclick = () => enviar("", false);
+    if ($("continuar")) $("continuar").onclick = () => { definirResposta(null); enviar("", false); };
+    document.querySelectorAll("#texto-historia .responder").forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      const x = cont.mensagens[b.dataset.m] && cont.mensagens[b.dataset.m].partes[b.dataset.p];
+      if (x) { definirResposta({ quem: x.quem, texto: x.texto }); $("texto").focus(); }
+    });
     if ($("refazer")) $("refazer").onclick = refazer;
     if ($("desfazer")) $("desfazer").onclick = desfazer;
     document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(cont.escolhas[b.dataset.i], false));
@@ -2218,7 +2245,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · rename everywhere";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · replies";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2253,6 +2280,15 @@ ${texto}`;
   }
   $("rolar-historia").addEventListener("click", () => { if (animacao) animacao.acabar(); });
 
+  // A mensagem a que estás a responder (aparece por cima da caixa de escrever; × cancela).
+  let responderA = null;
+  function definirResposta(r) {
+    responderA = r && r.quem ? { quem: String(r.quem).slice(0, 60), texto: String(r.texto || "").slice(0, 300) } : null;
+    $("a-responder").hidden = !responderA;
+    if (responderA) { $("ar-quem").textContent = "Replying to " + responderA.quem; $("ar-texto").textContent = responderA.texto; }
+  }
+  $("ar-fechar").onclick = () => definirResposta(null);
+
   function definirNota(sim) {
     modoNota = sim;
     $("botao-nota").setAttribute("aria-pressed", String(sim));
@@ -2271,14 +2307,16 @@ ${texto}`;
     if (tipo === "continuar" && comoNota) return;   // nota de autor vazia não faz nada
     // Também conta como nota de autor se a mensagem vier toda entre parênteses.
     if (/^\(.*\)$/s.test(texto)) { tipo = "nota"; texto = texto.slice(1, -1).trim(); }
-    const antes = cont;
+    const antes = cont, resposta = tipo === "acao" ? responderA : null;
     const c = JSON.parse(JSON.stringify(cont));
-    c.mensagens.push({ tipo, texto });
+    c.mensagens.push(resposta ? { tipo, texto, resposta } : { tipo, texto });
     $("texto").value = "";
     definirNota(false);
+    if (resposta || tipo === "continuar") definirResposta(null);
     if (!await pedirCena(c, antes)) {
       $("texto").value = texto;
       if (tipo === "nota") definirNota(true);
+      if (resposta) definirResposta(resposta);
     }
     $("texto").focus();
   }
@@ -2300,6 +2338,8 @@ ${texto}`;
       if (novos.length) avisarMemoria(novos);
       aEspera = false;
       desenhar("", true);
+      { const ult = c.mensagens[c.mensagens.length - 1], fp = ult && (ult.partes || []).filter(x => x.tipo === "fala");
+        definirResposta(fp && fp.length && fp[fp.length - 1].para_ti ? fp[fp.length - 1] : null); }
       if (hist.mundo) {
         const depois = valoresCena(c, hist);
         for (const x of elencoCena(hist)) if (avisarRelacao(proxAntes[x.id], depois[x.id], x)) break;   // um aviso de cada vez
@@ -2347,6 +2387,7 @@ ${texto}`;
     definirNota(minha.tipo === "nota");
     desenhar();
     $("texto").value = minha.tipo === "continuar" ? "" : minha.texto;
+    definirResposta(minha.resposta || null);
     $("texto").focus();
   }
 
