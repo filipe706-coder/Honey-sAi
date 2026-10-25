@@ -291,8 +291,14 @@
   .encontrado.fora { opacity: .45; }
   .encontrado-topo { display: flex; gap: 8px; align-items: center; }
   .encontrado-topo .avatar { width: 34px; height: 34px; font-size: 17px; }
-  .encontrado-topo input[type=text] { flex: 1; min-width: 0; margin: 0; }
-  .encontrado-topo .idade { width: 70px; flex: none; margin: 0; }
+  #pg-lista, #pagina .membros { grid-template-columns: minmax(0, 1fr); }   /* a lista nunca fica mais larga do que o ecrã */
+  .encontrado { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+  .encontrado-topo { min-width: 0; }
+  .formulario .encontrado-topo input { margin: 0; }
+  .formulario .encontrado-topo input.incluir { width: 22px; height: 22px; flex: none; padding: 0; accent-color: var(--acento); }
+  .formulario .encontrado-topo input.nome { flex: 1; min-width: 0; width: auto; }
+  .formulario .encontrado-topo input.idade { width: 64px; flex: none; text-align: center; }
+  .encontrado .idade-rotulo { font-size: 11px; color: var(--suave); text-transform: none; letter-spacing: 0; }
   .encontrado p { margin: 0; color: var(--suave); font-size: 13px; line-height: 1.4; }
   .linha-check { display: flex; gap: 8px; align-items: center; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--texto); }
   .linha-check input { width: auto; margin: 0; }
@@ -1417,8 +1423,10 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
 ${alvo ? `Only create "${alvo}" (ignore everyone else).` : "Find every person or character it profiles (for example the members of a group, or the main cast)."}
 For each one, using ONLY what the text says (no facts from memory, nothing invented):
 - nome: the name they're best known by (their stage name, if they have one)
-- nascimento: birth date as YYYY-MM-DD if the text gives it, otherwise ""
-- idade: age in years if the text gives an age but no birth date, otherwise -1
+- nascimento: their birth date copied exactly as the text writes it (any format, e.g. "May 5, 2009", "2009.05.05",
+  "March 2nd, 2000"); just the year if only the year is given; "" if the text doesn't give it. Look for "Birthday",
+  "Born", "Date of birth" and similar.
+- idade: their age in years if the text states it, otherwise -1
 - papel: their position or role, short (e.g. main dancer, rapper)
 - ficha: 80 to 150 words in English, third person: who they are, their role, appearance if mentioned, personality and traits,
   likes, quirks and fun facts from the text. End with a line "Example lines:" and 3 short lines in their voice that fit
@@ -1432,15 +1440,25 @@ If the text profiles nobody, return an empty list. Ignore ads, comments and navi
 TEXT:
 ${texto}`;
   // Idade a partir da data de nascimento (feita aqui, não pela IA, para não haver erros de contas).
+  // Percebe datas escritas de várias formas: 2009-05-05, 2009.05.05, 2009/5/5, May 5 2009, 5 May 2009, 2009년 5월 5일, ou só 2009.
+  const MESES = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  function lerData(t) {
+    t = String(t || "").toLowerCase().replace(/(\d)(st|nd|rd|th)\b/g, "$1");
+    let m;
+    if ((m = /(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})/.exec(t))) return [+m[1], +m[2], +m[3]];
+    if ((m = /([a-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/.exec(t)) && MESES.includes(m[1])) return [+m[3], MESES.indexOf(m[1]) + 1, +m[2]];
+    if ((m = /(\d{1,2})\s+([a-z]{3})[a-z]*\.?,?\s+(\d{4})/.exec(t)) && MESES.includes(m[2])) return [+m[3], MESES.indexOf(m[2]) + 1, +m[1]];
+    if ((m = /(\d{1,2})[./](\d{1,2})[./](\d{4})/.exec(t))) return [+m[3], +m[2], +m[1]];   // 05/05/2009 (dia/mês)
+    if ((m = /\b(19\d{2}|20\d{2})\b/.exec(t))) return [+m[1], 0, 0];                          // só o ano
+    return null;
+  }
   function idadeDe(x) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(x.nascimento || "");
-    if (m) {
-      const hojeD = new Date(), ano = +m[1], mes = +m[2], dia = +m[3];
-      if (ano > 1900 && ano <= hojeD.getFullYear() && mes >= 1 && mes <= 12) {
-        let a = hojeD.getFullYear() - ano;
-        if (hojeD.getMonth() + 1 < mes || (hojeD.getMonth() + 1 === mes && hojeD.getDate() < dia)) a--;
-        return a;
-      }
+    const d = lerData(x.nascimento), hojeD = new Date();
+    if (d && d[0] > 1900 && d[0] <= hojeD.getFullYear()) {
+      let a = hojeD.getFullYear() - d[0];
+      if (!d[1]) return a - 1 >= 0 ? a - 1 : a;   // só o ano: conta pelo lado mais novo (mais seguro)
+      if (hojeD.getMonth() + 1 < d[1] || (hojeD.getMonth() + 1 === d[1] && hojeD.getDate() < d[2])) a--;
+      return a;
     }
     return Number.isInteger(x.idade) && x.idade > 0 && x.idade < 120 ? x.idade : null;
   }
@@ -1509,6 +1527,7 @@ ${texto}`;
           <div class="avatar" style="background:linear-gradient(135deg, ${cor(x.cor1, "#3d2c5c")}, ${cor(x.cor2, "#c76b4a")})">${escapar(String(x.emoji || "✨").slice(0, 8))}</div>
           <input type="text" class="nome" maxlength="60" value="${escapar(x.nome)}" aria-label="Name">
           <input type="text" class="idade" inputmode="numeric" maxlength="3" value="${x.idade ?? ""}" placeholder="age" aria-label="Age"></div>
+        ${x.idade == null ? `<span class="idade-rotulo">The page didn't say the age: write it in the box.</span>` : ""}
         <p>${x.ja ? "<b>Already in your gallery.</b> " : ""}${escapar([x.papel, x.frase].filter(Boolean).join(" · "))}</p></div>`).join("");
     $("pg-lista").querySelectorAll(".encontrado").forEach(c => {
       const x = encontrados[c.dataset.i];
@@ -2047,7 +2066,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "24 Oct · group link";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · ages fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
