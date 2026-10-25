@@ -846,6 +846,8 @@ There are never lines for "you".
 false on everything else (narration, characters talking to each other). The scene STOPS right after the first line with
 "para_ti": true: never write anything after it, it's the user's turn.
 If the user's message starts with (Replying to NAME: "..."), they are answering that exact line: NAME reacts first.
+When others are in the scene, they react to what "you" said or did too, each with their own feelings (one can get jealous,
+tease, sulk, defend you or compete for your attention), and often one of them turns to "you" with the next line.
 {"partes": [{"tipo": "narracao", "quem": "", "texto": "...", "para_ti": false}, {"tipo": "fala", "quem": "name of the speaker", "texto": "...", "para_ti": true}],
 "escolhas": [3 short replies, first person: one about what is happening,
 one funny or teasing, and one about the relationship between you two (getting closer, teasing or showing something vulnerable)],
@@ -2245,7 +2247,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · replies";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · reactions";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
