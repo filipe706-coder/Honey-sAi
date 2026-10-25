@@ -1070,6 +1070,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   }
   //  - "preferir" escolhe o modelo a tentar primeiro (os resumos usam o pequeno, para poupar o grande).
   //  - Se um modelo chegar ao limite do dia ou do minuto, passa para o outro antes de desistir ou esperar.
+  let semStrict = false;   // fica true se o Groq recusar o modo estrito
   async function groq(mensagens, { esquema, nome, esforco = "low", max = 1500, onEspera, preferir = 0 } = {}) {
     if (!chave()) throw { code: "sem_chave" };
     const ordem = preferir ? [MODELOS[1], MODELOS[0]] : MODELOS.slice();
@@ -1077,8 +1078,19 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     if (!livres().length) throw { code: "limite_dia" };
     const corpo = { model: livres()[0], messages: mensagens, max_tokens: max, reasoning_effort: esforco };
     const tentadosNoMinuto = new Set();
-    if (esquema) corpo.response_format = { type: "json_schema", json_schema: { name: nome, schema: esquema } };
+    // strict: o Groq obriga o modelo a seguir o formato (se não aceitar o modo estrito, tira-se e tenta-se outra vez)
+    if (esquema) corpo.response_format = { type: "json_schema", json_schema: Object.assign({ name: nome, schema: esquema }, semStrict ? {} : { strict: true }) };
     let falhasJson = 0, esperas = 0;
+    // Formato falhado: tenta o outro modelo (repetir no mesmo costuma falhar outra vez e só faz esperar mais)
+    const outroModelo = () => { const o = livres().find(m => m !== corpo.model); if (o) corpo.model = o; };
+    // Às vezes o JSON vem quase certo (dentro de texto, ou com um pedaço a mais): tenta aproveitá-lo.
+    const aproveitar = t => {
+      if (!t) return null;
+      try { return JSON.parse(t); } catch (e) {}
+      const i = t.indexOf("{"), j = t.lastIndexOf("}");
+      if (i >= 0 && j > i) { try { return JSON.parse(t.slice(i, j + 1)); } catch (e) {} }
+      return null;
+    };
     while (true) {
       let r;
       try {
@@ -1090,7 +1102,10 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       if (r.ok) {
         const texto = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || "";
         if (!esquema) return texto.trim();
-        try { return JSON.parse(texto); } catch (e) { if (++falhasJson >= 2) throw { code: "invalid_json" }; continue; }
+        const j = aproveitar(texto);
+        if (j) return j;
+        if (++falhasJson >= 2) throw { code: "invalid_json" };
+        outroModelo(); continue;
       }
       const msg = (d.error && d.error.message) || "";
       if (r.status === 401) throw { code: "chave_errada" };
@@ -1111,7 +1126,16 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
         await dormir(seg * 1000 + 500);
         continue;
       }
-      if (d.error && d.error.code === "json_validate_failed" && ++falhasJson < 2) continue;
+      if (d.error && d.error.code === "json_validate_failed") {
+        const j = aproveitar(d.error.failed_generation);   // o Groq devolve o que o modelo escreveu: muitas vezes dá para usar
+        if (j && typeof j === "object") return j;
+        if (++falhasJson >= 2) throw { code: "invalid_json" };
+        outroModelo(); continue;
+      }
+      // o modo estrito não é aceite neste modelo: volta ao normal
+      if (r.status === 400 && corpo.response_format && corpo.response_format.json_schema.strict) {
+        delete corpo.response_format.json_schema.strict; semStrict = true; continue;   // não volta a tentar até recarregar
+      }
       if (r.status === 413 || /too large|context length|maximum context/i.test(msg)) throw { code: "demasiado_grande" };
       throw { code: "erro", detalhe: msg || ("Error " + r.status) };
     }
@@ -1124,7 +1148,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       case "rate_limited": return "Too many requests to Groq in a row. Wait a minute and try again.";
       case "limite_dia": return "You've reached today's limit on Groq's free plan (on both models). It works again tomorrow.";
       case "demasiado_grande": return "This request got too big for the free plan. Try a shorter message.";
-      case "invalid_json": return "The reply came back broken. Try again.";
+      case "invalid_json": return "The AI got tangled up writing this one. Send your message again (or tap ↻).";
       case "sem_rede": return "No internet connection (or Groq is down). Try again.";
       default: return "The AI didn't reply" + (e && e.detalhe ? ": " + e.detalhe : ".");
     }
@@ -2013,7 +2037,7 @@ ${texto}`;
       const c = { mensagens: [], memoria: [], resumo: "", resumidas_ate: 0, escolhas: [] };
       const d = await groq([{ role: "system", content: instrucoes(pers, h, [], "") },
                             { role: "user", content: notaAbertura(h) }],
-                           { esquema: esquemaCena(h), nome: "cena", max: 700 });
+                           { esquema: esquemaCena(h), nome: "cena", max: 1200 });
       aplicarCena(c, d, h);
       atualizarHistoria(h); gravarConteudo(h.id, c);
       ocupado(false);
@@ -2247,7 +2271,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · reactions";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · json fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2332,7 +2356,7 @@ ${texto}`;
     try {
       const turnos = c.mensagens.length ? paraTurnos(recentes(c)) : [{ role: "user", content: notaAbertura(hist) }];
       const d = await groq([{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + nCenas(c), hist.mundo ? valoresCena(c, hist) : proxDe(c, hist)) }]
-        .concat(turnos), { esquema: esquemaCena(hist), nome: "cena", max: 700,
+        .concat(turnos), { esquema: esquemaCena(hist), nome: "cena", max: 1200,
           onEspera: seg => desenhar(`<div class="a-escrever">Too many requests in a row. Trying again in ${seg} s…</div>`) });
       const proxAntes = hist.mundo ? valoresCena(c, hist) : proxDe(c, hist);
       const novos = aplicarCena(c, d);
