@@ -884,6 +884,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       + (menores.length ? `\nNO ROMANCE with ${menores.join(", ")}: minors in their original work. Never romance, flirting or romantic tension with them.` : "")
       + `\nTHE CHARACTERS AND THEIR NAMES: the group in this story is exactly ${[p].concat(elenco, outros).map(x => x.nome).join(", ")}. `
       + `Always call them by these names (in "quem" too), even if a profile mentions another name for them. `
+      + [p].concat(elenco, outros).filter(x => (x.outrosNomes || []).length).map(x => `${x.nome} was called ${x.outrosNomes.join(" / ")} before: same person, now always "${x.nome}". `).join("")
       + `Other people the profiles mention (other members, family, friends) are NOT part of this story: don't bring them in as characters, `
       + `unless the user does.`
       + `\nIn the JSON, instead of "proximidade" return "proximidades": [{"quem": name, "passo": -2..2}] for each character in the scene whose feelings toward "you" changed because of what "you" said or did (leave out the ones that didn't). Each one has their own feelings: one can get closer while another gets jealous or distant.`;
@@ -1162,7 +1163,8 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   function avatarDe(nome) {
     const n = nome.toLowerCase(), cand = [pers].concat(elencoVisivel).filter(Boolean);
     const q = cand.find(x => x.nome.toLowerCase() === n) || cand.find(x => x.nome.split(" ")[0].toLowerCase() === n.split(" ")[0])
-      || cand.find(x => x.nome.toLowerCase().split(" ").includes(n));   // "Xinlong" -> "He Xinlong"
+      || cand.find(x => x.nome.toLowerCase().split(" ").includes(n))   // "Xinlong" -> "He Xinlong"
+      || cand.find(x => (x.outrosNomes || []).some(o => o.toLowerCase() === n));   // nome antigo (antes de o mudares)
     if (q && q.avatar) return `<span class="mini-avatar" style="background:center/cover url(${q.avatar})"></span>`;
     if (q) return `<span class="mini-avatar" style="background:${fundo(q)}">${escapar(q.emoji)}</span>`;
     return `<span class="mini-avatar" style="background:${corDoNome(nome)}">${escapar([...nome][0] || "?")}</span>`;
@@ -1415,6 +1417,33 @@ ${texto}`;
     }
     $("r-link-ler").disabled = $("guardar").disabled = false;
   };
+  // Mudar o nome de uma personagem muda-o também no que já existe: cenas, memória, resumo, títulos,
+  // histórico dos grupos e as fichas das outras personagens dos mesmos grupos. Assim a IA deixa de ver o nome antigo.
+  function renomearEmTudo(id, velho, novo) {
+    const re = new RegExp("\\b" + velho.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "g");
+    const troca = t => typeof t === "string" ? t.replace(re, novo) : t;
+    const gruposDela = mundos().filter(m => (m.personagens || []).includes(id)).map(m => m.id);
+    const hs = historias().map(h => {
+      const entra = h.personagem === id || (h.elenco || []).includes(id) || gruposDela.includes(h.mundo);
+      if (!entra) return h;
+      const c = conteudoDe(h.id);
+      c.mensagens.forEach(m => {
+        m.texto = troca(m.texto);
+        (m.partes || []).forEach(x => { x.quem = troca(x.quem); x.texto = troca(x.texto); });
+        if (m.escolhas) m.escolhas = m.escolhas.map(troca);
+        if (m.factos) m.factos = m.factos.map(troca);
+      });
+      c.memoria = (c.memoria || []).map(troca); c.resumo = troca(c.resumo || ""); c.escolhas = (c.escolhas || []).map(troca);
+      if (c.recap) c.recap.texto = troca(c.recap.texto);
+      gravarConteudo(h.id, c);
+      return Object.assign({}, h, { titulo: troca(h.titulo), premissa: troca(h.premissa), papel: troca(h.papel), universo: troca(h.universo) });
+    });
+    gravarHistorias(hs);
+    gravarMundos(mundos().map(m => !gruposDela.includes(m.id) ? m : Object.assign({}, m, { descricao: troca(m.descricao),
+      historicos: Object.fromEntries(Object.entries(m.historicos || {}).map(([k, v]) => [k, troca(v)])) })));
+    const doGrupo = new Set(mundos().filter(m => gruposDela.includes(m.id)).flatMap(m => m.personagens || []));
+    gravarPersonagens(personagens().map(x => x.id !== id && doGrupo.has(x.id) ? Object.assign({}, x, { ficha: troca(x.ficha), frase: troca(x.frase) }) : x));
+  }
   function guardarFicha() {
     const txtIdade = $("r-idade").value.trim();
     if (txtIdade && !/^\d{1,3}$/.test(txtIdade)) { $("aviso-ficha").innerHTML = `<p class="erro">Write the age as a number (e.g. 22), or leave it empty.</p>`; return; }
@@ -1440,7 +1469,9 @@ ${texto}`;
       p.ficha = /— \d{1,3} years old/.test(p.ficha) ? p.ficha.replace(/— \d{1,3} years old/, "— " + idade + " years old")   // a 1.ª linha da ficha também
               : `${p.nome} — ${idade} years old.\n` + p.ficha;
     }
+    if (nomeVelho && nomeNovo !== nomeVelho) p.outrosNomes = [...new Set((rascunho.outrosNomes || []).concat(nomeVelho))].filter(n => n !== nomeNovo);
     const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
+    if (nomeVelho && nomeNovo !== nomeVelho) renomearEmTudo(p.id, nomeVelho, nomeNovo);
     rascunho = null;
     depoisDeGuardar(p);
   }
@@ -2098,7 +2129,8 @@ ${texto}`;
     const n = String(nome || "").trim().toLowerCase();
     if (!n) return null;
     return lista.find(x => x.nome.toLowerCase() === n) || lista.find(x => x.nome.split(" ")[0].toLowerCase() === n.split(" ")[0])
-      || lista.find(x => x.nome.toLowerCase().split(" ").includes(n)) || null;
+      || lista.find(x => x.nome.toLowerCase().split(" ").includes(n))
+      || lista.find(x => (x.outrosNomes || []).some(o => o.toLowerCase() === n)) || null;
   }
   const valoresCena = (c, h) => Object.fromEntries(elencoCena(h).map(x => [x.id, valorProx(c, h, x.id)]));
   // Pontos por cada passo que o narrador dá: o slow burn anda mais devagar.
@@ -2186,7 +2218,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · names fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · rename everywhere";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
