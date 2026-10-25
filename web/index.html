@@ -379,7 +379,7 @@
   <section class="ecra" id="ecra-criar">
     <div class="barra gutter">
       <button class="icone" id="criar-voltar" aria-label="Back">←</button>
-      <div class="barra-nome"><b>New character</b><small id="criar-passo">Then pick a story</small></div>
+      <div class="barra-nome"><b id="criar-titulo">New character</b><small id="criar-passo">Then pick a story</small></div>
     </div>
     <div class="rolar">
       <form class="formulario gutter" id="passo1">
@@ -395,7 +395,13 @@
         <div id="aviso-ficha"></div>
         <div class="avatar-linha"><label class="carregar-avatar" for="r-foto"><span id="r-foto-ver">+<small>Avatar</small></span></label>
           <input type="file" id="r-foto" accept="image/*" hidden><p class="dica">Tap to add a picture (optional).</p></div>
+        <div class="seccao">
+          <label>Improve with a link (optional)<input id="r-link" type="text" inputmode="url" autocapitalize="off" autocorrect="off" placeholder="A page about this character (Kprofiles, a wiki…)"></label>
+          <button type="button" class="botao secundario" id="r-link-ler">Read the page and improve the profile</button>
+          <div id="r-link-estado"></div>
+        </div>
         <label>Name<input id="r-nome" maxlength="80"></label>
+        <label>Age (optional)<input id="r-idade" inputmode="numeric" maxlength="3" placeholder="e.g. 22"></label>
         <label>From<input id="r-obra" maxlength="120"></label>
         <label>Card tagline<input id="r-frase" maxlength="200"></label>
         <label>Personality and way of speaking<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
@@ -1313,13 +1319,15 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     $("passo1").reset(); $("c-nome").value = nome; $("c-obra").value = obra;
     $("passo1").hidden = false; $("passo2").hidden = true; $("pagina").hidden = true;
     $("passo1-estado").innerHTML = "";
-    $("criar-passo").textContent = "Then pick a story";
+    $("criar-passo").textContent = "Then pick a story"; $("criar-titulo").textContent = "New character";
     mostrar("ecra-criar");
     $("c-nome").focus();
   }
   let aEditarFicha = false;   // true = estamos a editar uma personagem que já existia
   function mostrarRevisao(p, editar) {
     rascunho = p; aEditarFicha = !!editar;
+    $("r-idade").value = Number.isInteger(p.idade) ? p.idade : "";
+    $("r-link").value = ""; $("r-link-estado").innerHTML = "";
     $("r-nome").value = p.nome; $("r-obra").value = p.obra; $("r-frase").value = p.frase; $("r-ficha").value = p.ficha;
     $("aviso-ficha").innerHTML = p.conhecida ? "" :
       `<div class="aviso">I don't know this character well, so this profile is generic. You can write more about them below, or go back and paste some information.</div>`;
@@ -1328,6 +1336,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     $("regerar").hidden = !!editar;
     $("guardar").textContent = editar ? "Save changes" : "Save and pick a story";
     $("criar-passo").textContent = editar ? "Edit profile" : "Review the profile";
+    $("criar-titulo").textContent = editar ? $("r-nome").value || "Edit character" : "New character";
     mostrar("ecra-criar");
   }
   async function gerarFicha() {
@@ -1356,7 +1365,51 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     }
     $("gerar").disabled = $("regerar").disabled = false;
   }
+  // "Improve with a link": a IA junta o que a página diz à ficha atual (sem apagar o que já lá estava).
+  const ESQUEMA_MELHORAR = obj({ sobre_esta_pessoa: B, ficha: S, frase: S, nascimento: S, idade: { type: "integer" } });
+  const PEDIDO_MELHORAR = (nome, obra, ficha, texto) => `Current profile of "${nome}"${obra ? " (" + obra + ")" : ""}, a character for interactive fanfics:
+${ficha}
+
+Below is text from a web page about them. Improve the profile with it: keep what the current profile says unless the page
+clearly contradicts it, and add what the page tells you about them: personality and traits, background, family, likes and
+dislikes, quirks, habits, way of speaking, appearance, role or position. Use ONLY the page and the current profile; invent nothing.
+- sobre_esta_pessoa: false if the page is not about ${nome} (then return the current profile unchanged)
+- ficha: 150 to 250 words in English, third person. End with a line "Example lines:" and 4 short lines in their voice that fit
+  their personality (in character, not real quotes), one per line, starting with "- ".
+- frase: up to 12 words for a gallery card
+- nascimento: their birth date copied exactly as the page writes it (any format), or "" if not given
+- idade: their age in years if the page states it, otherwise -1
+
+PAGE:
+${texto}`;
+  $("r-link-ler").onclick = async () => {
+    const url = linkDe($("r-link").value);
+    if (!url) { $("r-link-estado").innerHTML = `<p class="erro">Paste the link of a page about ${escapar($("r-nome").value || "them")}.</p>`; return; }
+    const estado = t => { $("r-link-estado").innerHTML = t; };
+    $("r-link-ler").disabled = $("guardar").disabled = true;
+    estado(`<div class="carregar"><span class="grande">Opening the link…</span></div>`);
+    try {
+      const texto = cortarRestos(limparPagina(await lerLink(url))).slice(0, 12000);
+      estado(`<div class="carregar"><span class="grande">Reading about ${escapar($("r-nome").value)}…</span>This takes a few seconds.</div>`);
+      const d = await groq([{ role: "user", content: PEDIDO_MELHORAR($("r-nome").value.trim(), $("r-obra").value.trim(), $("r-ficha").value.trim(), texto) }],
+        { esquema: ESQUEMA_MELHORAR, nome: "melhorar", esforco: "medium", max: 3500,
+          onEspera: seg => estado(`<div class="carregar"><span class="grande">Waiting ${seg} s…</span>Groq's free plan allows a few requests per minute.</div>`) });
+      if (d.sobre_esta_pessoa === false) { estado(`<p class="erro">That page doesn't seem to be about ${escapar($("r-nome").value)}. Nothing was changed.</p>`); }
+      else {
+        if (d.ficha) $("r-ficha").value = String(d.ficha).slice(0, 4000);
+        if (d.frase) $("r-frase").value = String(d.frase).slice(0, 200);
+        const idade = idadeDe(d);
+        if (idade != null) $("r-idade").value = idade;   // a idade da página entra na caixa (decide o romance ao guardar)
+        estado(`<p class="dica">✦ Profile improved from the page${idade != null ? ` (age: ${idade}${idade < 18 ? ", so no romance" : ""})` : ""}. Check it and tap <b>${escapar($("guardar").textContent)}</b>.</p>`);
+      }
+    } catch (e) {
+      estado(`<p class="erro">${e && e.link ? ERRO_LINK : escapar(mensagemDeErro(e))}</p>`);
+    }
+    $("r-link-ler").disabled = $("guardar").disabled = false;
+  };
   function guardarFicha() {
+    const txtIdade = $("r-idade").value.trim();
+    if (txtIdade && !/^\d{1,3}$/.test(txtIdade)) { $("aviso-ficha").innerHTML = `<p class="erro">Write the age as a number (e.g. 22), or leave it empty.</p>`; return; }
     const p = Object.assign({}, rascunho, {
       nome: $("r-nome").value.trim().slice(0, 80) || rascunho.nome,
       obra: $("r-obra").value.trim().slice(0, 120),
@@ -1364,6 +1417,15 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       ficha: $("r-ficha").value.trim().slice(0, 4000) || rascunho.ficha,
       avatar: fotoNova !== null ? fotoNova : rascunho.avatar,
     });
+    // Idade: com a idade real guardada (ex.: importada de uma página), é ela que decide o romance.
+    // Sem ela (personagens que a IA conhece), uma idade nova só pode tornar mais seguro, nunca tirar a regra da obra.
+    if (txtIdade) {
+      const idade = +txtIdade;
+      p.menor = Number.isInteger(rascunho.idade) ? idade < 18 : (!!rascunho.menor || idade < 18);
+      p.idade = idade;
+      p.ficha = /— \d{1,3} years old/.test(p.ficha) ? p.ficha.replace(/— \d{1,3} years old/, "— " + idade + " years old")   // a 1.ª linha da ficha também
+              : `${p.nome} — ${idade} years old.\n` + p.ficha;
+    }
     const l = personagens().filter(x => x.id !== p.id); l.unshift(p); gravarPersonagens(l);
     rascunho = null;
     depoisDeGuardar(p);
@@ -1584,7 +1646,7 @@ ${texto}`;
       frase: String(x.frase || x.papel || "").slice(0, 200),
       ficha: (`${String(x.nome).trim()} — ${x.idade} years old${x.papel ? ", " + x.papel : ""}.\n` + String(x.ficha || "")).slice(0, 4000),
       emoji: String(x.emoji || "✨").slice(0, 8), cores: [cor(x.cor1, "#3d2c5c"), cor(x.cor2, "#c76b4a")],
-      conhecida: true, menor: x.idade < 18,
+      conhecida: true, menor: x.idade < 18, idade: x.idade,
     }));
     if (!gravarPersonagens(novos.concat(personagens()))) { $("pg-estado2").innerHTML = `<p class="erro">Not enough space in this browser.</p>`; return; }
     // Para onde vão: o grupo de onde vieste, um grupo novo com eles, ou a galeria
@@ -2094,7 +2156,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · links 3";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · member links";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2360,6 +2422,7 @@ ${texto}`;
     const ms = membros(mundo);
     $("mundo-membros").innerHTML = ms.length ? ms.map(p => `<div class="membro" data-id="${p.id}">
         <div class="membro-topo"><div class="avatar"></div><b>${escapar(p.nome)}</b>
+          <button type="button" class="ligacao editar-membro">edit</button>
           <button type="button" class="ligacao tirar-membro">remove</button></div>
         <textarea rows="3" maxlength="1500" placeholder="e.g. You met at a dance class two years ago. He's protective of you and pretends he isn't jealous.">${escapar(historicoDe(mundo, p.id))}</textarea>
         <small></small></div>`).join("")
@@ -2377,6 +2440,8 @@ ${texto}`;
           mundo = m;
         }, 600);
       };
+      // edit: abre a ficha do membro; ao guardar volta ao grupo
+      c.querySelector(".editar-membro").onclick = () => { mundoAlvo = mundo.id; mostrarRevisao(Object.assign({}, p), true); };
       c.querySelector(".tirar-membro").onclick = () => {
         const m = mundoDe(mundo.id);
         m.personagens = (m.personagens || []).filter(x => x !== id);   // o histórico fica guardado, se a voltares a pôr
