@@ -637,6 +637,7 @@
       <div><span class="rotulo">Theme</span><div class="tons" id="a-tema"></div></div>
       <div><span class="rotulo">Story text size</span><div class="tons" id="a-letra"></div></div>
       <div><span class="rotulo">Story background</span><div class="tons" id="a-fundo"></div></div>
+      <div><span class="rotulo">Reply suggestions</span><div class="tons" id="a-sugestoes"></div></div>
       <div class="cena amostra">The rain taps on the window. <em>He doesn't look up.</em></div>
       <button type="button" class="botao" id="fechar-aspeto">Done</button>
     </div>
@@ -2156,7 +2157,7 @@ ${texto}`;
     const botoes = (podeRefazer(cont) ? `<button class="mini-acao" id="refazer" title="Write this scene again" aria-label="Redo">↻</button>` : "")
       + (podeDesfazer(cont) ? `<button class="mini-acao" id="desfazer" title="Take back your last move" aria-label="Undo">↩</button>` : "");
     $("escolhas").innerHTML = (aEspera || modoNota) ? "" :
-      (cont.escolhas || []).map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("")
+      (ler("sussurros-aspeto", {}).sugestoes === "nao" ? [] : cont.escolhas || []).map((e, i) => `<button class="escolha" data-i="${i}">${formatar(e)}</button>`).join("")
       + (cont.mensagens.length ? `<div class="linha-acoes"><button class="continuar-btn" id="continuar">Continue ▸</button>`
         + `<div class="mini-acoes">${botoes}</div></div>` : "");
     $("escolhas").hidden = !$("escolhas").innerHTML;
@@ -2174,7 +2175,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · pick who";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · hide suggestions";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2603,7 +2604,7 @@ ${texto}`;
     document.documentElement.dataset.tema = tema[0];
     document.documentElement.style.setProperty("--escala", LETRAS.some(l => l[0] === a.letra) ? a.letra : "1");
     $("cor-tema").content = tema[2];
-    if (hist && pers && $("ecra-historia").classList.contains("ativo")) { pintarFundoHistoria(); pintarBarraRelacao(); }
+    if (hist && pers && $("ecra-historia").classList.contains("ativo")) { pintarFundoHistoria(); pintarBarraRelacao(); if (!aEspera && !animacao) desenhar(); }
   }
   function abrirAspeto() {
     const a = ler("sussurros-aspeto", {});
@@ -2618,6 +2619,7 @@ ${texto}`;
     opcoes($("a-tema"), TEMAS, a.tema || "escuro", "tema");
     opcoes($("a-letra"), LETRAS, a.letra || "1", "letra");
     opcoes($("a-fundo"), [["foto", "Character picture"], ["liso", "Plain"]], a.fundo || "foto", "fundo");
+    opcoes($("a-sugestoes"), [["sim", "Show"], ["nao", "Hide"]], a.sugestoes || "sim", "sugestoes");   // as sugestões por baixo da cena
     $("painel-aspeto").hidden = false;
   }
   $("abrir-aspeto").onclick = abrirAspeto;
