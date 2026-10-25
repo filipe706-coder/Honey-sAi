@@ -724,6 +724,19 @@
   // =====================================================================
   const TONS = ["Romance", "Slow burn", "Mystery", "Adventure", "Comedy", "Drama", "Fluff", "Angst", "Action", "Supernatural"];
   const TONS_ROMANTICOS = ["Romance", "Slow burn"];
+  // O que cada tom quer dizer para o narrador (vai nas instruções de cada cena).
+  const SENTIDO_TONS = {
+    "Romance": "warmth, attraction and tender moments between you and them",
+    "Slow burn": "feelings grow very slowly and stay hidden; tension, almost-moments, nothing rushed",
+    "Mystery": "suspense, clues, secrets and unease; not everything is what it seems",
+    "Adventure": "momentum, discovery, risks and new places",
+    "Comedy": "light and funny: awkward situations, banter, jokes",
+    "Drama": "emotional stakes, conflict and serious moments; humour is rare and small",
+    "Fluff": "cozy, sweet and safe: low stakes, comfort, small happy moments",
+    "Angst": "pain, longing, regret and heavy feelings; no jokes that break the mood",
+    "Action": "fast, physical and dangerous; short sentences, high stakes",
+    "Supernatural": "eerie, magical or uncanny things are real here",
+  };
   const RELACOES = ["Open", "Best friends", "Rivals", "Colleagues", "Strangers"];
   const GENEROS = ["Male", "Female", "Non-binary"];
   // Tipos de personalidade: o texto explica à IA como a personagem age.
@@ -843,9 +856,10 @@ VOICE (very important):
   asks for them, writes an author's note, or lets the story move on.
 - ALWAYS end with a character speaking directly to "you" (a question, a challenge, an invitation) or in a situation that
   demands an answer right now. Never end on a still description.
-- VARY: alternate action or plot scenes, teasing and humor, and quiet, private or vulnerable moments. Don't ask the
+- VARY, but always inside the story's TONE: alternate plot moments, lighter moments and quiet, private or vulnerable moments. Don't ask the
   same kind of question two scenes in a row; often the question should be personal or teasing, not about the plot.
-- Characters true to their profile; use the example lines only as a style guide, never repeat them.
+- Characters true to their profile: their personality comes first (a serious or cold one doesn't suddenly joke around just
+  to sound casual). Use the example lines only as a style guide, never repeat them.
 - [AUTHOR'S NOTE] is an instruction for you (skip time, change the setting, bring someone in): apply it without mentioning it.
 - No explicit sexual content (the scene cuts away gracefully). Violence without graphic detail.
 - If the user shows real distress outside the story, gently step out of the narration and suggest getting help.
@@ -860,7 +874,7 @@ When others are in the scene, they react to what "you" said or did too, each wit
 tease, sulk, defend you or compete for your attention), and often one of them turns to "you" with the next line.
 {"partes": [{"tipo": "narracao", "quem": "", "texto": "...", "para_ti": false}, {"tipo": "fala", "quem": "name of the speaker", "texto": "...", "para_ti": true}],
 "escolhas": [3 short replies the user could send, written the way a person really types in a chat (casual, first person,
-can be one or two words, no fancy wording): one about what is happening, one funny or teasing, and one about the relationship
+can be one or two words, no fancy wording): one about what is happening, one lighter (funny or teasing, only if it fits the tone; otherwise a bolder choice), and one about the relationship
 between you two (getting closer, teasing or showing something vulnerable)],
 "novos_factos": [new, lasting facts, short sentences; [] if none],
 "proximidade": how the user's last message (what "you" said or did) changed the main character's feelings toward "you": -2 (hurt or pushed away), -1,
@@ -932,7 +946,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       + (h.premissa ? `\n${h.mundo ? "Situation" : "Idea"}: ${h.premissa}` : "")
       + `\nSetting: ${h.universo || (h.mundo && mundoDe(h.mundo) ? "somewhere in " + mundoDe(h.mundo).nome : "the original work's")}`
       + (h.relacao && h.relacao !== "Open" ? `\nRelationship between them: ${h.relacao}` : "")
-      + (h.tons.length ? `\nTone: ${h.tons.join(", ")}` : "")
+      + (h.tons.length ? `\n\nTONE OF THIS STORY (follow it in every scene, it decides the mood of everything): ${h.tons.map(t => t + " = " + (SENTIDO_TONS[t] || t)).join("; ")}.` : "")
       + `\nThe user is: ${eu ? textoPersona(eu) + (h.papel ? ". In this story: " + h.papel.replace(/[.\s]+$/, "") : "") : h.papel || "someone new in " + p.nome + "'s life"}. In the narration they are ALWAYS "you", never their name; `
       + `don't write what "you" do, say, your expression or clothes unless the user wrote it (you only narrate the rest of the world).`
       + (memoria.length ? `\n\n## Remember\n${memoria.map(f => "- " + f).join("\n")}` : "")
@@ -2290,7 +2304,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · continue fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · tone fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
