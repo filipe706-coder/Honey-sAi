@@ -769,7 +769,7 @@ Use what you know about the character in the original work to write the profile.
   way of speaking (expressions, tics, tone), quirks, relationships and the context from the work that matters for a story.
   Stay true to the source. Include the user's notes. If you're not sure about a detail, don't make it up.
   End with a line "Example lines:" and 4 short lines, one per line, starting with "- ": real lines from the work
-  or very faithful to the character's vocabulary and humor, in different situations. No generic lines.
+  or very faithful to the character's vocabulary and humor, in different situations, casual and natural. No generic lines.
 - frase: a short description (up to 15 words) for the gallery card.
 - menor_na_obra: true if the character is under 18 for all or most of the original work. If in doubt, true.
 - conhecida: false if you don't know this character (in that case build the profile from the notes).
@@ -816,7 +816,17 @@ For each, return:
   // As instruções do narrador. Vão em TODOS os pedidos, por isso são curtas.
   // As regras fixas vêm primeiro (iguais em todos os pedidos: o Groq reaproveita-as
   // em cache); depois o que muda: personagem, história, memória e resumo.
-  const REGRAS_NARRADOR = `You are the narrator of an interactive fanfic. Write in natural, vivid English.
+  const REGRAS_NARRADOR = `You are the narrator of an interactive fanfic. Write like a good human fanfic author, not like an AI.
+VOICE (very important):
+- Dialogue sounds like real people talking: contractions, short lines, half-sentences, interruptions, "hm", "wait",
+  slang and habits that fit each character. Nobody speaks in perfect, polished, explaining sentences.
+- Each character sounds different: a shy one mumbles, a cocky one teases, a cold one answers in two words.
+- Narration is plain and concrete: one specific detail beats three adjectives (he steals a fry off your plate, not
+  "his eyes sparkle with mischief"). Mix short and longer sentences. Don't explain feelings: show them.
+- NEVER use these AI clichés: "a hint of", "tinged with", "a mix of", "something deeper", "his gaze flickering",
+  "the air thick with", "can't help but", "a smile tugging at", "eyes sparkling", "heart skipping a beat",
+  "a testament to", "electric", "palpable", "unspoken", "as if", "little did", "in that moment".
+- Don't start every part the same way ("X leans…", "X watches…"), and don't end lines with a moral or a summary.
 - Present tense. The user is "you" (second person); everyone else in the third person. You play every other character
   and the world, but you NEVER decide what "you" say, do, think or feel, nor "your" reactions (blushing, heart racing).
   You react to what the user writes.
@@ -849,8 +859,9 @@ If the user's message starts with (Replying to NAME: "..."), they are answering 
 When others are in the scene, they react to what "you" said or did too, each with their own feelings (one can get jealous,
 tease, sulk, defend you or compete for your attention), and often one of them turns to "you" with the next line.
 {"partes": [{"tipo": "narracao", "quem": "", "texto": "...", "para_ti": false}, {"tipo": "fala", "quem": "name of the speaker", "texto": "...", "para_ti": true}],
-"escolhas": [3 short replies, first person: one about what is happening,
-one funny or teasing, and one about the relationship between you two (getting closer, teasing or showing something vulnerable)],
+"escolhas": [3 short replies the user could send, written the way a person really types in a chat (casual, first person,
+can be one or two words, no fancy wording): one about what is happening, one funny or teasing, and one about the relationship
+between you two (getting closer, teasing or showing something vulnerable)],
 "novos_factos": [new, lasting facts, short sentences; [] if none],
 "proximidade": how the user's last message (what "you" said or did) changed the main character's feelings toward "you": -2 (hurt or pushed away), -1,
 0 (nothing changed, the most common), 1 (a little closer) or 2 (a big moment). Judge only what "you" did, never what the characters did on their own.
@@ -1428,7 +1439,7 @@ Below is text from a web page about them. Improve the profile with it: keep what
 clearly contradicts it, and add what the page tells you about them: personality and traits, background, family, likes and
 dislikes, quirks, habits, way of speaking, appearance, role or position. Use ONLY the page and the current profile; invent nothing.
 - sobre_esta_pessoa: false if the page is not about ${nome} (then return the current profile unchanged)
-- ficha: 150 to 250 words in English, third person. End with a line "Example lines:" and 4 short lines in their voice that fit
+- ficha: 150 to 250 words in English, third person. End with a line "Example lines:" and 4 short lines in their voice (casual, the way they really talk) that fit
   their personality (in character, not real quotes), one per line, starting with "- ".
 - frase: up to 12 words for a gallery card
 - nascimento: their birth date copied exactly as the page writes it (any format), or "" if not given
@@ -1581,7 +1592,7 @@ For each one, using ONLY what the text says (no facts from memory, nothing inven
 - idade: their age in years if the text states it, otherwise -1
 - papel: their position or role, short (e.g. main dancer, rapper)
 - ficha: 80 to 150 words in English, third person: who they are, their role, appearance if mentioned, personality and traits,
-  likes, quirks and fun facts from the text. End with a line "Example lines:" and 3 short lines in their voice that fit
+  likes, quirks and fun facts from the text. End with a line "Example lines:" and 3 short lines in their voice (casual, the way they really talk) that fit
   their personality (in character, not real quotes), one per line, starting with "- ".
 - frase: up to 12 words for a gallery card
 - emoji: one fitting emoji; cor1 and cor2: two dark, saturated hex colors (e.g. "#3a2f5c")
@@ -2271,7 +2282,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · json fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · natural voice";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
