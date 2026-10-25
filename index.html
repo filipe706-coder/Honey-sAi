@@ -386,7 +386,7 @@
         <p class="dica">Write who it is. The AI writes their personality and way of talking, and you can review it.</p>
         <label>Name<input id="c-nome" maxlength="80" placeholder="e.g. L"></label>
         <label>From (optional)<input id="c-obra" maxlength="120" placeholder="e.g. Death Note, or the name of a group"></label>
-        <label>Paste a link, info or a profile page (optional)<textarea id="c-extra" rows="5" maxlength="60000"
+        <label>Paste a link, info or a profile page (optional)<textarea id="c-extra" rows="5"
           placeholder="A link, or text from a wiki or a profile page. If it's about a whole group, everyone in it is created at once."></textarea></label>
         <button class="botao" id="gerar">Create</button>
         <div id="passo1-estado"></div>
@@ -1333,6 +1333,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   async function gerarFicha() {
     const nome = $("c-nome").value.trim(), extra = $("c-extra").value.trim();
     if (eLink(extra)) return lerPaginaDoLink(extra, $("c-obra").value.trim(), nome);
+    if (!nome && extra && extra.length <= 40) { $("passo1-estado").innerHTML = `<p class="erro">That's too little text. If the site didn't let you copy (Kprofiles blocks it), paste the page's link instead.</p>`; return; }
     if (extra.length > 1500 || (!nome && extra.length > 40)) return lerPagina(limparPagina(extra), $("c-obra").value.trim(), nome);
     if (!nome) { $("passo1-estado").innerHTML = `<p class="erro">Write a name (or paste a page).</p>`; return; }
     $("gerar").disabled = $("regerar").disabled = true;
@@ -1466,15 +1467,26 @@ ${texto}`;
   // Um browser não pode ler páginas de outros sites diretamente (bloqueiam-no), por isso pedimos o texto
   // ao Jina Reader (r.jina.ai), um serviço grátis que abre a página e devolve só o texto.
   const eLink = t => /^https?:\/\/\S+$/i.test(String(t).trim());
+  // Tenta dois caminhos: 1) Jina Reader (devolve o texto pronto); 2) se falhar, AllOrigins (devolve o HTML da
+  // página e a app tira-lhe o texto). Sites como o Kprofiles não deixam copiar o texto à mão, mas por aqui lê-se.
   async function lerLink(url) {
-    let r;
-    try { r = await fetch("https://r.jina.ai/" + url.trim(), { headers: { "Accept": "text/plain" } }); }
-    catch (e) { throw { link: true }; }
-    const t = r.ok ? await r.text() : "";
-    if (!r.ok || t.replace(/\s+/g, " ").length < 300) throw { link: true };
-    return t;
+    url = url.trim();
+    const tentativas = [
+      async () => { const r = await fetch("https://r.jina.ai/" + url, { headers: { "Accept": "text/plain" } }); return r.ok ? r.text() : ""; },
+      async () => {
+        const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url)); if (!r.ok) return "";
+        const doc = new DOMParser().parseFromString(await r.text(), "text/html");
+        doc.querySelectorAll("script, style, noscript, nav, footer, header, aside, form, iframe, .comments, #comments").forEach(e => e.remove());
+        const corpo = doc.querySelector("article, .entry-content, main") || doc.body;
+        return corpo ? corpo.innerText || corpo.textContent || "" : "";
+      },
+    ];
+    for (const tentar of tentativas) {
+      try { const t = await tentar(); if (t && t.replace(/\s+/g, " ").length >= 300) return t; } catch (e) { /* tenta o próximo */ }
+    }
+    throw { link: true };
   }
-  const ERRO_LINK = "I couldn't open that link (some sites block it). Open the page, copy its text and paste it here instead.";
+  const ERRO_LINK = "I couldn't open that link (the site blocks it). Try another page about them (Wikipedia, a fan wiki), or copy the text and paste it here.";
   // Lê um link e mostra as personagens que lá estão (para confirmar).
   async function lerPaginaDoLink(url, grupo, alvo) {
     $("gerar").disabled = true;
@@ -2066,7 +2078,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · ages fix";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "25 Oct · links 2";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
