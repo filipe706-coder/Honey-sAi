@@ -420,7 +420,12 @@
         <label>Card tagline<input id="r-frase" maxlength="200"></label>
         <div><span class="rotulo">Their tone (up to 3)</span><div class="tons" id="r-tipos"></div></div>
         <label>Relationship with you<select id="r-relacao" class="campo-select"></select></label>
-        <label>Personality and way of speaking<textarea id="r-ficha" rows="10" maxlength="4000"></textarea></label>
+        <div class="seccao"><span class="rotulo">Profile</span>
+          <div id="r-secoes"></div>
+          <button type="button" class="botao secundario" id="r-secoes-ia">✦ Fill the empty ones with AI</button>
+          <div id="r-secoes-estado"></div>
+        </div>
+        <label>About them (background, appearance, example lines)<textarea id="r-ficha" rows="8" maxlength="4000"></textarea></label>
         <div class="acoes">
           <button type="button" class="botao secundario" id="regerar">Generate again</button>
           <button class="botao" id="guardar">Save and pick a story</button>
@@ -806,6 +811,34 @@
   const PALETAS = [["#3d2c5c", "#c76b4a"], ["#22304a", "#5a4a7a"], ["#2b2b2b", "#b08d57"], ["#1f2f5c", "#8f6fd1"],
                    ["#4a1f2e", "#c9809a"], ["#1e3b34", "#6fa38a"], ["#3a2a1a", "#c4874e"], ["#2a1f45", "#d17fa6"]];
 
+  // ---------- As secções do perfil ----------
+  // k = nome guardado; t = título no ecrã; d = exemplo na caixa; n = como o narrador lê.
+  // As "Roleplay rules" são só tuas: a IA nunca as escreve nem as muda.
+  const SECOES = [
+    { k: "core", t: "Core personality", d: "e.g. calm and reserved, very loyal, hates being the center of attention", n: "Core personality" },
+    { k: "feelings", t: "Their feelings towards you", d: "e.g. likes you but would never admit it; gets protective around you", n: 'Feelings towards "you"' },
+    { k: "speech", t: "Speech style", d: 'e.g. short sentences, dry jokes, says "hm" a lot', n: "Speech style" },
+    { k: "affection", t: "How they show affection", d: "e.g. with actions, not words: saves you a seat, walks you home", n: "How they show affection" },
+    { k: "behaviour", t: "Example of behaviour", d: "e.g. if you're sad, he sits next to you in silence and hands you his hoodie", n: "Example of behaviour" },
+    { k: "boundaries", t: "Emotional boundaries", d: "e.g. doesn't talk about his family; shuts down if pushed too fast", n: "Emotional boundaries (respect them; they only soften slowly, if the story earns it)" },
+    { k: "rules", t: "Roleplay rules", d: "Your rules for this character, e.g. never kisses first; always a bit shy", n: "ROLEPLAY RULES (always obey, no exceptions)", soTu: true },
+  ];
+  const SECOES_IA = SECOES.filter(c => !c.soTu);
+  const MAX_SECAO = 600;
+  const secoesDe = x => (x && x.secoes) || {};
+  // O que cada secção quer dizer (para a IA as escrever bem)
+  const GUIA_SECOES = `each one 1 to 3 short sentences in English, concrete and true to the character (not generic):
+  core = core personality; feelings = how they feel about "you" (the user); speech = speech style (vocabulary, tics, tone,
+  how long their sentences are); affection = how they show affection or care; behaviour = one concrete example of how they
+  act in a typical moment; boundaries = emotional boundaries (topics or things that make them close off, what they won't do easily).`;
+  // As secções preenchidas, para o narrador (max = letras por secção)
+  function linhasSecoes(x, max = 450) {
+    const s = secoesDe(x);
+    const l = SECOES.filter(c => String(s[c.k] || "").trim()).map(c => `${c.n}: ${String(s[c.k]).trim().slice(0, max)}`);
+    if (!l.length) return "";
+    return "\n" + l.join("\n") + (x.menor && String(s.feelings || "").trim() ? `\n(${x.nome} is a minor: their feelings towards "you" are never romantic.)` : "");
+  }
+
   const PEDIDO_FICHA = (nome, obra, extra) => `The user wants to write interactive fanfics with this character:
 
 Name: ${nome}
@@ -818,6 +851,8 @@ Use what you know about the character in the original work to write the profile.
   Stay true to the source. Include the user's notes. If you're not sure about a detail, don't make it up.
   End with a line "Example lines:" and 4 short lines, one per line, starting with "- ": real lines from the work
   or very faithful to the character's vocabulary and humor, in different situations, casual and natural. No generic lines.
+- secoes: the profile in sections, ${GUIA_SECOES}
+  For "feelings": a natural starting point towards someone new in their life (never romantic if they're a minor).
 - frase: a short description (up to 15 words) for the gallery card.
 - menor_na_obra: true if the character is under 18 for all or most of the original work. If in doubt, true.
 - conhecida: false if you don't know this character (in that case build the profile from the notes).
@@ -965,7 +1000,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     const hx = x => historicoDe(m, x.id);
     // Quem está na cena: ficha + histórico contigo. Quem não está: uma linha (e o início do histórico).
     return (hx(p) ? `\nHistory with "you" (in ${m.nome}): ${hx(p).slice(0, 700)}` : "")
-      + (elenco.length ? "\n\n## Also in this scene\n" + elenco.map(x => `### ${x.nome}\n${String(x.ficha).slice(0, 700)}` + linhasPersonagem(x, h)
+      + (elenco.length ? "\n\n## Also in this scene\n" + elenco.map(x => `### ${x.nome}\n${String(x.ficha).slice(0, 700)}` + linhasPersonagem(x, h) + linhasSecoes(x, 260)
           + (hx(x) ? `\nHistory with "you": ${hx(x).slice(0, 500)}` : "")).join("\n") : "")
       + (outros.length ? "\n\n## Others in this group (bring them in only when it fits)\n" + outros.map(x => `- ${x.nome}: ${x.frase || ""}` + (relacaoComigo(x, h) !== "Open" ? ` · with you: ${relacaoComigo(x, h)}` : "")
           + (hx(x) ? ` · with you: ${hx(x).slice(0, 160)}` : "")).join("\n") : "")
@@ -985,7 +1020,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       + (p.menor ? `\nNO ROMANCE: ${p.nome} is a minor in the original work. Only friendship, adventure, mystery or rivalry; never romance, flirting or romantic tension with ${p.nome}, even if the user asks or says they're an adult.` : "")
       + (eMenor(eu) ? `\nNO ROMANCE: the user's character is under 18. Only friendship, adventure, mystery or rivalry; never romance, flirting or romantic tension with them.` : "")
       + blocoMundo(h.mundo && mundoDe(h.mundo))
-      + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 2200)}` + linhasPersonagem(p, h)
+      + `\n\n## ${p.nome}${p.obra ? " (" + p.obra + ")" : ""}\n${String(p.ficha).slice(0, 2200)}` + linhasPersonagem(p, h) + linhasSecoes(p, 500)
       + blocoElenco(p, h)
       + `\n\n## Story: ${h.titulo || "untitled"}`
       + (h.premissa ? `\n${h.mundo ? "Situation" : "Idea"}: ${h.premissa}` : "")
@@ -1011,6 +1046,8 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     const partes = [];
     if (tipos.length) partes.push(tipos.map(t => PERSONALIDADES[t].split(";")[0]).join("; "));
     if (r !== "Open") partes.push(`${r} with you (${SENTIDO_RELACOES[r]})`);
+    const regras = String(secoesDe(x).rules || "").trim();
+    if (regras) partes.push(`rules: ${regras.slice(0, 300)}`);
     return partes.length ? `${x.nome}: ${partes.join(" | ")}` : "";
   }
   function folhaPersonagens(p, h) {
@@ -1019,7 +1056,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       ? `\n\n## MOST IMPORTANT: stay true to this in every single line (even if earlier scenes drifted)\n`
         + (h.tons && h.tons.length ? `Story tone: ${h.tons.join(", ")}.\n` : "")
         + linhas.map(l => "- " + l).join("\n")
-        + `\nBefore writing each line, check it fits that character's tone and their relationship with "you". If it doesn't, rewrite it.`
+        + `\nBefore writing each line, check it fits that character's tone, their relationship with "you" and their profile sections (speech style, boundaries, rules). If it doesn't, rewrite it.`
       : "";
   }
   // Lembrete curto que vai junto à última mensagem (não aparece no ecrã).
@@ -1131,7 +1168,8 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
 
   const obj = (props, req) => ({ type: "object", additionalProperties: false, required: req || Object.keys(props), properties: props });
   const S = { type: "string" }, B = { type: "boolean" }, LS = { type: "array", items: { type: "string" } };
-  const ESQUEMA_FICHA = obj({ conhecida: B, nome: S, obra: S, frase: S, ficha: S, menor_na_obra: B, emoji: S, cor1: S, cor2: S });
+  const ESQUEMA_SECOES = obj(Object.fromEntries(SECOES_IA.map(c => [c.k, S])));
+  const ESQUEMA_FICHA = obj({ conhecida: B, nome: S, obra: S, frase: S, ficha: S, secoes: ESQUEMA_SECOES, menor_na_obra: B, emoji: S, cor1: S, cor2: S });
   const ESQUEMA_OPCOES = obj({ opcoes: { type: "array", items: obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS }) } });
   const ESQUEMA_IDEIA = obj({ titulo: S, premissa: S, universo: S, papel: S, relacao: S, tons: LS });
   const ESQUEMA_PARTE = obj({ tipo: { type: "string", enum: ["narracao", "fala"] }, quem: S, texto: S, para_ti: B });
@@ -1477,8 +1515,49 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     $("c-nome").focus();
   }
   let aEditarFicha = false;   // true = estamos a editar uma personagem que já existia
+  // Secções: guarda só as que têm texto
+  function limparSecoes(o) {
+    const r = {};
+    for (const c of SECOES) { const v = String((o && o[c.k]) || "").trim().slice(0, MAX_SECAO); if (v) r[c.k] = v; }
+    return r;
+  }
+  function desenharSecoes(secoes) {
+    $("r-secoes").innerHTML = SECOES.map(c => `<label>${escapar(c.t)}<textarea id="r-s-${c.k}" rows="2" maxlength="${MAX_SECAO}" placeholder="${escapar(c.d)}"></textarea></label>`).join("");
+    for (const c of SECOES) $("r-s-" + c.k).value = (secoes || {})[c.k] || "";
+    $("r-secoes-estado").innerHTML = "";
+  }
+  const secoesDoEcra = () => limparSecoes(Object.fromEntries(SECOES.map(c => [c.k, $("r-s-" + c.k).value])));
+  // ✦ A IA escreve as secções que estão vazias (nunca mexe no que escreveste, nem nas regras)
+  const PEDIDO_SECOES = (x) => `Profile of "${x.nome}"${x.obra ? " (" + x.obra + ")" : ""}, a character for interactive fanfics:
+${x.ficha}
+${x.tipos.length ? "Their tone: " + x.tipos.map(t => PERSONALIDADES[t] || t).join("; ") + "\n" : ""}${x.relacao !== "Open" ? `Their relationship with "you" (the user): ${x.relacao} = ${SENTIDO_RELACOES[x.relacao]}\n` : ""}${Object.keys(x.secoes).length ? "Sections the user already wrote (stay consistent with them):\n" + SECOES.filter(c => x.secoes[c.k]).map(c => `- ${c.t}: ${x.secoes[c.k]}`).join("\n") + "\n" : ""}
+Write the profile sections, ${GUIA_SECOES}
+"feelings" must match their relationship with "you"${x.menor ? `; ${x.nome} is a minor, so their feelings are NEVER romantic` : ""}.
+Use what you know about the character from the original work and the profile above; don't invent big facts.`;
+  $("r-secoes-ia").onclick = async () => {
+    const vazias = SECOES_IA.filter(c => !$("r-s-" + c.k).value.trim());
+    if (!vazias.length) { $("r-secoes-estado").innerHTML = `<p class="dica">All sections already have text. Empty one to have it rewritten.</p>`; return; }
+    const idade = +$("r-idade").value.trim();
+    const x = { nome: $("r-nome").value.trim() || rascunho.nome, obra: $("r-obra").value.trim(), ficha: $("r-ficha").value.trim().slice(0, 3000),
+      tipos: [...$("r-tipos").querySelectorAll('.tom[aria-pressed="true"]')].map(b => b.dataset.v), relacao: $("r-relacao").value || "Open",
+      menor: !!rascunho.menor || (idade > 0 && idade < 18), secoes: secoesDoEcra() };
+    $("r-secoes-ia").disabled = $("guardar").disabled = true;
+    $("r-secoes-estado").innerHTML = `<div class="carregar"><span class="grande">Writing the profile…</span>This takes a few seconds.</div>`;
+    try {
+      const d = await groq([{ role: "user", content: PEDIDO_SECOES(x) }], { esquema: ESQUEMA_SECOES, nome: "secoes", esforco: "medium", max: 2500,
+        onEspera: seg => { $("r-secoes-estado").innerHTML = `<div class="carregar"><span class="grande">Waiting ${seg} s…</span></div>`; } });
+      const novas = limparSecoes(d);
+      let n = 0;
+      for (const c of vazias) if (novas[c.k] && !$("r-s-" + c.k).value.trim()) { $("r-s-" + c.k).value = novas[c.k]; n++; }
+      $("r-secoes-estado").innerHTML = `<p class="dica">✦ ${n} section${n === 1 ? "" : "s"} filled. Change anything you like, then tap <b>${escapar($("guardar").textContent)}</b>.</p>`;
+    } catch (e) {
+      $("r-secoes-estado").innerHTML = `<p class="erro">${escapar(mensagemDeErro(e))}</p>`;
+    }
+    $("r-secoes-ia").disabled = $("guardar").disabled = false;
+  };
   function mostrarRevisao(p, editar) {
     rascunho = p; aEditarFicha = !!editar;
+    desenharSecoes(secoesDe(p));
     $("r-idade").value = Number.isInteger(p.idade) ? p.idade : "";
     $("r-link").value = ""; $("r-link-estado").innerHTML = "";
     desenharTiposFicha(tiposDe(p));
@@ -1505,12 +1584,12 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     $("passo1-estado").innerHTML = `<div class="carregar"><span class="grande">Getting to know ${escapar(nome)}…</span>This takes a few seconds.</div>`;
     try {
       const d = await groq([{ role: "user", content: PEDIDO_FICHA(nome, $("c-obra").value.trim(), $("c-extra").value.trim()) }],
-        { esquema: ESQUEMA_FICHA, nome: "ficha", esforco: "medium", max: 3000 });
+        { esquema: ESQUEMA_FICHA, nome: "ficha", esforco: "medium", max: 3800 });
       if (!d || !d.ficha) throw { code: "invalid_json" };
       mostrarRevisao({
         id: novoId(),
         nome: String(d.nome || nome).slice(0, 80), obra: String(d.obra || $("c-obra").value).slice(0, 120),
-        frase: String(d.frase || "").slice(0, 200), ficha: String(d.ficha).slice(0, 4000),
+        frase: String(d.frase || "").slice(0, 200), ficha: String(d.ficha).slice(0, 4000), secoes: limparSecoes(d.secoes),
         emoji: String(d.emoji || "✨").slice(0, 8), cores: [cor(d.cor1, "#3d2c5c"), cor(d.cor2, "#c76b4a")],
         conhecida: d.conhecida !== false,
         menor: d.menor_na_obra !== false,  // na dúvida, trata como menor
@@ -1521,9 +1600,10 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
     $("gerar").disabled = $("regerar").disabled = false;
   }
   // "Improve with a link": a IA junta o que a página diz à ficha atual (sem apagar o que já lá estava).
-  const ESQUEMA_MELHORAR = obj({ sobre_esta_pessoa: B, ficha: S, frase: S, nascimento: S, idade: { type: "integer" } });
-  const PEDIDO_MELHORAR = (nome, obra, ficha, texto) => `Current profile of "${nome}"${obra ? " (" + obra + ")" : ""}, a character for interactive fanfics:
+  const ESQUEMA_MELHORAR = obj({ sobre_esta_pessoa: B, ficha: S, secoes: ESQUEMA_SECOES, frase: S, nascimento: S, idade: { type: "integer" } });
+  const PEDIDO_MELHORAR = (nome, obra, ficha, texto, secoes = {}) => `Current profile of "${nome}"${obra ? " (" + obra + ")" : ""}, a character for interactive fanfics:
 ${ficha}
+${SECOES_IA.filter(c => secoes[c.k]).map(c => `${c.t}: ${secoes[c.k]}`).join("\n")}
 
 Below is text from a web page about them. Improve the profile with it: keep what the current profile says unless the page
 clearly contradicts it, and add what the page tells you about them: personality and traits, background, family, likes and
@@ -1531,6 +1611,8 @@ dislikes, quirks, habits, way of speaking, appearance, role or position. Use ONL
 - sobre_esta_pessoa: false if the page is not about ${nome} (then return the current profile unchanged)
 - ficha: 150 to 250 words in English, third person. End with a line "Example lines:" and 4 short lines in their voice (casual, the way they really talk) that fit
   their personality (in character, not real quotes), one per line, starting with "- ".
+- secoes: the profile sections, ${GUIA_SECOES}
+  Keep what the current sections say and add what the page shows. If there's no current "feelings", leave it "".
 - frase: up to 12 words for a gallery card
 - nascimento: their birth date copied exactly as the page writes it (any format), or "" if not given
 - idade: their age in years if the page states it, otherwise -1
@@ -1546,12 +1628,15 @@ ${texto}`;
     try {
       const texto = cortarRestos(limparPagina(await lerLink(url))).slice(0, 12000);
       estado(`<div class="carregar"><span class="grande">Reading about ${escapar($("r-nome").value)}…</span>This takes a few seconds.</div>`);
-      const d = await groq([{ role: "user", content: PEDIDO_MELHORAR($("r-nome").value.trim(), $("r-obra").value.trim(), $("r-ficha").value.trim(), texto) }],
-        { esquema: ESQUEMA_MELHORAR, nome: "melhorar", esforco: "medium", max: 3500,
+      const d = await groq([{ role: "user", content: PEDIDO_MELHORAR($("r-nome").value.trim(), $("r-obra").value.trim(), $("r-ficha").value.trim(), texto, secoesDoEcra()) }],
+        { esquema: ESQUEMA_MELHORAR, nome: "melhorar", esforco: "medium", max: 4200,
           onEspera: seg => estado(`<div class="carregar"><span class="grande">Waiting ${seg} s…</span>Groq's free plan allows a few requests per minute.</div>`) });
       if (d.sobre_esta_pessoa === false) { estado(`<p class="erro">That page doesn't seem to be about ${escapar($("r-nome").value)}. Nothing was changed.</p>`); }
       else {
         if (d.ficha) $("r-ficha").value = String(d.ficha).slice(0, 4000);
+        // secções: as da página entram; "feelings" e "boundaries" só se estavam vazias (são mais tuas); as regras nunca
+        const novas = limparSecoes(d.secoes);
+        for (const c of SECOES_IA) if (novas[c.k] && (!["feelings", "boundaries"].includes(c.k) || !$("r-s-" + c.k).value.trim())) $("r-s-" + c.k).value = novas[c.k];
         if (d.frase) $("r-frase").value = String(d.frase).slice(0, 200);
         const idade = idadeDe(d);
         if (idade != null) $("r-idade").value = idade;   // a idade da página entra na caixa (decide o romance ao guardar)
@@ -1587,7 +1672,7 @@ ${texto}`;
     gravarMundos(mundos().map(m => !gruposDela.includes(m.id) ? m : Object.assign({}, m, { descricao: troca(m.descricao),
       historicos: Object.fromEntries(Object.entries(m.historicos || {}).map(([k, v]) => [k, troca(v)])) })));
     const doGrupo = new Set(mundos().filter(m => gruposDela.includes(m.id)).flatMap(m => m.personagens || []));
-    gravarPersonagens(personagens().map(x => x.id !== id && doGrupo.has(x.id) ? Object.assign({}, x, { ficha: troca(x.ficha), frase: troca(x.frase) }) : x));
+    gravarPersonagens(personagens().map(x => x.id !== id && doGrupo.has(x.id) ? Object.assign({}, x, { ficha: troca(x.ficha), frase: troca(x.frase), secoes: Object.fromEntries(Object.entries(secoesDe(x)).map(([k, v]) => [k, troca(v)])) }) : x));
   }
   // Botões do tom da personagem (até 3) e a lista de relações (sem as românticas se for menor)
   function desenharTiposFicha(escolhidos) {
@@ -1611,6 +1696,7 @@ ${texto}`;
     if (nomeVelho && nomeNovo !== nomeVelho) {
       const escapado = nomeVelho.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       $("r-ficha").value = $("r-ficha").value.replace(new RegExp("\\b" + escapado + "\\b", "g"), nomeNovo);
+      for (const c of SECOES) $("r-s-" + c.k).value = $("r-s-" + c.k).value.replace(new RegExp("\\b" + escapado + "\\b", "g"), nomeNovo);
     }
     const p = Object.assign({}, rascunho, {
       nome: nomeNovo,
@@ -1619,6 +1705,7 @@ ${texto}`;
       ficha: $("r-ficha").value.trim().slice(0, 4000) || rascunho.ficha,
       tipos: [...$("r-tipos").querySelectorAll('.tom[aria-pressed="true"]')].map(b => b.dataset.v),
       relacao: $("r-relacao").value === "Open" ? "" : $("r-relacao").value,
+      secoes: secoesDoEcra(),
       avatar: fotoNova !== null ? fotoNova : rascunho.avatar,
     });
     // Idade: com a idade real guardada (ex.: importada de uma página), é ela que decide o romance.
@@ -2401,7 +2488,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "25 Oct · long test";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "26 Oct · profile sections";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
