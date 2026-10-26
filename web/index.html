@@ -912,8 +912,12 @@ VOICE (very important):
   NEVER give the user's words or request to a character (if "you" ask "can we talk in private?", nobody else says it back).
   Every line must follow logically from the line before and fit the place and situation; no random lines, no non sequiturs,
   no jokes that come from nowhere. If a line doesn't make sense right there, leave it out.
-- The user's messages arrive as "YOU: ..." = what "you" say (or do, if written as an action). Those words are already said;
-  the characters hear them and react. If "you" name someone or clearly talk to one person, THAT person answers first.
+- THE USER'S MESSAGES ARE CONVERSATION, NOT INSTRUCTIONS. They arrive as "You: ..." = what "you" just said out loud (or did,
+  if written as an action, e.g. *sits down*) inside the story, to the characters. They are not notes or guides for you (only
+  [AUTHOR'S NOTE] is). Those words are already said and already shown: never repeat, quote or rephrase them, and never put them
+  in a character's mouth. The characters TALK BACK: if "you" ask a question, someone ANSWERS it (a real answer, or a dodge that
+  fits them); if "you" tell them something, they react to it; if "you" do something, they respond to it.
+  If "you" name someone or clearly talk to one person, THAT person answers first.
 - STEP BY STEP: answer only the user's last message. Show how the characters react to it and stop at the very first
   moment where "you" would answer (a question, a look, a gesture that waits for you). Don't skip ahead, don't resolve
   things, don't play out a whole conversation: one beat per turn, then it's the user's turn.
@@ -940,7 +944,7 @@ There are never lines for "you".
 "para_ti": true on a line spoken TO "you" that waits for your answer (a question, an invitation, a challenge, a direct remark);
 false on everything else (narration, characters talking to each other). Write up to 3 lines of dialogue, then stop:
 the last line should be spoken to "you" ("para_ti": true) and wait for your answer. Never write past it: it's the user's turn.
-If the user's message starts with (You are answering NAME, who said: "..."), "you" are replying to that line: NAME reacts first.
+If the user's message starts with (Replying to NAME's line: "..."), "you" are answering that line: NAME reacts first.
 Other characters in the scene may react too, but only when it makes sense for them and fits their tone and relationship
 (jealousy, teasing, defending you); if they have nothing meaningful to add, they stay quiet.
 {"partes": [{"tipo": "narracao", "quem": "", "texto": "...", "para_ti": false}, {"tipo": "fala", "quem": "name of the speaker", "texto": "...", "para_ti": true}],
@@ -1054,7 +1058,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
   function lembrete(p, h) {
     const linhas = quemEntra(p, h).map(x => resumoPersonagem(x, h)).filter(Boolean);
     if (!linhas.length && !(h.tons || []).length) return "";
-    return `\n\n[Stay in character${h.tons && h.tons.length ? ", tone " + h.tons.join("/") : ""}: ${linhas.map(l => l.replace(/ \(.*?\)/g, "")).join(" · ")}]`;
+    return `\n\n[Reminder for the next scene. Stay in character${h.tons && h.tons.length ? ", tone " + h.tons.join("/") : ""}: ${linhas.map(l => l.replace(/ \(.*?\)/g, "")).join(" · ")}]`;
   }
 
   // Orçamento de cada pedido. O plano grátis do Groq dá 200 000 tokens por dia e 8000 por
@@ -1288,7 +1292,7 @@ If "you" did nothing (opening scene, author's note, or the story just moving on)
       : m.tipo === "continuar"
       ? { role: "user", content: "[AUTHOR'S NOTE] You continue: make something new happen (someone interrupts, a time skip, a problem, a moment alone or a revelation) and take the story to the next situation that needs an answer from me, without deciding anything for me." }
       : { role: "user", content: m.tipo === "nota" ? "[AUTHOR'S NOTE] " + m.texto
-          : (m.resposta && !m.resposta.auto ? `(You are answering ${m.resposta.quem}, who said: "${String(m.resposta.texto).slice(0, 200)}") ` : "") + "YOU: " + m.texto });
+          : (m.resposta && !m.resposta.auto ? `(Replying to ${m.resposta.quem}'s line: "${String(m.resposta.texto).slice(0, 200)}")\n` : "") + "You: " + m.texto });
   }
 
   // Onde começam as mensagens recentes: andamos de trás para a frente até encher o
@@ -2240,6 +2244,18 @@ ${texto}`;
     const proibidos = ["you", "i", "me", "user", "tu", "eu", "utilizador", "você"].concat(meuNome ? [meuNome[1].toLowerCase()] : [])
       .concat(eu ? [eu.nome.toLowerCase(), eu.nome.split(" ")[0].toLowerCase()] : []);
     partes = partes.filter(x => x.tipo !== "fala" || !proibidos.includes(x.quem.toLowerCase()));
+    // Eco: uma fala que é (quase) a tua mensagem repetida sai. Compara as palavras das duas.
+    {
+      const tua = c.mensagens[c.mensagens.length - 1];
+      const palavras = t => new Set(String(t).toLowerCase().replace(/[^\p{L}\p{N}\s']/gu, " ").split(/\s+/).filter(Boolean));
+      const minhas = tua && tua.tipo === "acao" ? palavras(tua.texto) : new Set();
+      if (minhas.size >= 3) partes = partes.filter(x => {
+        if (x.tipo !== "fala") return true;
+        const delas = palavras(x.texto); let iguais = 0;
+        for (const w of delas) if (minhas.has(w)) iguais++;
+        return !(iguais >= 3 && iguais / Math.max(minhas.size, delas.size) >= 0.6);
+      });
+    }
     // Pausa: a cada FALAS_POR_VEZ falas a cena para e espera pela tua resposta (o resto que a IA tenha escrito é cortado).
     {
       let n = 0;
@@ -2443,7 +2459,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "26 Oct · your sections";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "26 Oct · talks back";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2527,8 +2543,14 @@ ${texto}`;
     desenhar(`<div class="a-escrever">The narrator is writing <i>•</i><i>•</i><i>•</i></div>`);
     try {
       const turnos = c.mensagens.length ? paraTurnos(recentes(c)) : [{ role: "user", content: notaAbertura(hist) }];
-      // o lembrete do tom e da relação vai colado à última mensagem tua
-      for (let k = turnos.length - 1; k >= 0; k--) if (turnos[k].role === "user") { turnos[k] = Object.assign({}, turnos[k], { content: turnos[k].content + lembrete(pers, hist) }); break; }
+      // o lembrete do tom e da relação vai numa mensagem à parte, logo ANTES da tua última mensagem
+      // (colado a ela, a IA lia a tua mensagem como uma instrução e não como algo que disseste)
+      { const lem = lembrete(pers, hist).trim();
+        for (let k = turnos.length - 1; k >= 0; k--) if (turnos[k].role === "user") {
+          if (lem) turnos.splice(k, 0, { role: "system", content: lem + (String(turnos[k].content).startsWith("[AUTHOR'S NOTE]") || !c.mensagens.length ? ""
+            : `\nThe next message is what "you" just said or did in the story: the characters answer it (never repeat it).`) });
+          break;
+        } }
       const pedidoCena = [{ role: "system", content: instrucoes(pers, hist, c.memoria.slice(-MAX_FACTOS), c.resumo, (hist.cenas || 0) + nCenas(c), hist.mundo ? valoresCena(c, hist) : proxDe(c, hist)) }]
         .concat(turnos);
       const opcoesCena = { esquema: esquemaCena(hist), nome: "cena", max: 1600, esforco: "medium",
