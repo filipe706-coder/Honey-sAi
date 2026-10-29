@@ -198,6 +198,11 @@
   .cena p:last-child { margin-bottom: 0; }
   .cena em { color: var(--enfase); }
   .fala { display: flex; gap: 8px; align-items: flex-end; max-width: 90%; }
+  .pensamento { margin: 4px 0 0 36px; max-width: 86%; background: color-mix(in srgb, var(--acento) 16%, var(--cartao)); border-radius: 16px;
+                padding: 10px 13px; font-size: calc(14.5px * var(--escala)); line-height: 1.55; color: var(--texto-historia); font-style: italic; }
+  .pensamento b { display: block; font-style: normal; font-size: 12px; color: var(--acento); margin-bottom: 3px; }
+  .ver-pensamento { margin: 2px 0 0 36px; align-self: flex-start; background: none; border: 1px solid var(--linha); color: var(--suave);
+                    border-radius: 999px; padding: 5px 12px; font-size: 13px; }
   .mini-avatar { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
                  font-size: 14px; font-weight: 600; color: #fff; }
   .balao { background: var(--cartao); border-radius: 18px; border-bottom-left-radius: 6px; padding: 9px 13px;
@@ -919,20 +924,26 @@ described below and the world around them. The user plays themselves: "you". Wri
 HOW EVERY TURN WORKS (the most important part):
 1. The user's last message ("You: ...") is what "you" just said out loud, or did (*like this*), to the characters, right now.
    It's a conversation, not instructions for you. Only an [AUTHOR'S NOTE] is an instruction (apply it without mentioning it).
-2. Reply IN CHARACTER and DIRECTLY to that message, like a real person would. A question gets a real answer (or a dodge that
-   fits them). News gets a reaction. A request gets a yes, a no or a "why?". An action gets a response.
-   The person "you" talked to (by name, or the one who spoke to you last) answers first.
-3. NEVER repeat, quote or rephrase what "you" said; never give your words to a character; never write what "you" say, do,
-   think or feel (no "you smile", "your heart races"); never ignore the message to do something else.
-4. Short, like a chat message: a little narration (an action, a gesture, what they do) and what they say.
-   40 to 120 words, UP TO 3 spoken lines in total (1 or 2 good lines beat 3 forced ones). One beat per turn: don't skip ahead,
-   don't resolve things, don't play out a whole conversation.
-5. End with a character speaking to "you" (a question, a tease, an invitation, a challenge) so you have something to answer.
+2. Every reply is a short scene in three beats, like a chat message from a great roleplay partner:
+   a) REACTION: a narration part showing how the character reacts, in their body, to exactly what "you" said or did
+      (they freeze, look away, laugh, their jaw tightens). The person "you" talked to (by name, or the one who spoke last) reacts first.
+   b) ANSWER: what they say back. A question gets a real answer (or a dodge that fits them). News gets a reaction. A request
+      gets a yes, a no or a "why?". An action gets a response. Small action beats can go between their lines.
+   c) CLOSING BEAT: hand the turn back. Either a follow-up line to "you" (a question about you, an offer, a tease, a challenge),
+      or a short narration that shows what their words hide (they say "whatever" but don't move away; their ears go red).
+3. Be a proactive partner, not a passive one: notice things, ask about "you", offer to do something, remember what "you"
+   told them, and bring in small details of your shared past or their life (invent them to fit their profile, then keep them).
+4. Subtext: in romance or slow burn, what they feel leaks through their body while their words deflect or tease.
+5. NEVER repeat, quote or rephrase what "you" said; never give your words to a character; never write what "you" say, do,
+   decide or feel. You MAY describe what "you" notice with your senses (you catch the smell of rain on his jacket, you can
+   feel his eyes on you), never your reactions (no "you blush", "your heart races").
+6. Length: 80 to 130 words, 3 to 5 short parts, at most 3 spoken lines in total. One beat of the story per turn:
+   don't skip ahead, don't resolve things, don't play out a whole conversation.
 
 EXAMPLE (the user asked a question):
 You: what's your favourite song?
-GOOD -> narration: Xinlong doesn't look up from his phone. | Xinlong: Why, so you can steal it? | narration: He turns the screen toward you anyway. | Xinlong: This one. Don't laugh.
-BAD -> Xinlong: What's my favourite song? (repeats you) | narration: You ask him about music. (narrates you) | Xinlong: Let's go practise. (ignores the question)
+GOOD -> narration: Xinlong stops halfway through tying his shoe, like the question caught him off guard. | Xinlong: Song? Hm. Something old, probably. You wouldn't know it. | narration: He looks up a second too long, then back at his laces. | Xinlong: Why? You making me a playlist or something?
+BAD -> Xinlong: What's my favourite song? (repeats you) | narration: You ask him about music and smile. (writes for you) | Xinlong: Let's go practise. (ignores the question)
 
 VOICE:
 - Each character talks like a real person and like THEMSELVES: their tone, their relationship with "you", their profile
@@ -943,8 +954,10 @@ VOICE:
 - NEVER use these AI clichés: "a hint of", "tinged with", "a mix of", "something deeper", "his gaze flickering",
   "the air thick with", "can't help but", "a smile tugging at", "eyes sparkling", "heart skipping a beat",
   "a testament to", "electric", "palpable", "unspoken", "little did", "in that moment".
-- In group stories, others may react too (tease, get jealous, defend you, talk to each other), but only when it makes sense
-  for them; if they have nothing meaningful to add, they stay quiet. Every line must follow from the one before.
+- In group stories, each character in the scene can get their own short beat (a narration part and maybe a line), each one
+  reacting in their own personality: one flirts, one gets annoyed, one stays silent but you see them react. Name them in the
+  narration so it's clear who is who. The person "you" talked to goes first; others only when it makes sense. Every line
+  must follow from the one before.
 - If the user's message starts with (Replying to NAME's line: "..."), "you" are answering that line: NAME reacts first.
 - Small surprises are welcome when the user only reacts briefly; big turns (someone arrives, a time skip, a problem) only
   when the user asks, writes an author's note, or lets the story move on ("you continue").
@@ -955,8 +968,9 @@ FORMAT: reply only with JSON. "partes" is the reply in order: each part is narra
 line (only the words, no quotation marks, no "he says"). There are never lines for "you".
 "para_ti": true on a line spoken TO "you" that waits for your answer; false on everything else.
 {"partes": [{"tipo": "narracao", "quem": "", "texto": "...", "para_ti": false}, {"tipo": "fala", "quem": "name of the speaker", "texto": "...", "para_ti": true}],
-"escolhas": [3 short replies the user could send next, the way a person really types in a chat (casual, first person, can be
-one or two words): one about what is happening, one lighter or bolder, and one about the relationship],
+"escolhas": [3 replies the user could send next, written as "you" in the first person, like a roleplay move: a short
+*action in asterisks* and/or a line in quotes, 8 to 25 words (e.g. *I lean on the doorframe* "Okay, which bed is mine?").
+One about what is happening, one lighter or bolder, and one about the relationship],
 "novos_factos": [new, lasting facts (especially things "you" told them), short sentences; [] if none],
 "proximidade": how the user's last message changed the main character's feelings toward "you": -2 (hurt), -1, 0 (nothing
 changed, the most common), 1 (a little closer) or 2 (a big moment). Judge only what "you" did. If "you" did nothing
@@ -2303,7 +2317,8 @@ ${texto}`;
     {
       let n = 0;
       const ate = partes.findIndex(x => x.tipo === "fala" && ++n >= FALAS_POR_VEZ);
-      if (ate >= 0) partes = partes.slice(0, ate + 1);
+      // depois da última fala pode ficar UMA narração curta (o remate, como no Whispy: "mas ele não se afasta")
+      if (ate >= 0) partes = partes.slice(0, ate + 1 + (partes[ate + 1] && partes[ate + 1].tipo === "narracao" ? 1 : 0));
     }
     if (!partes.length && d && d.texto) partes = [{ tipo: "narracao", quem: "", texto: String(d.texto).trim() }];
     if (!partes.length) partes = [{ tipo: "narracao", quem: "", texto: "*The silence stretches on for a moment.*" }];
@@ -2471,6 +2486,8 @@ ${texto}`;
     const ultima = cont.mensagens.length - 1;
     $("texto-historia").innerHTML = `<h2 class="titulo-historia">${escapar(hist.titulo || "Untitled")}</h2><div class="ornamento">✦ ✦ ✦</div>` +
       cont.mensagens.map((m, i) => (m.tipo === "cena" ? `<div class="bloco-cena"${animar && i === ultima ? ' id="a-animar"' : ""}>${desenharCena(m, i)}</div>`
+          + (m.pensamento ? `<div class="pensamento"><b>💭 ${escapar(m.pensamento.quem)}</b>${formatar(m.pensamento.texto)}</div>`
+             : i === ultima && m.partes && !aEspera ? `<button type="button" class="ver-pensamento" id="ver-pensamento"${animar ? " hidden" : ""}>💭 Inner thoughts</button>` : "")
         : m.tipo === "nota" ? `<div class="nota">✎ ${formatar(m.texto)}</div>`
         : m.tipo === "continuar" ? `<div class="continuou" aria-hidden="true">· · ·</div>`
         : `<div class="acao">${m.resposta ? `<div class="citacao"><b>${escapar(m.resposta.quem)}</b>${formatar(String(m.resposta.texto).slice(0, 160))}</div>` : ""}${formatar(m.texto)}</div>`)).join("") + extra;
@@ -2484,7 +2501,7 @@ ${texto}`;
         + `<div class="mini-acoes">${botoes}</div></div>` : "");
     $("escolhas").hidden = !$("escolhas").innerHTML;
     // palavra a palavra: as sugestões só aparecem quando o texto acaba
-    if (animar && $("a-animar")) { const tinha = !$("escolhas").hidden; $("escolhas").hidden = true; animarCena($("a-animar"), () => { $("escolhas").hidden = !tinha; rolarFundo(); }); }
+    if (animar && $("a-animar")) { const tinha = !$("escolhas").hidden; $("escolhas").hidden = true; animarCena($("a-animar"), () => { $("escolhas").hidden = !tinha; if ($("ver-pensamento")) $("ver-pensamento").hidden = false; rolarFundo(); }); }
     if ($("continuar")) $("continuar").onclick = () => { definirResposta(null); enviar("", false); };
     document.querySelectorAll("#texto-historia .responder").forEach(b => b.onclick = e => {
       e.stopPropagation();
@@ -2492,6 +2509,7 @@ ${texto}`;
       if (x) { definirResposta({ quem: x.quem, texto: x.texto }); $("texto").focus(); }
     });
     if ($("refazer")) $("refazer").onclick = refazer;
+    if ($("ver-pensamento")) $("ver-pensamento").onclick = () => pedirPensamento(ultima);
     if ($("desfazer")) $("desfazer").onclick = desfazer;
     document.querySelectorAll(".escolha").forEach(b => b.onclick = () => enviar(cont.escolhas[b.dataset.i], false));
     $("enviar").disabled = aEspera;
@@ -2502,7 +2520,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "27 Oct · Whispy-style AI";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "29 Oct · Whispy beats";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2644,6 +2662,40 @@ ${texto}`;
     c.resumidas_ate = Math.min(c.resumidas_ate, c.mensagens.length);
     c.capitulos = (c.capitulos || []).slice(0, Math.floor(nCenas(c) / CENAS_POR_CAPITULO));
     delete c.recap;
+  }
+  // ---------- 💭 Inner thoughts (como no Whispy): o que a personagem pensou e não disse ----------
+  const ESQUEMA_PENSAMENTO = obj({ texto: S });
+  async function pedirPensamento(i) {
+    const m = cont.mensagens[i], b = $("ver-pensamento");
+    if (!m || m.tipo !== "cena" || aEspera) return;
+    const falas = (m.partes || []).filter(x => x.tipo === "fala");
+    const quem = (falas.length ? falas[falas.length - 1].quem : "") || pers.nome;
+    const x = acharPorNome([pers].concat(elencoVisivel || []).filter(Boolean), quem) || pers;
+    const sec = secoesDe(x);
+    const conversa = cont.mensagens.slice(Math.max(0, i - 5), i + 1).map(y => y.tipo === "cena" ? y.texto : y.tipo === "acao" ? "You: " + y.texto : "").filter(Boolean).join("\n\n");
+    if (b) { b.disabled = true; b.textContent = "💭 …"; }
+    try {
+      const d = await groq([{ role: "user", content: `Interactive story. Character: ${x.nome}${x.obra ? " (" + x.obra + ")" : ""}.
+${String(x.ficha || "").slice(0, 900)}
+${resumoPersonagem(x, hist)}${sec.core ? "\nCore personality: " + sec.core : ""}${sec.feelings ? "\nFeelings towards the user: " + sec.feelings : ""}${sec.boundaries ? "\nEmotional boundaries: " + sec.boundaries : ""}
+Story tone: ${(hist.tons || []).join(", ") || "open"}
+
+The last moments of the story:
+${conversa.slice(-3000)}
+
+Write ${x.nome}'s private inner thoughts right now: first person, present tense, 40 to 90 words, raw and honest,
+in their own voice. What they really feel or want but didn't say out loud (it can contradict their words).
+Don't repeat the scene. No explicit sexual content.${x.menor ? ` ${x.nome} is a minor: nothing romantic or sexual at all.` : ""}
+Reply in JSON: {"texto": "..."}` }], { esquema: ESQUEMA_PENSAMENTO, nome: "pensamento", esforco: "low", max: 700, modelos: modelosHistoria() });
+      const texto = String((d && d.texto) || "").trim().slice(0, 700);
+      if (!texto) throw { code: "invalid_json" };
+      m.pensamento = { quem: x.nome, texto };
+      gravarConteudo(hist.id, cont);
+      desenhar(); rolarFundo();
+    } catch (e) {
+      if (b) { b.disabled = false; b.textContent = "💭 Inner thoughts"; }
+      avisar(escapar(mensagemDeErro(e)));
+    }
   }
   // ↻ Outra versão da última cena (a tua jogada fica igual).
   async function refazer() {
@@ -3126,7 +3178,6 @@ ${texto}`;
     }
     const ultFala = [...final].reverse().find(x => x.tipo === "fala");
     if (!ultFala) prob.push("no character speaks");
-    if (final.length && final[final.length - 1].tipo !== "fala" && !(final.length >= 2 && final[final.length - 2].tipo === "fala")) prob.push("ends on narration, not on a line to you");
     if (cen.primeiro) {
       const pf = brutas.find(x => x.tipo === "fala");
       if (pf && String(pf.quem).toLowerCase().split(" ")[0] !== cen.primeiro.toLowerCase()) prob.push(`${cen.primeiro} should answer first, but ${pf.quem} did`);
