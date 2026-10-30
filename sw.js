@@ -1,7 +1,7 @@
 // "Service worker": deixa a app abrir mesmo sem rede (para releres as histórias).
 // Vai sempre primeiro à rede, para apanhar as atualizações do site; só usa a cópia guardada se não houver rede.
 // Os pedidos ao Groq e às fontes (outros sites) passam direto, sem nada guardado aqui.
-const CACHE = "whispers-v10";
+const CACHE = "whispers-v11";
 const FICHEIROS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
