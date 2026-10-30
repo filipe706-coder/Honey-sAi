@@ -668,7 +668,7 @@
       <div><span class="rotulo">Model</span><div class="tons" id="ia-modelo"></div></div>
       <p class="dica" id="ia-existe"></p>
       <h4>Test the AI</h4>
-      <p class="dica">Plays 10 short test conversations with made-up characters (yours aren't used) and checks every reply:
+      <p class="dica">Plays 11 short test conversations with made-up characters (yours aren't used) and checks every reply:
         does it answer you, repeat you, stay in character… A second AI grades each reply. Takes a few minutes per model and uses part of today's free limit.</p>
       <div class="tons" id="ia-teste-qual"></div>
       <button type="button" class="botao" id="ia-testar">Run the test</button>
@@ -937,8 +937,10 @@ HOW EVERY TURN WORKS (the most important part):
 5. NEVER repeat, quote or rephrase what "you" said; never give your words to a character; never write what "you" say, do,
    decide or feel. You MAY describe what "you" notice with your senses (you catch the smell of rain on his jacket, you can
    feel his eyes on you), never your reactions (no "you blush", "your heart races").
-6. Length: 80 to 130 words, 3 to 5 short parts, at most 3 spoken lines in total. One beat of the story per turn:
-   don't skip ahead, don't resolve things, don't play out a whole conversation.
+6. Length follows the moment, like a real person: a short or simple message ("Sangwon?", "ok", "hi") gets a short reply
+   (one small reaction and ONE line, 15 to 40 words); a bigger moment can get up to 130 words and 3 spoken lines.
+   Never add a line just to fill space. Every line must say something new: never two lines that mean the same thing.
+   One beat of the story per turn: don't skip ahead, don't resolve things, don't play out a whole conversation.
 
 EXAMPLE (the user asked a question):
 You: what's your favourite song?
@@ -949,6 +951,9 @@ VOICE:
 - Each character talks like a real person and like THEMSELVES: their tone, their relationship with "you", their profile
   (speech style, how they show affection, boundaries, rules) come first. A cold one answers in few words; a shy one mumbles.
 - Natural dialogue: contractions, short lines, half-sentences, slang that fits them. Nobody speaks in polished, explaining sentences.
+- They talk like a person in the story, never like an assistant or a therapist: no "I'm here for you", "I'm right here,
+  listening", "I'm all ears", "take your time", "you can tell me anything", "that's valid". A simple "Hm? What's up?" is better.
+- Narration stays short and plain too: one concrete detail, not a pretty sentence with snow, glow and smiles all at once.
 - Narration is plain, concrete and short (one specific detail beats three adjectives), present tense, third person for
   everyone except "you". Show feelings through actions; don't explain them.
 - NEVER use these AI clichés: "a hint of", "tinged with", "a mix of", "something deeper", "his gaze flickering",
@@ -2520,7 +2525,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "29 Oct · Whispy beats";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "30 Oct · less filler";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -3149,6 +3154,8 @@ Reply in JSON: {"texto": "..."}` }], { esquema: ESQUEMA_PENSAMENTO, nome: "pensa
     { id: 10, nome: "Continue ▸ moves the story", h: T_SOLO, antes: [ABRE_SOLO, { tipo: "acao", texto: "yeah, couldn't sleep" },
       cenaT(["", "He nods at the floor beside him."], ["Xinlong", "Then stretch. You'll hurt yourself otherwise.", true])],
       continuar: true, espera: "Something new happens (a small surprise, interruption or change) and it ends with Xinlong saying something to the user. Nothing is written for the user." },
+    { id: 11, nome: "Short message, short reply", h: T_SOLO, antes: [ABRE_SOLO], tua: "Xinlong?", curto: true,
+      espera: "A short, natural reply: a small reaction and ONE simple line (like \"Hm? What's up?\"). No filler, no assistant phrases like \"I'm here, listening\", no two lines saying the same thing." },
   ];
   const ESQUEMA_JUIZ = obj({ answers_the_user: B, repeats_the_user: B, writes_for_the_user: B, in_character: B, makes_sense: B, natural: B,
     score: { type: "integer", enum: [1, 2, 3, 4, 5] }, problem: S });
@@ -3187,6 +3194,9 @@ Reply in JSON: {"texto": "..."}` }], { esquema: ESQUEMA_PENSAMENTO, nome: "pensa
       if (falas.some(x => /\bbabe\b/i.test(x.texto))) prob.push('called you "babe" (his rule says never)');
     }
     const n = final.map(x => x.texto).join(" ").split(/\s+/).filter(Boolean).length;
+    if (cen.curto && falas.length > 1) prob.push(`${falas.length} lines for a one-word message (should be 1)`);
+    if (cen.curto && n > 60) prob.push(`too long for a one-word message (${n} words)`);
+    if (falas.some(x => /i'?m (right )?here|i'?m all ears|take your time|you can tell me anything|i'?m listening/i.test(x.texto))) prob.push("assistant-like filler line");
     if (n < 12) prob.push(`very short (${n} words)`);
     if (n > 180) prob.push(`too long (${n} words)`);
     return prob;
