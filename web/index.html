@@ -925,7 +925,7 @@ HOW EVERY TURN WORKS (the most important part):
 1. The user's last message ("You: ...") is what "you" just said out loud, or did (*like this*), to the characters, right now.
    It's a conversation, not instructions for you. Only an [AUTHOR'S NOTE] is an instruction (apply it without mentioning it).
 2. Every reply is a short scene in three beats, like a chat message from a great roleplay partner:
-   a) REACTION: a narration part showing how the character reacts, in their body, to exactly what "you" said or did
+   a) REACTION: one short narration sentence showing how the character reacts to exactly what "you" said or did
       (they freeze, look away, laugh, their jaw tightens). The person "you" talked to (by name, or the one who spoke last) reacts first.
    b) ANSWER: what they say back. A question gets a real answer (or a dodge that fits them). News gets a reaction. A request
       gets a yes, a no or a "why?". An action gets a response. Small action beats can go between their lines.
@@ -944,7 +944,8 @@ HOW EVERY TURN WORKS (the most important part):
 
 EXAMPLE (the user asked a question):
 You: what's your favourite song?
-GOOD -> narration: Xinlong stops halfway through tying his shoe, like the question caught him off guard. | Xinlong: Song? Hm. Something old, probably. You wouldn't know it. | narration: He looks up a second too long, then back at his laces. | Xinlong: Why? You making me a playlist or something?
+GOOD -> narration: Xinlong stops tying his shoe. | Xinlong: Song? Hm. Something old, probably. You wouldn't know it. | narration: He looks up a second too long. | Xinlong: Why? You making me a playlist or something?
+BAD narration -> Xinlong chuckles, the cold wind tugging at his jacket as snowflakes drift onto his shoulders, his grin widening. (too long, too many details)
 BAD -> Xinlong: What's my favourite song? (repeats you) | narration: You ask him about music and smile. (writes for you) | Xinlong: Let's go practise. (ignores the question)
 
 VOICE:
@@ -953,7 +954,9 @@ VOICE:
 - Natural dialogue: contractions, short lines, half-sentences, slang that fits them. Nobody speaks in polished, explaining sentences.
 - They talk like a person in the story, never like an assistant or a therapist: no "I'm here for you", "I'm right here,
   listening", "I'm all ears", "take your time", "you can tell me anything", "that's valid". A simple "Hm? What's up?" is better.
-- Narration stays short and plain too: one concrete detail, not a pretty sentence with snow, glow and smiles all at once.
+- NARRATION IS SHORT: each narration part is ONE short sentence, 4 to 14 words, ONE action ("Sangwon laughs.", "He pulls his
+  jacket tighter."). Don't stack details (wind + snow + grin + jacket in one sentence). Don't describe the weather or the place
+  again unless it just changed. Most of the reply is what they SAY; narration only adds the gesture that matters.
 - Narration is plain, concrete and short (one specific detail beats three adjectives), present tense, third person for
   everyone except "you". Show feelings through actions; don't explain them.
 - NEVER use these AI clichés: "a hint of", "tinged with", "a mix of", "something deeper", "his gaze flickering",
@@ -2525,7 +2528,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "30 Oct · less filler";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "30 Oct · short narration";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -3194,6 +3197,8 @@ Reply in JSON: {"texto": "..."}` }], { esquema: ESQUEMA_PENSAMENTO, nome: "pensa
       if (falas.some(x => /\bbabe\b/i.test(x.texto))) prob.push('called you "babe" (his rule says never)');
     }
     const n = final.map(x => x.texto).join(" ").split(/\s+/).filter(Boolean).length;
+    const longas = final.filter(x => x.tipo !== "fala" && x.texto.split(/\s+/).length > 20);
+    if (longas.length) prob.push(`narration too long (${longas.map(x => x.texto.split(/\s+/).length).join(", ")} words; max ~14)`);
     if (cen.curto && falas.length > 1) prob.push(`${falas.length} lines for a one-word message (should be 1)`);
     if (cen.curto && n > 60) prob.push(`too long for a one-word message (${n} words)`);
     if (falas.some(x => /i'?m (right )?here|i'?m all ears|take your time|you can tell me anything|i'?m listening/i.test(x.texto))) prob.push("assistant-like filler line");
