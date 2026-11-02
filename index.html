@@ -198,6 +198,8 @@
   .cena p:last-child { margin-bottom: 0; }
   .cena em { color: var(--enfase); }
   .fala { display: flex; gap: 8px; align-items: flex-end; max-width: 90%; }
+  .fala.seguida { margin-top: -6px; }
+  .vazio-avatar { visibility: hidden; }
   .pensamento { margin: 4px 0 0 36px; max-width: 86%; background: color-mix(in srgb, var(--acento) 16%, var(--cartao)); border-radius: 16px;
                 padding: 10px 13px; font-size: calc(14.5px * var(--escala)); line-height: 1.55; color: var(--texto-historia); font-style: italic; }
   .pensamento b { display: block; font-style: normal; font-size: 12px; color: var(--acento); margin-bottom: 3px; }
@@ -737,6 +739,8 @@
         <label>Your role in this story<textarea id="e-papel" rows="2" maxlength="800"></textarea></label>
         <div><span class="rotulo">Your relationship</span><div class="tons" id="e-relacao"></div></div>
         <div><span class="rotulo">Tone</span><div class="tons" id="e-tons"></div></div>
+        <div><span class="rotulo">Style</span><div class="tons" id="e-estilo"></div>
+          <p class="dica">Texting: the story happens over text messages (short bursts, no narration).</p></div>
         <button class="botao" id="guardar-contexto">Save changes</button>
       </form>
       <p class="uso" id="uso-painel"></p>
@@ -952,6 +956,8 @@ VOICE:
 - Each character talks like a real person and like THEMSELVES: their tone, their relationship with "you", their profile
   (speech style, how they show affection, boundaries, rules) come first. A cold one answers in few words; a shy one mumbles.
 - Natural dialogue: contractions, short lines, half-sentences, slang that fits them. Nobody speaks in polished, explaining sentences.
+- Be ALIVE: quick comebacks, dry humor, teasing, playful deflection, a line that lands. Short and punchy beats long and
+  explained: "oh." / "i thought so." / "i could." can say more than a paragraph. Let them be a little unpredictable.
 - They talk like a person in the story, never like an assistant or a therapist: no "I'm here for you", "I'm right here,
   listening", "I'm all ears", "take your time", "you can tell me anything", "that's valid". A simple "Hm? What's up?" is better.
 - NARRATION IS SHORT: each narration part is ONE short sentence, 4 to 14 words, ONE action ("Sangwon laughs.", "He pulls his
@@ -1036,6 +1042,18 @@ changed, the most common), 1 (a little closer) or 2 (a big moment). Judge only w
       + `\nIn the JSON, instead of "proximidade" return "proximidades": [{"quem": name, "passo": -2..2}] for each character in the scene whose feelings toward "you" changed because of what "you" said or did (leave out the ones that didn't). Each one has their own feelings: one can get closer while another gets jealous or distant.`;
   }
 
+  // Estilo "Texting": como uma conversa por mensagens (rajadas curtas, minúsculas, sem narração).
+  const ehTexting = h => !!h && h.estilo === "texting";
+  const REGRAS_TEXTING = `
+
+STYLE: TEXTING (this overrides the scene format above). The story happens as a text message conversation on the phone.
+- Write ONLY messages ("tipo": "fala"). No narration, no *actions*, no quotation marks, no descriptions.
+- Text like real people text: mostly lowercase, short messages (1 to 12 words each), sent in quick bursts of 1 to 4 messages
+  in a row ("oh" / "was that supposed to go to someone else"). Casual spelling, abbreviations and slang that fit them
+  (omg, idk, lol, ngl), emojis only if it really fits the character.
+- Real texting rhythm: short replies, dry humor, teasing, playful deflection, subtext, left-on-read energy, sudden honesty.
+- The answer still follows "HOW EVERY TURN WORKS": react to exactly what "you" texted, answer it, hand the turn back.
+- The suggestions ("escolhas") are texts too: lowercase, short, no asterisks.`;
   function instrucoes(p, h, memoria, resumo, nCena = 0, prox = null) {
     const eu = personaDe(h.persona);
     const slow = !p.menor && !eMenor(eu) && h.tons.includes("Slow burn");
@@ -1057,6 +1075,7 @@ changed, the most common), 1 (a little closer) or 2 (a big moment). Judge only w
       + (prox === null ? "" : typeof prox === "object"
           ? `\n\nHow close each one feels to "you" right now: ${Object.entries(prox).map(([id, v]) => { const x = personagens().find(y => y.id === id); return x ? `${x.nome}: ${faseDe(v, romantico(x, h)).nome} (${v}/100)` : ""; }).filter(Boolean).join("; ")}. Keep their behaviour consistent with it.`
           : `\n\nHow close ${p.nome} feels to "you" right now: ${faseDe(prox, romantico(p, h)).nome} (${prox}/100). Keep ${p.nome}'s behaviour consistent with it.`)
+      + (ehTexting(h) ? REGRAS_TEXTING : "")
       + folhaPersonagens(p, h);
   }
   // A "folha de personagens": o tom e a relação de cada um, curtos, no FIM das instruções (o que vem por último pesa mais).
@@ -1411,7 +1430,9 @@ changed, the most common), 1 (a little closer) or 2 (a big moment). Judge only w
   function desenharCena(m, i) {
     if (!m.partes) return `<div class="cena">${paragrafos(m.texto)}</div>`;
     return m.partes.map((x, j) => x.tipo === "fala"
-      ? `<div class="fala">${avatarDe(x.quem)}<div class="balao"><b>${escapar(x.quem)}</b>${formatar(x.texto)}</div>`
+      ? (j > 0 && m.partes[j - 1].tipo === "fala" && m.partes[j - 1].quem === x.quem
+          ? `<div class="fala seguida"><span class="mini-avatar vazio-avatar"></span><div class="balao">${formatar(x.texto)}</div>`
+          : `<div class="fala">${avatarDe(x.quem)}<div class="balao"><b>${escapar(x.quem)}</b>${formatar(x.texto)}</div>`)
         + (i != null ? `<button type="button" class="responder" data-m="${i}" data-p="${j}" aria-label="Reply to ${escapar(x.quem)}">↩</button>` : "") + `</div>`
       : `<div class="cena">${paragrafos(x.texto)}</div>`).join("");
   }
@@ -2287,7 +2308,8 @@ ${texto}`;
       const ultimaMsg = c.mensagens[c.mensagens.length - 1];
       const respostaTua = !!ultimaMsg && ultimaMsg.tipo === "acao", grupo = !!(h && h.mundo);
       // Igual para tudo (a tua mensagem, o "Continue", notas, a abertura): no máximo 3 falas e 6 partes por vez.
-      const maxFalas = FALAS_POR_VEZ, maxPartes = FALAS_POR_VEZ * 2;
+      const maxFalas = ehTexting(h) ? 4 : FALAS_POR_VEZ, maxPartes = FALAS_POR_VEZ * 2;
+      if (ehTexting(h) && partes.some(x => x.tipo === "fala")) partes = partes.filter(x => x.tipo === "fala");
       // narrações seguidas juntam-se numa só (senão a IA enche a cena de pedaços de narração)
       partes = partes.reduce((l, x) => { const u = l[l.length - 1];
         if (u && u.tipo === "narracao" && x.tipo === "narracao") u.texto += " " + x.texto; else l.push(x); return l; }, []);
@@ -2324,7 +2346,7 @@ ${texto}`;
     // Pausa: a cada FALAS_POR_VEZ falas a cena para e espera pela tua resposta (o resto que a IA tenha escrito é cortado).
     {
       let n = 0;
-      const ate = partes.findIndex(x => x.tipo === "fala" && ++n >= FALAS_POR_VEZ);
+      const ate = partes.findIndex(x => x.tipo === "fala" && ++n >= (ehTexting(h) ? 4 : FALAS_POR_VEZ));
       // depois da última fala pode ficar UMA narração curta (o remate, como no Whispy: "mas ele não se afasta")
       if (ate >= 0) partes = partes.slice(0, ate + 1 + (partes[ate + 1] && partes[ate + 1].tipo === "narracao" ? 1 : 0));
     }
@@ -2528,7 +2550,7 @@ ${texto}`;
   // só aparece quando chega a vez dela. Tocar no texto mostra tudo de uma vez.
   let animacao = null;
   const MS_POR_PALAVRA = 45;
-  const VERSAO = "30 Oct · short narration";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
+  const VERSAO = "2 Nov · texting style";   // muda a cada publicação: serve para confirmar no telemóvel que é a versão nova
   $("versao").textContent = VERSAO;
   const rolarFundo = () => { const r = $("rolar-historia"); r.scrollTop = r.scrollHeight; };
   function animarCena(bloco, fim) {
@@ -2806,6 +2828,9 @@ Reply in JSON: {"texto": "..."}` }], { esquema: ESQUEMA_PENSAMENTO, nome: "pensa
     // $("e-persona").dataset.id = personaCtx;
     desenharTons($("e-tons"), hist.tons, pers.menor || eMenor(personaDe(personaCtx)));
     desenharRelacao($("e-relacao"), hist.relacao, !!pers.menor);
+    { const caixa = $("e-estilo"), atual = hist.estilo === "texting" ? "texting" : "cena";
+      caixa.innerHTML = [["cena", "Scene"], ["texting", "Texting"]].map(o => `<button type="button" class="tom" data-v="${o[0]}" aria-pressed="${o[0] === atual}">${o[1]}</button>`).join("");
+      caixa.querySelectorAll(".tom").forEach(b => b.onclick = () => caixa.querySelectorAll(".tom").forEach(x => x.setAttribute("aria-pressed", String(x === b)))); }
     $("mem-factos").innerHTML = cont.memoria.length ? cont.memoria.map(f => `<li>${formatar(f)}</li>`).join("") : `<p class="vazio">Nothing yet.</p>`;
     $("mem-resumo").innerHTML = cont.resumo ? formatar(cont.resumo) : `<span class="vazio">The summary appears once the story gets longer.</span>`;
     for (const id of ["recomecar", "apagar-historia"]) $(id).dataset.confirmar = "";
@@ -2821,6 +2846,7 @@ Reply in JSON: {"texto": "..."}` }], { esquema: ESQUEMA_PENSAMENTO, nome: "pensa
     e.preventDefault();
     hist = Object.assign({}, hist, { titulo: $("e-titulo").value.trim().slice(0, 120), premissa: $("e-premissa").value.trim(),
       papel: $("e-papel").value.trim(), relacao: relacaoDe($("e-relacao")), tons: tonsDe($("e-tons")),
+      estilo: ($("e-estilo").querySelector('.tom[aria-pressed="true"]') || {}).dataset?.v === "texting" ? "texting" : "",
       persona: hist.persona || null });   // PERSONAS: com a escolha desligada, fica a que a história já tinha. Ligado era: $("e-persona").dataset.id || null
     if (!hist.persona) delete hist.persona;
     atualizarHistoria(hist);
